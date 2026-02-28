@@ -27,7 +27,12 @@ func (g *Generator) mapType(node ast.Node, typ types.Type) string {
 		if isErrorType(typ) {
 			return "so_Error"
 		}
-		return g.symbolName(t.Obj().Name())
+		obj := t.Obj()
+		if obj.Pkg() != nil && obj.Pkg() != g.pkg.Types {
+			// This is a named type from another package.
+			return obj.Pkg().Name() + "_" + obj.Name()
+		}
+		return g.symbolName(obj.Name())
 
 	case *types.Pointer:
 		return g.mapType(node, t.Elem()) + "*"
