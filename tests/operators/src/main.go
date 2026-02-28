@@ -28,10 +28,17 @@ func main() {
 		_ = f
 	}
 
+	// {
+	// 	// String concatenation is not supported.
+	// 	var s1, s2, s3 string = "hello", " ", "world"
+	// 	s4 := s1 + s2 + s3
+	// 	_ = s4
+	// }
+
 	{
 		// Bitwise operations.
 		var b1, b2 = 0b1010, 0b1100
-		b3 := (b1|b2)&(b1&b2) | (b1 ^ b2)
+		b3 := ((b1 | b2) & (b1 & b2)) | (b1 ^ b2)
 		b3 = b3 << 2
 		b3 = b3 >> 1
 		b3 = b3 &^ b1
@@ -45,15 +52,36 @@ func main() {
 	}
 
 	{
-		// Logical operations and comparisons.
+		// Logical operations.
 		var a, b, c bool = true, false, true
-		d := (a && b) || (b || c) && !a
+		d := ((a && b) || (b || c)) && !a
 		_ = d
+	}
 
+	{
+		// Number comparison.
 		x, y, z := 10, 20, 30
-		e1 := (x < y) && (y > z) || (x == z)
+		e1 := ((x < y) && (y > z)) || (x == z)
 		_ = e1
-		e2 := (x <= y) && (y >= z) || (x != z)
+		e2 := ((x <= y) && (y >= z)) || (x != z)
+		_ = e2
+	}
+
+	{
+		// Rune comparison.
+		r1, r2, r3 := 'a', 'b', '本'
+		e1 := ((r1 < r2) && (r2 > r3)) || (r1 == r3)
+		_ = e1
+		e2 := ((r1 <= r2) && (r2 >= r3)) || (r1 != r3)
+		_ = e2
+	}
+
+	{
+		// String comparison.
+		s1, s2, s3 := "hello", "world", "hello"
+		e1 := ((s1 < s2) || (s1 > s3)) && ((s1 == s3) || (s2 != s3))
+		_ = e1
+		e2 := ((s1 <= s2) && (s1 >= s3)) || (s1 != s3)
 		_ = e2
 	}
 }

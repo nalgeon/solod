@@ -26,7 +26,7 @@ int main(void) {
     }
     {
         so_int b1 = 0b1010, b2 = 0b1100;
-        so_int b3 = (b1 | b2) & (b1 & b2) | (b1 ^ b2);
+        so_int b3 = ((b1 | b2) & (b1 & b2)) | (b1 ^ b2);
         b3 = b3 << 2;
         b3 = b3 >> 1;
         b3 = b3 & ~b1;
@@ -39,12 +39,28 @@ int main(void) {
     }
     {
         bool a = true, b = false, c = true;
-        bool d = (a && b) || (b || c) && !a;
+        bool d = ((a && b) || (b || c)) && !a;
         (void)d;
+    }
+    {
         so_int x = 10, y = 20, z = 30;
-        bool e1 = (x < y) && (y > z) || (x == z);
+        bool e1 = ((x < y) && (y > z)) || (x == z);
         (void)e1;
-        bool e2 = (x <= y) && (y >= z) || (x != z);
+        bool e2 = ((x <= y) && (y >= z)) || (x != z);
+        (void)e2;
+    }
+    {
+        int32_t r1 = U'a', r2 = U'b', r3 = U'本';
+        bool e1 = ((r1 < r2) && (r2 > r3)) || (r1 == r3);
+        (void)e1;
+        bool e2 = ((r1 <= r2) && (r2 >= r3)) || (r1 != r3);
+        (void)e2;
+    }
+    {
+        so_String s1 = so_strlit("hello"), s2 = so_strlit("world"), s3 = so_strlit("hello");
+        bool e1 = ((so_string_lt(s1, s2)) || (so_string_gt(s1, s3))) && ((so_string_eq(s1, s3)) || (so_string_ne(s2, s3)));
+        (void)e1;
+        bool e2 = ((so_string_lte(s1, s2)) && (so_string_gte(s1, s3))) || (so_string_ne(s1, s3));
         (void)e2;
     }
 }

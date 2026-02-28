@@ -10,7 +10,7 @@ int main(void) {
     main_HttpStatus status = main_StatusOK;
     so_println("%lld", status);
     main_ServerState state = main_StateConnected;
-    if (!so_string_eq(state, main_StateIdle)) {
+    if (so_string_ne(state, main_StateIdle)) {
         so_println("%d", true);
     }
 }

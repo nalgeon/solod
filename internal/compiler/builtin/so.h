@@ -29,6 +29,26 @@ typedef struct {
 static inline bool so_string_eq_impl(so_String s1, so_String s2) {
     return s1.len == s2.len && memcmp(s1.ptr, s2.ptr, s1.len) == 0;
 }
+// so_string_ne returns true if two strings are not equal.
+#define so_string_ne(s1, s2) (!so_string_eq(s1, s2))
+// so_string_lt returns true if s1 < s2 in lexicographical order.
+#define so_string_lt(s1, s2) so_string_lt_impl(s1, s2)
+static inline bool so_string_lt_impl(so_String s1, so_String s2) {
+    size_t n = s1.len < s2.len ? s1.len : s2.len;
+    int cmp = memcmp(s1.ptr, s2.ptr, n);
+    return cmp < 0 || (cmp == 0 && s1.len < s2.len);
+}
+// so_string_lte returns true if s1 <= s2 in lexicographical order.
+#define so_string_lte(s1, s2) (so_string_lt(s1, s2) || so_string_eq(s1, s2))
+// so_string_gt returns true if s1 > s2 in lexicographical order.
+#define so_string_gt(s1, s2) so_string_gt_impl(s1, s2)
+static inline bool so_string_gt_impl(so_String s1, so_String s2) {
+    size_t n = s1.len < s2.len ? s1.len : s2.len;
+    int cmp = memcmp(s1.ptr, s2.ptr, n);
+    return cmp > 0 || (cmp == 0 && s1.len > s2.len);
+}
+// so_string_gte returns true if s1 >= s2 in lexicographical order.
+#define so_string_gte(s1, s2) (so_string_gt(s1, s2) || so_string_eq(s1, s2))
 
 // so_utf8_decode decodes one UTF-8 rune from string s at byte offset i.
 // Stores the byte width in *w.

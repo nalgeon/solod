@@ -10,7 +10,7 @@ inspect:
 
 runc:
 	@mkdir -p build
-	@gcc $(CFLAGS) -Iinternal/compiler/runtime -o build/main $(path)
+	@gcc $(CFLAGS) -Iinternal/compiler/builtin -o build/main $(path)
 	@./build/main
 	@rm -f build/main
 

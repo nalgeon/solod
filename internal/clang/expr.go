@@ -45,19 +45,21 @@ func (g *Generator) emitBasicLit(n *ast.BasicLit) {
 		fmt.Fprintf(g.state.writer, "so_strlit(%s)", n.Value)
 		return
 	}
+	if n.Kind == token.CHAR {
+		// All char literals are emitted as Unicode (e.g. 'a' → U'a', '本' → U'本').
+		fmt.Fprintf(g.state.writer, "U%s", n.Value)
+		return
+	}
 	fmt.Fprintf(g.state.writer, "%s", n.Value)
 }
 
 // emitBinaryExpr emits a binary expression.
 func (g *Generator) emitBinaryExpr(n *ast.BinaryExpr) {
 	w := g.state.writer
-	// String equality: emit so_string_eq(x, y) instead of x == y.
-	if n.Op == token.EQL || n.Op == token.NEQ {
+	// String comparisons: emit so_string_eq/ne/lt/gt/lte/gte calls.
+	if isCompare(n.Op) {
 		if basic, ok := g.types.TypeOf(n.X).Underlying().(*types.Basic); ok && basic.Kind() == types.String {
-			if n.Op == token.NEQ {
-				fmt.Fprintf(w, "!")
-			}
-			fmt.Fprintf(w, "so_string_eq(")
+			fmt.Fprintf(w, "%s(", stringCompareFunc(n.Op))
 			g.emitExpr(n.X)
 			fmt.Fprintf(w, ", ")
 			g.emitExpr(n.Y)
@@ -246,4 +248,30 @@ func (g *Generator) emitUnaryExpr(n *ast.UnaryExpr) {
 	}
 	fmt.Fprintf(w, "%s", n.Op.String())
 	g.emitExpr(n.X)
+}
+
+func isCompare(op token.Token) bool {
+	switch op {
+	case token.EQL, token.NEQ, token.LSS, token.GTR, token.LEQ, token.GEQ:
+		return true
+	}
+	return false
+}
+
+func stringCompareFunc(op token.Token) string {
+	switch op {
+	case token.EQL:
+		return "so_string_eq"
+	case token.NEQ:
+		return "so_string_ne"
+	case token.LSS:
+		return "so_string_lt"
+	case token.LEQ:
+		return "so_string_lte"
+	case token.GTR:
+		return "so_string_gt"
+	case token.GEQ:
+		return "so_string_gte"
+	}
+	panic("unreachable")
 }
