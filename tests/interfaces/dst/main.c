@@ -47,6 +47,11 @@ static main_Rect* lineAsRect(main_Line l) {
     return r;
 }
 
+typedef struct {
+    void* self;
+    so_int (*Read)(void* self, so_Slice p, so_Error* err);
+} reader;
+
 int main(void) {
     main_Rect r = {.width = 10, .height = 5};
     {
@@ -63,5 +68,9 @@ int main(void) {
         (void)lineIsRect(l);
         main_Rect* rptr = lineAsRect(l);
         (void)rptr;
+    }
+    {
+        reader rdr = {0};
+        (void)rdr;
     }
 }

@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/types"
 	"io"
+	"strings"
 )
 
 // emitInterfaceTypeSpec emits a typedef struct with void* self and function pointers.
@@ -16,11 +17,29 @@ func (g *Generator) emitInterfaceTypeSpec(w io.Writer, spec *ast.TypeSpec) {
 	for m := range iface.Methods() {
 		sig := m.Type().(*types.Signature)
 		retType := g.mapType(spec, sig.Results().At(0).Type())
-		params := "void* self"
+		var params strings.Builder
+		params.WriteString("void* self")
+		// Regular parameters.
 		for p := range sig.Params().Variables() {
-			params += ", " + g.mapType(spec, p.Type()) + " " + p.Name()
+			params.WriteString(", ")
+			params.WriteString(g.mapType(spec, p.Type()))
+			params.WriteString(" ")
+			params.WriteString(p.Name())
 		}
-		fmt.Fprintf(w, "    %s (*%s)(%s);\n", retType, m.Name(), params)
+		// Out-parameters for multiple return values.
+		for i := 1; i < sig.Results().Len(); i++ {
+			result := sig.Results().At(i)
+			cType := g.mapType(spec, result.Type())
+			name := result.Name()
+			if name == "" {
+				name = fmt.Sprintf("_r%d", i)
+			}
+			params.WriteString(", ")
+			params.WriteString(cType)
+			params.WriteString("* ")
+			params.WriteString(name)
+		}
+		fmt.Fprintf(w, "    %s (*%s)(%s);\n", retType, m.Name(), params.String())
 	}
 	fmt.Fprintf(w, "} %s;\n", g.symbolName(spec.Name.Name))
 }

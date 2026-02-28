@@ -120,10 +120,15 @@ func (g *Generator) zeroValue(node ast.Node, typ types.Type) string {
 		return "NULL"
 	}
 
-	// Interfaces (e.g. error).
+	// Interfaces.
 	if iface, ok := typ.Underlying().(*types.Interface); ok {
 		if iface.Empty() {
+			// any (interface{}) maps to void*, so zero value is NULL.
 			return "NULL"
+		}
+		if _, ok := typ.(*types.Named); ok {
+			// Named interfaces map to structs, so zero value is {0}.
+			return "{0}"
 		}
 		g.fail(node, "unsupported non-empty anonymous interface")
 	}
