@@ -235,7 +235,11 @@ func (g *Generator) emitVarSpec(spec *ast.ValueSpec) {
 		if len(spec.Values) > i {
 			// Has explicit initializer.
 			fmt.Fprintf(w, "%s%s%s %s = ", g.indent(), specifier, cType, cName)
-			g.emitExpr(spec.Values[i])
+			if iface, ok := typ.Underlying().(*types.Interface); ok && iface.Empty() {
+				g.emitAnyValue(spec, spec.Values[i])
+			} else {
+				g.emitExpr(spec.Values[i])
+			}
 			fmt.Fprintf(w, ";\n")
 		} else {
 			// No initializer, emit zero value.

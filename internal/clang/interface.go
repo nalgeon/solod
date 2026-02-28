@@ -80,6 +80,23 @@ func (g *Generator) emitTypeAssertExpr(n *ast.TypeAssertExpr) {
 	fmt.Fprintf(g.state.writer, ".self)")
 }
 
+// emitAnyValue emits an expression as a void* for empty interface storage.
+// Pointers and interface values pass through as-is.
+// Value types are wrapped in a compound literal: &(type){val}.
+func (g *Generator) emitAnyValue(node ast.Node, expr ast.Expr) {
+	valType := g.types.TypeOf(expr)
+	_, isPtr := valType.Underlying().(*types.Pointer)
+	_, isIface := valType.Underlying().(*types.Interface)
+	if isPtr || isIface {
+		g.emitExpr(expr)
+		return
+	}
+	cType := g.mapType(node, valType)
+	fmt.Fprintf(g.state.writer, "&(%s){", cType)
+	g.emitExpr(expr)
+	fmt.Fprintf(g.state.writer, "}")
+}
+
 // isInterfaceType reports whether t is an interface type.
 func isInterfaceType(t types.Type) bool {
 	_, ok := t.Underlying().(*types.Interface)

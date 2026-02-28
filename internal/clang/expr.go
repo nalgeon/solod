@@ -98,7 +98,12 @@ func (g *Generator) emitCallExpr(n *ast.CallExpr) {
 	w := g.state.writer
 	if tv, ok := g.types.Types[n.Fun]; ok && tv.IsType() {
 		if isInterfaceType(tv.Type) {
-			// Interface conversion (e.g. Shape(r)).
+			iface := tv.Type.Underlying().(*types.Interface)
+			if iface.Empty() {
+				g.emitAnyValue(n, n.Args[0])
+				return
+			}
+			// Named non-empty interface conversion (e.g. Shape(r)).
 			g.emitInterfaceLit(tv.Type, n.Args[0])
 			return
 		}
