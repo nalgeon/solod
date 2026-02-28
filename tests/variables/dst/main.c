@@ -27,6 +27,8 @@ int main(void) {
         (void)vAnyVal;
         void* vAnyPtr = vPtr;
         (void)vAnyPtr;
+        void* vNil = NULL;
+        (void)vNil;
     }
     {
         so_int vInt = 42;
@@ -50,6 +52,8 @@ int main(void) {
         (void)vAnyVal;
         void* vAnyPtr = vPtr;
         (void)vAnyPtr;
+        void* vNil = NULL;
+        (void)vNil;
     }
     {
         so_int vInt = 42;
@@ -73,6 +77,30 @@ int main(void) {
         (void)vAnyVal;
         void* vAnyPtr = vPtr;
         (void)vAnyPtr;
+        void* vNil = NULL;
+        (void)vNil;
+    }
+    {
+        so_int vInt = 0;
+        (void)vInt;
+        double vFloat = 0;
+        (void)vFloat;
+        bool vBool = false;
+        (void)vBool;
+        uint8_t vByte = 0;
+        (void)vByte;
+        int32_t vRune = 0;
+        (void)vRune;
+        so_String vString = so_strlit("");
+        (void)vString;
+        so_Slice vSlice = {0};
+        (void)vSlice;
+        person vStruct = {0};
+        (void)vStruct;
+        person* vPtr = NULL;
+        (void)vPtr;
+        void* vNil = NULL;
+        (void)vNil;
     }
     {
         so_int a = 11, b = 22, c = 33;

@@ -87,7 +87,7 @@ func (g *Generator) mapType(node ast.Node, typ types.Type) string {
 		return "so_String"
 	default:
 		g.fail(node, "unsupported type: %s", typ)
-		return "void" // unreachable
+		panic("unreachable")
 	}
 }
 
@@ -98,6 +98,16 @@ func (g *Generator) zeroValue(node ast.Node, typ types.Type) string {
 		elemType := g.mapType(node, arr.Elem())
 		size := arr.Len()
 		return fmt.Sprintf("{(%s[%d]){0}, %d, %d}", elemType, size, size, size)
+	}
+
+	// Pointers.
+	if _, ok := typ.Underlying().(*types.Pointer); ok {
+		return "NULL"
+	}
+
+	// Slices.
+	if _, ok := typ.Underlying().(*types.Slice); ok {
+		return "{0}"
 	}
 
 	// Structs.
@@ -116,15 +126,17 @@ func (g *Generator) zeroValue(node ast.Node, typ types.Type) string {
 	// Basic types (e.g. int, bool, string).
 	basic := typ.Underlying().(*types.Basic)
 	switch basic.Kind() {
-	case types.Int:
-		return "0"
 	case types.Bool:
 		return "false"
 	case types.String:
 		return `so_strlit("")`
+	case types.Int, types.Int8, types.Int16, types.Int32, types.Int64,
+		types.Uint, types.Uint8, types.Uint16, types.Uint32, types.Uint64, types.Uintptr,
+		types.Float32, types.Float64:
+		return "0"
 	default:
 		g.fail(node, "unsupported type for zero value: %s", typ)
-		return "0" // unreachable
+		panic("unreachable")
 	}
 }
 

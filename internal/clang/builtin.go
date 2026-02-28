@@ -101,7 +101,7 @@ func (g *Generator) formatSpec(node ast.Node, typ types.Type) string {
 	basic, ok := typ.Underlying().(*types.Basic)
 	if !ok {
 		g.fail(node, "unsupported type for print: %s", typ)
-		return "" // unreachable
+		panic("unreachable")
 	}
 	switch basic.Kind() {
 	case types.Bool:
@@ -122,6 +122,6 @@ func (g *Generator) formatSpec(node ast.Node, typ types.Type) string {
 		return "%s"
 	default:
 		g.fail(node, "unsupported type for print: %s", typ)
-		return "" // unreachable
+		panic("unreachable")
 	}
 }

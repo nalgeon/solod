@@ -85,6 +85,10 @@ func (g *Generator) emitTypeAssertExpr(n *ast.TypeAssertExpr) {
 // Value types are wrapped in a compound literal: &(type){val}.
 func (g *Generator) emitAnyValue(node ast.Node, expr ast.Expr) {
 	valType := g.types.TypeOf(expr)
+	if basic, ok := valType.(*types.Basic); ok && basic.Kind() == types.UntypedNil {
+		fmt.Fprintf(g.state.writer, "NULL")
+		return
+	}
 	_, isPtr := valType.Underlying().(*types.Pointer)
 	_, isIface := valType.Underlying().(*types.Interface)
 	if isPtr || isIface {

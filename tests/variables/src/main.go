@@ -28,6 +28,8 @@ func main() {
 		_ = vAnyVal
 		var vAnyPtr any = vPtr
 		_ = vAnyPtr
+		var vNil any = nil
+		_ = vNil
 	}
 
 	{
@@ -53,6 +55,8 @@ func main() {
 		_ = vAnyVal
 		var vAnyPtr = any(vPtr)
 		_ = vAnyPtr
+		var vNil = any(nil)
+		_ = vNil
 	}
 
 	{
@@ -78,6 +82,32 @@ func main() {
 		_ = vAnyVal
 		vAnyPtr := any(vPtr)
 		_ = vAnyPtr
+		vNil := any(nil)
+		_ = vNil
+	}
+
+	{
+		// Zero values.
+		var vInt int
+		_ = vInt
+		var vFloat float64
+		_ = vFloat
+		var vBool bool
+		_ = vBool
+		var vByte byte
+		_ = vByte
+		var vRune rune
+		_ = vRune
+		var vString string
+		_ = vString
+		var vSlice []int
+		_ = vSlice
+		var vStruct person
+		_ = vStruct
+		var vPtr *person
+		_ = vPtr
+		var vNil any
+		_ = vNil
 	}
 
 	{
