@@ -269,13 +269,20 @@ func (g *Generator) emitTypeSpec(w io.Writer, spec *ast.TypeSpec) {
 	switch spec.Type.(type) {
 	case *ast.FuncType:
 		g.emitFuncTypeSpec(w, spec)
-	case *ast.Ident:
+	case *ast.Ident, *ast.ArrayType, *ast.StarExpr:
 		typ := g.types.Defs[spec.Name].Type()
 		cType := g.mapType(spec, typ.Underlying())
 		cName := g.symbolName(spec.Name.Name)
 		fmt.Fprintf(w, "typedef %s %s;\n", cType, cName)
 	case *ast.InterfaceType:
-		g.emitInterfaceTypeSpec(w, spec)
+		iface := g.types.Defs[spec.Name].Type().Underlying().(*types.Interface)
+		if iface.Empty() {
+			cType := g.mapType(spec, iface)
+			cName := g.symbolName(spec.Name.Name)
+			fmt.Fprintf(w, "typedef %s %s;\n", cType, cName)
+		} else {
+			g.emitInterfaceTypeSpec(w, spec)
+		}
 	case *ast.StructType:
 		g.emitStructTypeSpec(w, spec)
 	default:
