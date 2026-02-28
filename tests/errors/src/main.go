@@ -14,17 +14,18 @@ func makeTea(arg int) error {
 }
 
 func main() {
+	// Nil and non-nil errors.
 	err := makeTea(7)
-	if err == nil {
-		println("err == nil")
+	if err != nil {
+		panic("err != nil")
 	}
 
 	err = makeTea(42)
-	if err != nil {
-		println("err != nil")
+	if err == nil {
+		panic("err == nil")
 	}
-	if err == ErrOutOfTea {
-		println("err == ErrOutOfTea")
+	if err != ErrOutOfTea {
+		panic("err != ErrOutOfTea")
 	}
 
 	// Not supported: errors can only be defined at package level.

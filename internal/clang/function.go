@@ -192,6 +192,13 @@ func (g *Generator) emitFuncCall(call *ast.CallExpr) {
 			case "make":
 				g.emitMakeCall(call)
 				return
+			case "panic":
+				arg, ok := call.Args[0].(*ast.BasicLit)
+				if !ok {
+					g.fail(call, "panic() only supports string literals")
+				}
+				fmt.Fprintf(w, "so_panic(%s)", arg.Value)
+				return
 			case "print", "println":
 				g.emitPrintCall(call, bi.Name())
 				return
@@ -230,7 +237,12 @@ func (g *Generator) emitFuncCall(call *ast.CallExpr) {
 				isInterfaceType(sig.Params().At(i).Type()) &&
 				!isInterfaceType(g.types.TypeOf(arg)) {
 				// Argument needs to be wrapped as an interface.
-				g.emitInterfaceLit(sig.Params().At(i).Type(), arg)
+				paramType := sig.Params().At(i).Type()
+				if iface, ok := paramType.Underlying().(*types.Interface); ok && iface.Empty() {
+					g.emitAnyValue(call, arg)
+				} else {
+					g.emitInterfaceLit(paramType, arg)
+				}
 			} else {
 				// Regular argument.
 				g.emitExpr(arg)
@@ -258,7 +270,12 @@ func (g *Generator) emitFixedArgs(call *ast.CallExpr, sig *types.Signature) {
 		}
 		if isInterfaceType(sig.Params().At(i).Type()) &&
 			!isInterfaceType(g.types.TypeOf(call.Args[i])) {
-			g.emitInterfaceLit(sig.Params().At(i).Type(), call.Args[i])
+			paramType := sig.Params().At(i).Type()
+			if iface, ok := paramType.Underlying().(*types.Interface); ok && iface.Empty() {
+				g.emitAnyValue(call, call.Args[i])
+			} else {
+				g.emitInterfaceLit(paramType, call.Args[i])
+			}
 		} else {
 			g.emitExpr(call.Args[i])
 		}

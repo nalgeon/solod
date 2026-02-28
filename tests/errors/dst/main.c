@@ -10,14 +10,14 @@ static so_Error makeTea(so_int arg) {
 
 int main(void) {
     so_Error err = makeTea(7);
-    if (err == NULL) {
-        so_println("%s", "err == nil");
+    if (err != NULL) {
+        so_panic("err != nil");
     }
     err = makeTea(42);
-    if (err != NULL) {
-        so_println("%s", "err != nil");
+    if (err == NULL) {
+        so_panic("err == nil");
     }
-    if (err == main_ErrOutOfTea) {
-        so_println("%s", "err == ErrOutOfTea");
+    if (err != main_ErrOutOfTea) {
+        so_panic("err != ErrOutOfTea");
     }
 }
