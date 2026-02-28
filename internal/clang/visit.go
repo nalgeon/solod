@@ -199,24 +199,39 @@ func (g *Generator) emitConstSpec(spec *ast.ValueSpec) {
 func (g *Generator) emitVarSpec(spec *ast.ValueSpec) {
 	w := g.state.writer
 
-	// Local multi-variable declaration: emit all on one line.
+	// Local multi-variable declaration: group consecutive same-type variables,
+	// but emit separate declarations for different types
+	// (e.g. `int a = 1, b = 2; float c = 3.14;`).
 	if g.state.indent > 0 && len(spec.Names) > 1 {
-		typ := g.types.Defs[spec.Names[0]].Type()
-		cType := g.mapType(spec, typ)
-		fmt.Fprintf(w, "%s%s ", g.indent(), cType)
-		for i, name := range spec.Names {
-			if i > 0 {
-				fmt.Fprintf(w, ", ")
-			}
+		i := 0
+		for i < len(spec.Names) {
+			name := spec.Names[i]
+			typ := g.types.Defs[name].Type()
+			cType := g.mapType(spec, typ)
+			fmt.Fprintf(w, "%s%s %s = ", g.indent(), cType, name.Name)
 			if len(spec.Values) > i {
-				fmt.Fprintf(w, "%s = ", name.Name)
 				g.emitExpr(spec.Values[i])
 			} else {
-				zeroVal := g.zeroValue(spec, typ)
-				fmt.Fprintf(w, "%s = %s", name.Name, zeroVal)
+				fmt.Fprintf(w, "%s", g.zeroValue(spec, typ))
 			}
+			i++
+			for i < len(spec.Names) {
+				nextName := spec.Names[i]
+				nextTyp := g.types.Defs[nextName].Type()
+				nextCType := g.mapType(spec, nextTyp)
+				if nextCType != cType {
+					break
+				}
+				fmt.Fprintf(w, ", %s = ", nextName.Name)
+				if len(spec.Values) > i {
+					g.emitExpr(spec.Values[i])
+				} else {
+					fmt.Fprintf(w, "%s", g.zeroValue(spec, nextTyp))
+				}
+				i++
+			}
+			fmt.Fprintf(w, ";\n")
 		}
-		fmt.Fprintf(w, ";\n")
 		return
 	}
 

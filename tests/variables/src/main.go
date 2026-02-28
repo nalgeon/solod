@@ -81,7 +81,27 @@ func main() {
 	}
 
 	{
-		// Multiple variable declaration.
+		// Multiple typed variable declaration.
+		var a, b, c int = 11, 22, 33
+		_ = a
+		_ = b
+		_ = c
+		var b1, b2 byte = 'a', 'b'
+		_ = b1
+		_ = b2
+		var s1, s2 string = "foo", "bar"
+		_ = s1
+		_ = s2
+		var a1, a2 []int = []int{1, 2}, []int{3, 4}
+		_ = a1
+		_ = a2
+		var p1, p2 person = person{age: 42}, person{age: 43}
+		_ = p1
+		_ = p2
+	}
+
+	{
+		// Multiple untyped variable declaration.
 		var vInt, vFloat, vBool = 42, 3.14, true
 		_ = vInt
 		_ = vFloat
