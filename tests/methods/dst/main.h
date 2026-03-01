@@ -1,4 +1,4 @@
-#include "so.h"
+#include "solod.h"
 
 typedef struct main_Rect {
     so_int width;

@@ -48,7 +48,7 @@ func Translate(srcDir string, outDir string) error {
 		}
 	}
 
-	// Write embedded builtin files (so.h, so.c) into the output directory
+	// Write embedded builtin files into the output directory
 	return writeBuiltin(outDir)
 }
 

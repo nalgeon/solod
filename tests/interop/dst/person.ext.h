@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
-#include "so.h"
+#include "solod.h"
 
 typedef struct {
     so_String name;

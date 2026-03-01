@@ -1,4 +1,4 @@
-#include "so.h"
+#include "solod.h"
 
 typedef struct main_Movie {
     so_int year;

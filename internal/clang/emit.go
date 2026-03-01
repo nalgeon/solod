@@ -74,7 +74,7 @@ func (g *Generator) emitHeader(dir string) error {
 		return fmt.Errorf("create header file %s: %w", hPath, err)
 	}
 	defer hFile.Close()
-	fmt.Fprintf(hFile, "#include \"so.h\"\n")
+	fmt.Fprintf(hFile, "#include \"solod.h\"\n")
 	g.emitHeaderDecls(hFile)
 	return nil
 }

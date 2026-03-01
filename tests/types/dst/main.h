@@ -1,4 +1,4 @@
-#include "so.h"
+#include "solod.h"
 typedef so_int main_ID;
 typedef so_int main_AliasedID;
 typedef so_int main_AlsoID;
