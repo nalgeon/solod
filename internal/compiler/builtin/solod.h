@@ -61,7 +61,17 @@ typedef struct {
 } so_Slice;
 
 // so_make_slice creates a slice of the given type, length, and capacity.
-#define so_make_slice(type, len, cap) ((so_Slice){(type[cap]){0}, (len), (cap)})
+// Uses separate declaration and initialization to avoid
+// variable-length array initialization, which is not allowed in C.
+#define so_make_slice(type, len, cap) ({ \
+    type _arr[(cap)];                    \
+    memset(_arr, 0, sizeof(_arr));       \
+    (so_Slice){_arr, (len), (cap)};      \
+})
+
+// so_slice creates a slice from an array or another slice
+// from index 'from' (inclusive) to index 'to' (exclusive).
+#define so_slice(s, T, from, to) ((so_Slice){(T*)(s).ptr + (from), (to) - (from), (s).cap - (from)})
 
 // so_string_bytes wraps a string's raw bytes as a byte slice.
 #define so_string_bytes(s) ((so_Slice){(void*)(s).ptr, (s).len, (s).len})
@@ -94,10 +104,6 @@ so_Slice so_string_runes_impl(so_String s, int32_t* buf);
 
 // so_cap returns the capacity of a slice.
 #define so_cap(s) ((so_int)(s).cap)
-
-// so_slice creates a slice from an array or another slice
-// from index 'from' (inclusive) to index 'to' (exclusive).
-#define so_slice(s, T, from, to) ((so_Slice){(T*)(s).ptr + (from), (to) - (from), (s).cap - (from)})
 
 // so_copy copies elements from src to dst. Returns the number of elements copied
 // (which is the minimum of dst.len and src.len).
