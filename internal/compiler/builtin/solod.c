@@ -52,6 +52,17 @@ so_rune so_utf8_decode(so_String s, so_int i, int* w) {
     return 0xFFFD;
 }
 
+// so_string_runes_impl decodes UTF-8 string bytes into a rune buffer.
+so_Slice so_string_runes_impl(so_String s, int32_t* buf) {
+    size_t n = 0;
+    for (so_int i = 0; i < (so_int)s.len;) {
+        int w = 0;
+        buf[n++] = so_utf8_decode(s, i, &w);
+        i += w;
+    }
+    return (so_Slice){buf, n, n};
+}
+
 // print writes the formatted string to stdout.
 // Returns the number of bytes written.
 int so_print(const char* format, ...) {

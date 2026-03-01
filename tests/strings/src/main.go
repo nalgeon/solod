@@ -20,9 +20,26 @@ func main() {
 		println("r =", r)
 	}
 
-	s1 := "hello"
-	s2 := "world"
-	if s1 == s2 || s1 == "hello" {
-		println("ok")
+	{
+		// Compare strings.
+		s1 := "hello"
+		s2 := "world"
+		if s1 == s2 || s1 == "hello" {
+			println("ok")
+		}
 	}
+
+	{
+		// String conversion.
+		s := "1世3"
+		bs := []byte(s)
+		if bs[0] != '1' {
+			panic("unexpected byte")
+		}
+		rs := []rune(s)
+		if rs[1] != '世' {
+			panic("unexpected rune")
+		}
+	}
+
 }

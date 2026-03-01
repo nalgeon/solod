@@ -97,6 +97,7 @@ func (g *Generator) emitBinaryExpr(n *ast.BinaryExpr) {
 func (g *Generator) emitCallExpr(n *ast.CallExpr) {
 	w := g.state.writer
 	if tv, ok := g.types.Types[n.Fun]; ok && tv.IsType() {
+		// Convert value to an interface type (e.g. Shape(r)).
 		if isInterfaceType(tv.Type) {
 			iface := tv.Type.Underlying().(*types.Interface)
 			if iface.Empty() {
@@ -107,7 +108,15 @@ func (g *Generator) emitCallExpr(n *ast.CallExpr) {
 			g.emitInterfaceLit(tv.Type, n.Args[0])
 			return
 		}
-		// Type conversion (e.g. int(3.14)).
+		// String-to-slice conversion ([]byte(s) or []rune(s)).
+		if sl, ok := tv.Type.Underlying().(*types.Slice); ok {
+			basic, ok := g.types.TypeOf(n.Args[0]).Underlying().(*types.Basic)
+			if ok && basic.Kind() == types.String {
+				g.emitSliceCast(n, sl)
+				return
+			}
+		}
+		// Regular type conversion (e.g. int(3.14)).
 		cType := g.mapType(n, tv.Type)
 		fmt.Fprintf(w, "(%s)", cType)
 		g.emitExpr(n.Args[0])
@@ -124,6 +133,24 @@ func (g *Generator) emitCallExpr(n *ast.CallExpr) {
 
 	// Regular function call.
 	g.emitFuncCall(n)
+}
+
+// emitSliceCast emits a string-to-slice conversion ([]byte(s) or []rune(s)).
+func (g *Generator) emitSliceCast(call *ast.CallExpr, sl *types.Slice) {
+	w := g.state.writer
+	elem := sl.Elem().(*types.Basic)
+	switch elem.Kind() {
+	case types.Byte:
+		fmt.Fprintf(w, "so_string_bytes(")
+		g.emitExpr(call.Args[0])
+		fmt.Fprintf(w, ")")
+	case types.Int32:
+		fmt.Fprintf(w, "so_string_runes(")
+		g.emitExpr(call.Args[0])
+		fmt.Fprintf(w, ", so_len(")
+		g.emitExpr(call.Args[0])
+		fmt.Fprintf(w, "))")
+	}
 }
 
 // emitCompositeLit emits a composite literal (struct or array initialization).

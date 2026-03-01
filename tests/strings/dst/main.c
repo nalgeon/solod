@@ -24,9 +24,22 @@ int main(void) {
         so_println("%s %d", "r =", r);
         _ += __w;
     }
-    so_String s1 = so_strlit("hello");
-    so_String s2 = so_strlit("world");
-    if (so_string_eq(s1, s2) || so_string_eq(s1, so_strlit("hello"))) {
-        so_println("%s", "ok");
+    {
+        so_String s1 = so_strlit("hello");
+        so_String s2 = so_strlit("world");
+        if (so_string_eq(s1, s2) || so_string_eq(s1, so_strlit("hello"))) {
+            so_println("%s", "ok");
+        }
+    }
+    {
+        so_String s = so_strlit("1世3");
+        so_Slice bs = so_string_bytes(s);
+        if (so_index(bs, uint8_t, 0) != '1') {
+            so_panic("unexpected byte");
+        }
+        so_Slice rs = so_string_runes(s, so_len(s));
+        if (so_index(rs, int32_t, 1) != U'世') {
+            so_panic("unexpected rune");
+        }
     }
 }

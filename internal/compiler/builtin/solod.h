@@ -63,6 +63,16 @@ typedef struct {
 // so_make_slice creates a slice of the given type, length, and capacity.
 #define so_make_slice(type, len, cap) ((so_Slice){(type[cap]){0}, (len), (cap)})
 
+// so_string_bytes wraps a string's raw bytes as a byte slice.
+#define so_string_bytes(s) ((so_Slice){(void*)(s).ptr, (s).len, (s).len})
+
+// so_string_runes decodes a string's UTF-8 bytes into a rune slice.
+#define so_string_runes(s, maxlen) ({ \
+    int32_t _buf[(maxlen)];           \
+    so_string_runes_impl((s), _buf);  \
+})
+so_Slice so_string_runes_impl(so_String s, int32_t* buf);
+
 // so_append appends elements to a slice without resizing.
 // Returns the new slice with updated length.
 // Panics if the new length exceeds the capacity.
