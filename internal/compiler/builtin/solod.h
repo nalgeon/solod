@@ -115,6 +115,21 @@ struct so_Error_ {
 };
 typedef struct so_Error_* so_Error;
 
+// so_Result is the return type for functions that return (T, error).
+typedef struct {
+    union {
+        bool as_bool;
+        uint8_t as_byte;
+        int32_t as_rune;
+        so_int as_int;
+        double as_double;
+        so_String as_string;
+        so_Slice as_slice;
+        void* as_ptr;
+    } val;
+    so_Error err;
+} so_Result;
+
 // errors_New creates a new error with the given message string.
 // so_Error errors_New(so_String s)
 #define errors_New(s) (&(struct so_Error_){s.ptr})

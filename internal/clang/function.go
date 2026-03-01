@@ -15,6 +15,7 @@ type FuncDecl struct {
 	decl *ast.FuncDecl
 	spec string // specifier (e.g. "static")
 	typ  *ast.FuncType
+	sig  *types.Signature
 }
 
 func newFuncDecl(gen *Generator, decl *ast.FuncDecl) FuncDecl {
@@ -29,11 +30,20 @@ func newFuncDecl(gen *Generator, decl *ast.FuncDecl) FuncDecl {
 			spec = "static "
 		}
 	}
+
+	var sig *types.Signature
+	if decl.Recv != nil {
+		sig = gen.types.ObjectOf(decl.Name).Type().(*types.Signature)
+	} else {
+		sig = gen.types.Defs[decl.Name].Type().(*types.Signature)
+	}
+
 	return FuncDecl{
 		gen:  gen,
 		decl: decl,
 		spec: spec,
 		typ:  decl.Type,
+		sig:  sig,
 	}
 }
 
@@ -83,8 +93,7 @@ func (f *FuncDecl) returnType() string {
 	if f.typ.Results == nil || len(f.typ.Results.List) == 0 {
 		return "void"
 	}
-	typ := f.gen.types.TypeOf(f.typ.Results.List[0].Type)
-	return f.gen.mapType(f.decl, typ)
+	return f.gen.returnType(f.decl, f.sig)
 }
 
 // emitFuncTypeSpec emits a C function pointer typedef.
@@ -92,10 +101,7 @@ func (g *Generator) emitFuncTypeSpec(w io.Writer, spec *ast.TypeSpec) {
 	named := g.types.Defs[spec.Name].Type().(*types.Named)
 	sig := named.Underlying().(*types.Signature)
 
-	retType := "void"
-	if sig.Results().Len() > 0 {
-		retType = g.mapType(spec, sig.Results().At(0).Type())
-	}
+	retType := g.returnType(spec, sig)
 
 	var params []string
 	for parVar := range sig.Params().Variables() {
@@ -118,20 +124,17 @@ func (g *Generator) emitFuncDecl(decl *ast.FuncDecl) {
 	}
 	w := g.state.writer
 	fn := newFuncDecl(g, decl)
-	sig := g.types.Defs[decl.Name].Type().(*types.Signature)
-	if sig.Results().Len() > 1 {
-		g.fail(decl, "multiple return values are not supported")
-	}
-	if sig.Results().Len() == 1 && sig.Results().At(0).Name() != "" {
-		g.fail(decl, "named return values are not supported")
-	}
+	g.rejectNamedReturns(decl, fn.sig)
+	g.state.funcSig = fn.sig
+	g.state.tempCount = 0
 	fmt.Fprintf(w, "\n%s%s %s(%s) {\n", fn.spec, fn.returnType(), fn.name(), fn.params())
 	g.state.indent++
 	for _, stmt := range decl.Body.List {
 		ast.Walk(g, stmt)
 	}
-	g.state.indent--
 	fmt.Fprintf(w, "}\n")
+	g.state.indent--
+	g.state.funcSig = nil
 }
 
 // emitFuncCall emits a regular function call.

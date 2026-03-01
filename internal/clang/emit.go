@@ -42,6 +42,10 @@ type State struct {
 	indent int
 	// Current receiver name (for -> access in methods).
 	recvName string
+	// Current function's signature (for multi-return).
+	funcSig *types.Signature
+	// Counter for unique temp variable names.
+	tempCount int
 }
 
 // Generator is responsible for generating C code from Go ASTs.

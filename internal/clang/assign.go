@@ -18,10 +18,11 @@ func (g *Generator) emitAssignStmt(stmt *ast.AssignStmt) {
 				return
 			}
 		}
-		// Multiple return values are not supported.
+		// Multi-return destructuring: x, y := f()
 		if len(stmt.Lhs) > 1 && len(stmt.Rhs) == 1 {
-			if _, ok := stmt.Rhs[0].(*ast.CallExpr); ok {
-				g.fail(stmt, "multiple return values are not supported")
+			if call, ok := stmt.Rhs[0].(*ast.CallExpr); ok {
+				g.emitMultiReturnDefine(stmt, call)
+				return
 			}
 		}
 		// Regular define: group consecutive variables by type.
@@ -68,10 +69,11 @@ func (g *Generator) emitAssignStmt(stmt *ast.AssignStmt) {
 
 	case token.ASSIGN:
 		w := g.state.writer
-		// Multiple return values are not supported.
+		// Multi-return destructuring: x, y = f()
 		if len(stmt.Lhs) > 1 && len(stmt.Rhs) == 1 {
-			if _, ok := stmt.Rhs[0].(*ast.CallExpr); ok {
-				g.fail(stmt, "multiple return values are not supported")
+			if call, ok := stmt.Rhs[0].(*ast.CallExpr); ok {
+				g.emitMultiReturnAssign(stmt, call)
+				return
 			}
 		}
 		// Regular assignment.

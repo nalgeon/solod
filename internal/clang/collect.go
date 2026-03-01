@@ -153,10 +153,7 @@ func (g *Generator) emitForwardTypeDecl(w io.Writer, spec *ast.TypeSpec) {
 	case *ast.FuncType:
 		named := g.types.Defs[spec.Name].Type().(*types.Named)
 		sig := named.Underlying().(*types.Signature)
-		retType := "void"
-		if sig.Results().Len() > 0 {
-			retType = g.mapType(spec, sig.Results().At(0).Type())
-		}
+		retType := g.returnType(spec, sig)
 		var params []string
 		for p := range sig.Params().Variables() {
 			params = append(params, g.mapType(spec, p.Type()))

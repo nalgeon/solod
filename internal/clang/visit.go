@@ -367,6 +367,16 @@ func (g *Generator) emitReturnStmt(stmt *ast.ReturnStmt) {
 		fmt.Fprintf(w, "%sreturn;\n", g.indent())
 		return
 	}
+	if len(stmt.Results) > 1 {
+		// Multiple return values are wrapped in a so_Result struct.
+		field := g.resultField(stmt, g.state.funcSig)
+		fmt.Fprintf(w, "%sreturn (so_Result){.val.%s = ", g.indent(), field)
+		g.emitExpr(stmt.Results[0])
+		fmt.Fprintf(w, ", .err = ")
+		g.emitExpr(stmt.Results[1])
+		fmt.Fprintf(w, "};\n")
+		return
+	}
 	fmt.Fprintf(w, "%sreturn ", g.indent())
 	g.emitExpr(stmt.Results[0])
 	fmt.Fprintf(w, ";\n")

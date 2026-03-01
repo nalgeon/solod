@@ -33,10 +33,7 @@ func (g *Generator) emitStructTypeSpec(w io.Writer, spec *ast.TypeSpec) {
 // emitFuncPtrField emits a function pointer field in a struct typedef.
 // Example: so_int (*ratingFn)(struct main_Movie m);
 func (g *Generator) emitFuncPtrField(w io.Writer, node ast.Node, fieldName string, sig *types.Signature, enclosingStruct string) {
-	retType := "void"
-	if sig.Results().Len() > 0 {
-		retType = g.mapType(node, sig.Results().At(0).Type())
-	}
+	retType := g.returnType(node, sig)
 	var params []string
 	for p := range sig.Params().Variables() {
 		cType := g.mapType(node, p.Type())
@@ -66,13 +63,9 @@ func (g *Generator) emitMethodDecl(decl *ast.FuncDecl) {
 		}
 	}
 
-	sig := g.types.ObjectOf(decl.Name).Type().(*types.Signature)
-	if sig.Results().Len() > 1 {
-		g.fail(decl, "multiple return values are not supported")
-	}
-	if sig.Results().Len() == 1 && sig.Results().At(0).Name() != "" {
-		g.fail(decl, "named return values are not supported")
-	}
+	g.rejectNamedReturns(decl, fn.sig)
+	g.state.funcSig = fn.sig
+	g.state.tempCount = 0
 	fmt.Fprintf(w, "\n%s%s %s(%s) {\n", fn.spec, fn.returnType(), fn.name(), fn.params())
 	g.state.indent++
 
@@ -88,6 +81,7 @@ func (g *Generator) emitMethodDecl(decl *ast.FuncDecl) {
 	}
 	g.state.indent--
 	fmt.Fprintf(w, "}\n")
+	g.state.funcSig = nil
 }
 
 // emitAnonStructLit emits an anonymous struct literal.

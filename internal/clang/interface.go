@@ -12,18 +12,12 @@ import (
 func (g *Generator) emitInterfaceTypeSpec(w io.Writer, spec *ast.TypeSpec) {
 	typ := g.types.Defs[spec.Name].Type().(*types.Named)
 	iface := typ.Underlying().(*types.Interface)
-	for m := range iface.Methods() {
-		sig := m.Type().(*types.Signature)
-		if sig.Results().Len() > 1 {
-			g.fail(spec, "multiple return values are not supported")
-		}
-	}
 	cName := g.symbolName(spec.Name.Name)
 	fmt.Fprintf(w, "\ntypedef struct %s {\n", cName)
 	fmt.Fprintf(w, "    void* self;\n")
 	for m := range iface.Methods() {
 		sig := m.Type().(*types.Signature)
-		retType := g.mapType(spec, sig.Results().At(0).Type())
+		retType := g.returnType(spec, sig)
 		var params strings.Builder
 		params.WriteString("void* self")
 		for p := range sig.Params().Variables() {
