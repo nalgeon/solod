@@ -33,9 +33,9 @@ func (g *Generator) emitSliceRange(stmt *ast.RangeStmt) {
 	}
 
 	cType := g.mapType(stmt, g.types.Defs[key].Type())
-	fmt.Fprintf(w, "%sfor (%s %s = 0; %s < ", g.indent(), cType, key.Name, key.Name)
+	fmt.Fprintf(w, "%sfor (%s %s = 0; %s < so_len(", g.indent(), cType, key.Name, key.Name)
 	g.emitExpr(stmt.X)
-	fmt.Fprintf(w, ".len; %s++) {\n", key.Name)
+	fmt.Fprintf(w, "); %s++) {\n", key.Name)
 
 	// Emit value variable if present (e.g. `for i, v := range nums`).
 	if stmt.Value != nil {

@@ -7,7 +7,7 @@ static so_int sum(so_Slice nums);
 
 static so_int sum(so_Slice nums) {
     so_int total = 0;
-    for (so_int _ = 0; _ < nums.len; _++) {
+    for (so_int _ = 0; _ < so_len(nums); _++) {
         so_int num = so_index(so_int, nums, _);
         total += num;
     }
