@@ -39,11 +39,15 @@ func (g *Generator) resultField(node ast.Node, sig *types.Signature) string {
 // resultFieldName maps a Go type to the corresponding so_Result union field name.
 func resultFieldName(g *Generator, node ast.Node, typ types.Type) string {
 	typ = types.Unalias(typ)
-	switch typ.(type) {
+	switch t := typ.(type) {
 	case *types.Array, *types.Slice:
 		return "as_slice"
 	case *types.Pointer:
 		return "as_ptr"
+	case *types.Interface:
+		if t.Empty() {
+			return "as_ptr"
+		}
 	}
 	basic, ok := typ.Underlying().(*types.Basic)
 	if !ok {
