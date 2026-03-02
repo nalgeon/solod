@@ -16,7 +16,7 @@ int main(void) {
         mem_Dealloc(main_Point, mem_System, p);
     }
     {
-        so_Result _res2 = mem_AllocSlice(so_int, mem_System, 3);
+        so_Result _res2 = mem_AllocSlice(so_int, mem_System, 3, 3);
         so_Slice slice = _res2.val.as_slice;
         so_Error err = _res2.err;
         if (err != NULL) {
@@ -40,7 +40,7 @@ int main(void) {
         mem_Free(main_Point, p);
     }
     {
-        so_Slice slice = mem_NewSlice(so_int, 3);
+        so_Slice slice = mem_NewSlice(so_int, 3, 3);
         so_index(so_int, slice, 0) = 11;
         so_index(so_int, slice, 1) = 22;
         so_index(so_int, slice, 2) = 33;

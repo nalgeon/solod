@@ -14,14 +14,15 @@
 #define mem_Dealloc(T, a, ptr) \
     (a).Dealloc((a).self, (ptr), sizeof(T), alignof(so_typeof(T)))
 
-// AllocSlice allocates a slice of n elements of type T using allocator a.
+// AllocSlice allocates a slice of type T with given length and capacity using allocator a.
 // Returns a slice of the allocated memory or an error if allocation fails.
-#define mem_AllocSlice(T, a, n) ({                                          \
-    so_Result _mem_res = (a).Alloc((a).self, sizeof(T) * (n),               \
-                                   alignof(so_typeof(T)));                  \
-    so_Slice _slice = {.ptr = _mem_res.val.as_ptr, .len = (n), .cap = (n)}; \
-    so_Result _slice_res = {.val.as_slice = _slice, .err = _mem_res.err};   \
-    _slice_res;                                                             \
+#define mem_AllocSlice(T, a, len, cap) ({                                       \
+    if ((len) > (cap)) so_panic("AllocSlice: length exceeds capacity");         \
+    so_Result _mem_res = (a).Alloc((a).self, sizeof(T) * (cap),                 \
+                                   alignof(so_typeof(T)));                      \
+    so_Slice _slice = {.ptr = _mem_res.val.as_ptr, .len = (len), .cap = (cap)}; \
+    so_Result _slice_res = {.val.as_slice = _slice, .err = _mem_res.err};       \
+    _slice_res;                                                                 \
 })
 
 // DeallocSlice frees a slice previously allocated with AllocSlice.
@@ -40,13 +41,14 @@
 // Free frees a value previously allocated with New.
 #define mem_Free(T, ptr) mem_Dealloc(T, mem_System, ptr)
 
-// NewSlice allocates a slice of n elements of type T using the system allocator.
+// NewSlice allocates a slice of type T with given length
+// and capacity using the system allocator.
 // Returns a slice of the allocated memory or panics on failure.
-#define mem_NewSlice(T, n) ({                          \
-    so_Result _res = mem_AllocSlice(T, mem_System, n); \
-    if (_res.err != NULL)                              \
-        so_panic(_res.err->msg);                       \
-    _res.val.as_slice;                                 \
+#define mem_NewSlice(T, len, cap) ({                          \
+    so_Result _res = mem_AllocSlice(T, mem_System, len, cap); \
+    if (_res.err != NULL)                                     \
+        so_panic(_res.err->msg);                              \
+    _res.val.as_slice;                                        \
 })
 
 // FreeSlice frees a slice previously allocated with NewSlice.

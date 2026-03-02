@@ -24,7 +24,7 @@ func main() {
 	}
 	{
 		// mem.AllocSlice and mem.DeallocSlice
-		slice, err := mem.AllocSlice[int](mem.System, 3)
+		slice, err := mem.AllocSlice[int](mem.System, 3, 3)
 		if err != nil {
 			panic("AllocSlice: allocation failed")
 		}
@@ -48,7 +48,7 @@ func main() {
 	}
 	{
 		// mem.NewSlice and mem.FreeSlice
-		slice := mem.NewSlice[int](3)
+		slice := mem.NewSlice[int](3, 3)
 		slice[0] = 11
 		slice[1] = 22
 		slice[2] = 33
