@@ -33,9 +33,9 @@ func (g *Generator) emitAppendCall(call *ast.CallExpr) {
 		// Appending a slice (e.g. append(dst, src...)).
 		fmt.Fprintf(w, "so_extend(%s, ", elemType)
 		g.emitExpr(call.Args[0])
-		fmt.Fprintf(w, ", ")
+		fmt.Fprintf(w, ", (")
 		g.emitExpr(call.Args[1])
-		fmt.Fprintf(w, ")")
+		fmt.Fprintf(w, "))")
 	} else {
 		// Appending individual values (e.g. append(dst, v1, v2, v3)).
 		fmt.Fprintf(w, "so_append(%s, ", elemType)
