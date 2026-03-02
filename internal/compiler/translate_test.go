@@ -43,7 +43,7 @@ func testPackage(t *testing.T, testDir string) {
 	be.Err(t, err, nil)
 
 	// Verify builtin files are copied to output
-	for _, name := range []string{"solod.h", "solod.c"} {
+	for _, name := range []string{"so/builtin/builtin.h", "so/builtin/builtin.c"} {
 		if _, err := os.Stat(filepath.Join(tempOut, name)); err != nil {
 			t.Errorf("missing builtin file: %s", name)
 		}

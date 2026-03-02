@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
@@ -49,7 +50,11 @@ func Translate(srcDir string, outDir string) error {
 	}
 
 	// Write embedded builtin files into the output directory
-	return writeBuiltin(outDir)
+	builtinDir := filepath.Join(outDir, "so", "builtin")
+	if err := os.MkdirAll(builtinDir, 0o755); err != nil {
+		return fmt.Errorf("create builtin output directory %s: %w", builtinDir, err)
+	}
+	return writeBuiltin(builtinDir)
 }
 
 // loadPackages uses go/packages to load the entry package and all dependencies.

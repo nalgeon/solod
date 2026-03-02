@@ -1,6 +1,6 @@
 #include <stdarg.h>
 #include <stdio.h>
-#include "solod.h"
+#include "builtin.h"
 
 // so_panic aborts the program with the given message.
 void so_panic(const char* msg) {

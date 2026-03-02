@@ -1,4 +1,4 @@
 #pragma once
-#include "solod.h"
+#include "so/builtin/builtin.h"
 
 typedef so_int (*main_Sum3Fn)(so_int, so_int, so_int);

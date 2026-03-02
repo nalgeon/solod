@@ -10,7 +10,7 @@ inspect:
 
 runc:
 	@mkdir -p build
-	gcc $(CFLAGS) -I$(path) -Iinternal/compiler/builtin  -o build/main $(shell find $(path) -name "*.c") internal/compiler/builtin/*.c
+	gcc $(CFLAGS) -I$(path) -o build/main $(shell find $(path) -name "*.c")
 	@./build/main
 	@rm -f build/main
 

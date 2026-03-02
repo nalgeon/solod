@@ -1,5 +1,5 @@
 #pragma once
-#include "solod.h"
+#include "so/builtin/builtin.h"
 typedef so_int main_HttpStatus;
 typedef so_String main_ServerState;
 extern const main_HttpStatus main_StatusOK;

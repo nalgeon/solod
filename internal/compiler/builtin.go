@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 )
 
-//go:embed builtin/solod.h builtin/solod.c
+//go:embed builtin/builtin.h builtin/builtin.c
 var builtinFS embed.FS
 
 func writeBuiltin(outDir string) error {
-	for _, name := range []string{"solod.h", "solod.c"} {
+	for _, name := range []string{"builtin.h", "builtin.c"} {
 		data, err := builtinFS.ReadFile("builtin/" + name)
 		if err != nil {
 			return fmt.Errorf("read embedded builtin file %s: %w", name, err)

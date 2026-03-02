@@ -83,7 +83,7 @@ func (g *Generator) emitHeader(dir string) error {
 	}
 	defer hFile.Close()
 	fmt.Fprintf(hFile, "#pragma once\n")
-	fmt.Fprintf(hFile, "#include \"solod.h\"\n")
+	fmt.Fprintf(hFile, "#include \"so/builtin/builtin.h\"\n")
 	g.emitImports(hFile)
 	g.emitEmbeds(hFile, g.embeds.header)
 	g.emitHeaderDecls(hFile)

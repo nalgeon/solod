@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
-#include "solod.h"
+#include "so/builtin/builtin.h"
 
 typedef struct {
     so_String name;

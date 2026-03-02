@@ -1,5 +1,5 @@
 #pragma once
-#include "solod.h"
+#include "so/builtin/builtin.h"
 
 typedef struct main_Movie {
     so_int year;
