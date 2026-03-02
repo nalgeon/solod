@@ -3,6 +3,7 @@
 
 // -- Types --
 
+// Methods on struct types.
 typedef struct main_Rect {
     so_int width;
     so_int height;

@@ -1,6 +1,7 @@
 package clang
 
 import (
+	"cmp"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -20,6 +21,7 @@ const (
 type symbol struct {
 	kind     symbolKind
 	exported bool
+	doc      *ast.CommentGroup
 	typeSpec *ast.TypeSpec
 	funcDecl *ast.FuncDecl
 }
@@ -46,6 +48,7 @@ func (g *Generator) collectSymbols() {
 					g.symbols = append(g.symbols, symbol{
 						kind:     symbolType,
 						exported: ast.IsExported(ts.Name.Name),
+						doc:      cmp.Or(d.Doc, ts.Doc),
 						typeSpec: ts,
 					})
 				}
@@ -67,6 +70,7 @@ func (g *Generator) collectSymbols() {
 				g.symbols = append(g.symbols, symbol{
 					kind:     kind,
 					exported: exported,
+					doc:      d.Doc,
 					funcDecl: d,
 				})
 			}

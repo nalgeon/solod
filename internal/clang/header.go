@@ -48,17 +48,17 @@ func (g *Generator) emitImportSpec(w io.Writer, spec *ast.ImportSpec) {
 // can reference them.
 func (g *Generator) emitHeaderDecls(w io.Writer) {
 	// Phase 1: exported types from collected symbols.
-	var specs []*ast.TypeSpec
+	var typeSyms []symbol
 	for _, sym := range g.symbols {
 		if !sym.exported || sym.kind != symbolType {
 			continue
 		}
-		specs = append(specs, sym.typeSpec)
+		typeSyms = append(typeSyms, sym)
 	}
-	if len(specs) > 0 {
+	if len(typeSyms) > 0 {
 		fmt.Fprintln(w, "// -- Types --")
-		for _, spec := range specs {
-			g.emitTypeSpec(w, spec)
+		for _, sym := range typeSyms {
+			g.emitTypeSpec(w, sym.typeSpec, sym.doc)
 		}
 		fmt.Fprintln(w)
 	}
@@ -84,17 +84,18 @@ func (g *Generator) emitHeaderDecls(w io.Writer) {
 	}
 
 	// Phase 3: exported function/method prototypes from collected symbols.
-	var funcDecls []ast.FuncDecl
+	var funcSyms []symbol
 	for _, sym := range g.symbols {
 		if !sym.exported || sym.kind == symbolType {
 			continue
 		}
-		funcDecls = append(funcDecls, *sym.funcDecl)
+		funcSyms = append(funcSyms, sym)
 	}
-	if len(funcDecls) > 0 {
+	if len(funcSyms) > 0 {
 		fmt.Fprintln(w, "// -- Functions and methods --")
-		for _, decl := range funcDecls {
-			fn := newFuncDecl(g, &decl)
+		for _, sym := range funcSyms {
+			emitDocComment(w, sym.doc)
+			fn := newFuncDecl(g, sym.funcDecl)
 			fmt.Fprintf(w, "%s %s(%s);\n", fn.returnType(), fn.name(), fn.params())
 		}
 		fmt.Fprintln(w)
@@ -113,6 +114,7 @@ func (g *Generator) emitHeaderGenDecl(w io.Writer, decl *ast.GenDecl) {
 	}
 
 	// Variable and constant declarations.
+	emitted := false
 	for _, spec := range decl.Specs {
 		vs, ok := spec.(*ast.ValueSpec)
 		if !ok {
@@ -121,6 +123,12 @@ func (g *Generator) emitHeaderGenDecl(w io.Writer, decl *ast.GenDecl) {
 		for _, name := range vs.Names {
 			if !ast.IsExported(name.Name) {
 				continue
+			}
+			if !emitted {
+				// Emit the doc comment for the first
+				// exported const/var in this declaration.
+				emitDocComment(w, decl.Doc)
+				emitted = true
 			}
 			typ := g.types.Defs[name].Type()
 			cType := g.mapType(spec, typ)

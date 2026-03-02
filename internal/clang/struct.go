@@ -12,7 +12,7 @@ import (
 func (g *Generator) emitStructTypeSpec(w io.Writer, spec *ast.TypeSpec) {
 	st := spec.Type.(*ast.StructType)
 	cName := g.symbolName(spec.Name.Name)
-	fmt.Fprintf(w, "\ntypedef struct %s {\n", cName)
+	fmt.Fprintf(w, "typedef struct %s {\n", cName)
 	g.state.indent++
 	for _, field := range st.Fields.List {
 		typ := g.types.TypeOf(field.Type)
@@ -66,7 +66,10 @@ func (g *Generator) emitMethodDecl(decl *ast.FuncDecl) {
 	g.rejectNamedReturns(decl, fn.sig)
 	g.state.funcSig = fn.sig
 	g.state.tempCount = 0
-	fmt.Fprintf(w, "\n%s%s %s(%s) {\n", fn.spec, fn.returnType(), fn.name(), fn.params())
+	if !emitDocComment(w, decl.Doc) {
+		fmt.Fprintln(w)
+	}
+	fmt.Fprintf(w, "%s%s %s(%s) {\n", fn.spec, fn.returnType(), fn.name(), fn.params())
 	g.state.indent++
 
 	if named {

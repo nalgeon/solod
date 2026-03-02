@@ -109,7 +109,7 @@ func (g *Generator) emitFuncTypeSpec(w io.Writer, spec *ast.TypeSpec) {
 	}
 
 	name := g.symbolName(spec.Name.Name)
-	fmt.Fprintf(w, "\ntypedef %s (*%s)(%s);\n", retType, name, strings.Join(params, ", "))
+	fmt.Fprintf(w, "typedef %s (*%s)(%s);\n", retType, name, strings.Join(params, ", "))
 }
 
 // emitFuncDecl emits a function declaration.
@@ -126,7 +126,10 @@ func (g *Generator) emitFuncDecl(decl *ast.FuncDecl) {
 	g.rejectNamedReturns(decl, fn.sig)
 	g.state.funcSig = fn.sig
 	g.state.tempCount = 0
-	fmt.Fprintf(w, "\n%s%s %s(%s) {\n", fn.spec, fn.returnType(), fn.name(), fn.params())
+	if !emitDocComment(w, decl.Doc) {
+		fmt.Fprintln(w)
+	}
+	fmt.Fprintf(w, "%s%s %s(%s) {\n", fn.spec, fn.returnType(), fn.name(), fn.params())
 	g.state.indent++
 	for _, stmt := range decl.Body.List {
 		ast.Walk(g, stmt)

@@ -2,7 +2,11 @@
 #include "so/builtin/builtin.h"
 
 // -- Types --
+
+// Typedefed constant group.
 typedef so_int main_HttpStatus;
+
+// Regular constant group.
 typedef so_String main_ServerState;
 
 // -- Variables and constants --

@@ -1,12 +1,14 @@
 package clang
 
 import (
+	"cmp"
 	"fmt"
 	"go/ast"
 	"go/token"
 	"go/types"
 	"io"
 	"os"
+	"strings"
 )
 
 // Visit implements the ast.Visitor interface to walk the AST and generate code.
@@ -144,10 +146,16 @@ func (g *Generator) emitGenDecl(decl *ast.GenDecl) {
 		// Imports are handled separately at [Generator.emitImpl].
 		return
 	case token.CONST:
+		if g.state.indent == 0 {
+			emitDocComment(g.state.writer, decl.Doc)
+		}
 		for _, spec := range decl.Specs {
 			g.emitConstSpec(spec.(*ast.ValueSpec))
 		}
 	case token.VAR:
+		if g.state.indent == 0 {
+			emitDocComment(g.state.writer, decl.Doc)
+		}
 		for _, spec := range decl.Specs {
 			vs := spec.(*ast.ValueSpec)
 			if len(vs.Names) > 0 && g.embeds.vars[vs.Names[0].Name] {
@@ -162,7 +170,7 @@ func (g *Generator) emitGenDecl(decl *ast.GenDecl) {
 		for _, spec := range decl.Specs {
 			ts := spec.(*ast.TypeSpec)
 			if !ast.IsExported(ts.Name.Name) {
-				g.emitTypeSpec(g.state.writer, ts)
+				g.emitTypeSpec(g.state.writer, ts, cmp.Or(decl.Doc, ts.Doc))
 			}
 		}
 	default:
@@ -277,7 +285,12 @@ func (g *Generator) emitVarSpec(spec *ast.ValueSpec) {
 }
 
 // emitTypeSpec dispatches type declaration emission based on the spec type.
-func (g *Generator) emitTypeSpec(w io.Writer, spec *ast.TypeSpec) {
+func (g *Generator) emitTypeSpec(w io.Writer, spec *ast.TypeSpec, doc *ast.CommentGroup) {
+	hasDocs := emitDocComment(w, doc)
+	if !hasDocs && isBlockTypeSpec(spec) {
+		fmt.Fprintln(w)
+	}
+
 	switch spec.Type.(type) {
 	case *ast.FuncType:
 		g.emitFuncTypeSpec(w, spec)
@@ -390,6 +403,33 @@ func (g *Generator) emitReturnStmt(stmt *ast.ReturnStmt) {
 	fmt.Fprintf(w, ";\n")
 }
 
+// emitDocComment writes a Go doc comment group as C comments, filtering out directives.
+func emitDocComment(w io.Writer, doc *ast.CommentGroup) bool {
+	if doc == nil {
+		return false
+	}
+
+	// Collect non-directive comment lines.
+	var lines []string
+	for _, c := range doc.List {
+		text := strings.TrimSpace(c.Text)
+		if strings.HasPrefix(text, "//so:") || strings.HasPrefix(text, "// #include") {
+			continue
+		}
+		lines = append(lines, text)
+	}
+	if len(lines) == 0 {
+		return false
+	}
+
+	// Write collected comments.
+	fmt.Fprintln(w)
+	for _, line := range lines {
+		fmt.Fprintln(w, line)
+	}
+	return true
+}
+
 // emitBlock emits the statements within a block, adjusting indentation.
 func (g *Generator) emitBlock(block *ast.BlockStmt) {
 	g.state.indent++
@@ -397,4 +437,18 @@ func (g *Generator) emitBlock(block *ast.BlockStmt) {
 		ast.Walk(g, stmt)
 	}
 	g.state.indent--
+}
+
+// isBlockTypeSpec returns true for type specs that emit multi-line blocks
+// (structs, non-empty interfaces, func types) and need a blank line separator.
+func isBlockTypeSpec(spec *ast.TypeSpec) bool {
+	switch spec.Type.(type) {
+	case *ast.StructType, *ast.FuncType:
+		return true
+	case *ast.InterfaceType:
+		// Non-empty interfaces are block types; empty ones are single-line typedefs.
+		iface := spec.Type.(*ast.InterfaceType)
+		return len(iface.Methods.List) > 0
+	}
+	return false
 }
