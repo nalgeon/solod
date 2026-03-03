@@ -1,6 +1,6 @@
 package math
 
-// #include <math.h>
+//so:include <math.h>
 
 func sqrt(x float64) float64
 

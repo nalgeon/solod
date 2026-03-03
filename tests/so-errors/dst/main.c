@@ -14,8 +14,6 @@ static so_Result work(so_int n) {
 }
 
 int main(void) {
-    double x = math_Sqrt(4.0);
-    (void)x;
     so_Result _res1 = work(11);
     so_int r1 = _res1.val.as_int;
     so_Error err = _res1.err;
@@ -30,6 +28,4 @@ int main(void) {
         so_panic("expected Err42");
     }
     (void)r2;
-    io_Reader rdr = {0};
-    (void)rdr;
 }
