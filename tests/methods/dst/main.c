@@ -28,6 +28,20 @@ static so_int circle_area(void* self) {
     return 3 * c->radius * c->radius;
 }
 
+// Methods on primitive types are not supported.
+// type HttpStatus int
+// func (s HttpStatus) String() string {
+// 	switch s {
+// 	case 200:
+// 		return "OK"
+// 	case 404:
+// 		return "Not Found"
+// 	case 500:
+// 		return "Error"
+// 	default:
+// 		return "Other"
+// 	}
+// }
 int main(void) {
     main_Rect r = (main_Rect){.width = 10, .height = 5};
     so_int rArea = main_Rect_Area(&r);

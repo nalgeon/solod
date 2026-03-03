@@ -4,6 +4,7 @@
 
 int main(void) {
     {
+        // Integer literals.
         const so_int d1 = 123;
         (void)d1;
         const so_int d2 = 100000;
@@ -18,6 +19,7 @@ int main(void) {
         (void)d6;
     }
     {
+        // Floating-point literals.
         const double f1 = 3.14;
         (void)f1;
         const double f2 = 0.25;
@@ -29,7 +31,20 @@ int main(void) {
         const double f5 = 1e6;
         (void)f5;
     }
+    // {
+    // 	// Imaginary literals - not supported.
+    // 	const i1 = 0i
+    // 	_ = i1
+    // 	const i2 = 0o123i // == 0o123 * 1i == 83i
+    // 	_ = i2
+    // 	const i3 = 0xabci // == 0xabc * 1i == 2748i
+    // 	_ = i3
+    // 	const i4 = 2.71828i
+    // 	_ = i4
+    // 	const i5 = 1.e+0i
+    // }
     {
+        // Rune literals.
         const int32_t r1 = U'a';
         (void)r1;
         const int32_t r2 = U'ä';
@@ -42,6 +57,7 @@ int main(void) {
         (void)r5;
     }
     {
+        // String literals.
         const so_String s1 = so_strlit("abc");
         (void)s1;
         const so_String s2 = so_strlit("abc\n\t\tdef");

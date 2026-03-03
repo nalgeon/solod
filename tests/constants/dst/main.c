@@ -13,8 +13,15 @@ const main_ServerState main_StateIdle = so_strlit("idle");
 const main_ServerState main_StateConnected = so_strlit("connected");
 const main_ServerState main_StateError = so_strlit("error");
 
+// Iota is not supported.
+// const (
+// 	Sunday = iota
+// 	Monday
+// 	Tuesday
+// )
 int main(void) {
     {
+        // Local constants.
         const so_int lInt = 500000000;
         (void)lInt;
         const double lFloat = 3e20 / lInt;
@@ -23,6 +30,7 @@ int main(void) {
         (void)lString;
     }
     {
+        // Using constants in expressions.
         main_HttpStatus status = main_StatusOK;
         (void)(status != main_StatusNotFound);
         main_HttpStatus secret = statusSecret;
@@ -31,6 +39,8 @@ int main(void) {
         (void)so_string_eq(state, main_StateIdle);
     }
     {
+        // Using _ on file level is not supported,
+        // so silence the unused file-level constants here.
         (void)fInt;
         (void)fString;
     }

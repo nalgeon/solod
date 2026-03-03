@@ -66,7 +66,7 @@ func (g *Generator) emitMethodDecl(decl *ast.FuncDecl) {
 	g.rejectNamedReturns(decl, fn.sig)
 	g.state.funcSig = fn.sig
 	g.state.tempCount = 0
-	if !emitDocComment(w, decl.Doc) {
+	if !g.emitComments(w, decl) {
 		fmt.Fprintln(w)
 	}
 	fmt.Fprintf(w, "%s%s %s(%s) {\n", fn.spec, fn.returnType(), fn.name(), fn.params())
@@ -79,9 +79,7 @@ func (g *Generator) emitMethodDecl(decl *ast.FuncDecl) {
 		fmt.Fprintf(w, "%s(void)self;\n", g.indent())
 	}
 
-	for _, stmt := range decl.Body.List {
-		ast.Walk(g, stmt)
-	}
+	g.walkStmts(decl.Body.List)
 	g.state.indent--
 	fmt.Fprintf(w, "}\n")
 	g.state.funcSig = nil

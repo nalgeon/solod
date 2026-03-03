@@ -4,8 +4,13 @@
 // -- Types --
 
 // Primitive types.
+// not a different type
 typedef so_int main_ID;
+
+// also int
 typedef so_int main_AliasedID;
+
+// also int
 typedef so_int main_AlsoID;
 typedef int32_t main_Rune;
 

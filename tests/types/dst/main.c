@@ -13,6 +13,7 @@ static main_Person newPerson(so_String name) {
 
 int main(void) {
     {
+        // Primitive types.
         main_ID id = 123;
         (void)id;
         so_int aid = 456;
@@ -23,6 +24,7 @@ int main(void) {
         (void)r;
     }
     {
+        // Complex types.
         main_Name n = so_strlit("Alice");
         (void)n;
         main_IntArray arr = (so_Slice){(so_int[3]){1, 2, 3}, 3, 3};
@@ -31,6 +33,7 @@ int main(void) {
         (void)slice;
     }
     {
+        // Struct types.
         main_Person bob = (main_Person){so_strlit("Bob"), 20};
         (void)bob;
         main_Person alice = (main_Person){.name = so_strlit("Alice"), .age = 30};

@@ -4,6 +4,7 @@
 
 int main(void) {
     {
+        // Integer arithmetics.
         so_int a = 11, b = 22, c = 33;
         so_int d = b / a + (a - c) * a + c % b;
         d += 10;
@@ -16,6 +17,7 @@ int main(void) {
         (void)d;
     }
     {
+        // Floating-point arithmetics.
         double x = 1.1, y = 2.2, z = 3.3;
         double f = x / y + (y - z) * x;
         f += 1.0;
@@ -26,7 +28,14 @@ int main(void) {
         f--;
         (void)f;
     }
+    // {
+    // 	// String concatenation is not supported.
+    // 	var s1, s2, s3 string = "hello", " ", "world"
+    // 	s4 := s1 + s2 + s3
+    // 	_ = s4
+    // }
     {
+        // Bitwise operations.
         so_int b1 = 0b1010, b2 = 0b1100;
         so_int b3 = ((b1 | b2) & (b1 & b2)) | (b1 ^ b2);
         b3 = b3 << 2;
@@ -37,14 +46,17 @@ int main(void) {
         b4 |= 0b1100;
         b4 &= 0b1100;
         b4 ^= 0b1100;
+        // b4 &^= 0b1010 // not supported
         (void)b4;
     }
     {
+        // Logical operations.
         bool a = true, b = false, c = true;
         bool d = ((a && b) || (b || c)) && !a;
         (void)d;
     }
     {
+        // Number comparison.
         so_int x = 10, y = 20, z = 30;
         bool e1 = ((x < y) && (y > z)) || (x == z);
         (void)e1;
@@ -52,6 +64,7 @@ int main(void) {
         (void)e2;
     }
     {
+        // Byte comparison.
         uint8_t b1 = 'a', b2 = 'b', b3 = 'c';
         bool e1 = ((b1 < b2) && (b2 > b3)) || (b1 == b3);
         (void)e1;
@@ -59,6 +72,7 @@ int main(void) {
         (void)e2;
     }
     {
+        // Rune comparison.
         int32_t r1 = U'a', r2 = U'b', r3 = U'本';
         bool e1 = ((r1 < r2) && (r2 > r3)) || (r1 == r3);
         (void)e1;
@@ -66,6 +80,7 @@ int main(void) {
         (void)e2;
     }
     {
+        // String comparison.
         so_String s1 = so_strlit("hello"), s2 = so_strlit("world"), s3 = so_strlit("hello");
         bool e1 = ((so_string_lt(s1, s2)) || (so_string_gt(s1, s3))) && ((so_string_eq(s1, s3)) || (so_string_ne(s2, s3)));
         (void)e1;

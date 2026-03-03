@@ -26,7 +26,9 @@ func offset(p Point, dx int, dy int) Point {
 const MaxCoord int = 1000
 
 func main() {
+	// Create a point.
 	p := NewPoint(1, 2)
+	// Scale and offset.
 	p.Scale(MaxCoord)
 	p = offset(p, 1, 1)
 	_ = p

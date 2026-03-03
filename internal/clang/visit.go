@@ -1,7 +1,6 @@
 package clang
 
 import (
-	"cmp"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -147,14 +146,14 @@ func (g *Generator) emitGenDecl(decl *ast.GenDecl) {
 		return
 	case token.CONST:
 		if g.state.indent == 0 {
-			emitDocComment(g.state.writer, decl.Doc)
+			g.emitComments(g.state.writer, decl)
 		}
 		for _, spec := range decl.Specs {
 			g.emitConstSpec(spec.(*ast.ValueSpec))
 		}
 	case token.VAR:
 		if g.state.indent == 0 {
-			emitDocComment(g.state.writer, decl.Doc)
+			g.emitComments(g.state.writer, decl)
 		}
 		for _, spec := range decl.Specs {
 			vs := spec.(*ast.ValueSpec)
@@ -170,7 +169,14 @@ func (g *Generator) emitGenDecl(decl *ast.GenDecl) {
 		for _, spec := range decl.Specs {
 			ts := spec.(*ast.TypeSpec)
 			if !ast.IsExported(ts.Name.Name) {
-				g.emitTypeSpec(g.state.writer, ts, cmp.Or(decl.Doc, ts.Doc))
+				// The CommentMap might attach the doc comment to either decl
+				// or type spec, depending on whether it's a standalone or
+				// grouped declaration, so check both.
+				hasDocs := g.emitComments(g.state.writer, decl, ts)
+				if !hasDocs && isBlockTypeSpec(ts) {
+					fmt.Fprintln(g.state.writer)
+				}
+				g.emitTypeSpec(g.state.writer, ts)
 			}
 		}
 	default:
@@ -285,12 +291,7 @@ func (g *Generator) emitVarSpec(spec *ast.ValueSpec) {
 }
 
 // emitTypeSpec dispatches type declaration emission based on the spec type.
-func (g *Generator) emitTypeSpec(w io.Writer, spec *ast.TypeSpec, doc *ast.CommentGroup) {
-	hasDocs := emitDocComment(w, doc)
-	if !hasDocs && isBlockTypeSpec(spec) {
-		fmt.Fprintln(w)
-	}
-
+func (g *Generator) emitTypeSpec(w io.Writer, spec *ast.TypeSpec) {
 	switch spec.Type.(type) {
 	case *ast.FuncType:
 		g.emitFuncTypeSpec(w, spec)
@@ -403,26 +404,24 @@ func (g *Generator) emitReturnStmt(stmt *ast.ReturnStmt) {
 	fmt.Fprintf(w, ";\n")
 }
 
-// emitDocComment writes a Go doc comment group as C comments, filtering out directives.
-func emitDocComment(w io.Writer, doc *ast.CommentGroup) bool {
-	if doc == nil {
-		return false
-	}
-
-	// Collect non-directive comment lines.
+// emitComments looks up comments for the given nodes from the CommentMap,
+// filters out directives, and emits them. Returns true if any were emitted.
+func (g *Generator) emitComments(w io.Writer, nodes ...ast.Node) bool {
 	var lines []string
-	for _, c := range doc.List {
-		text := strings.TrimSpace(c.Text)
-		if strings.HasPrefix(text, "//so:") || strings.HasPrefix(text, "// #include") {
-			continue
+	for _, node := range nodes {
+		for _, cg := range g.comments[node] {
+			for _, c := range cg.List {
+				text := strings.TrimSpace(c.Text)
+				if strings.HasPrefix(text, "//so:") || strings.HasPrefix(text, "// #include") {
+					continue
+				}
+				lines = append(lines, text)
+			}
 		}
-		lines = append(lines, text)
 	}
 	if len(lines) == 0 {
 		return false
 	}
-
-	// Write collected comments.
 	fmt.Fprintln(w)
 	for _, line := range lines {
 		fmt.Fprintln(w, line)
@@ -433,10 +432,21 @@ func emitDocComment(w io.Writer, doc *ast.CommentGroup) bool {
 // emitBlock emits the statements within a block, adjusting indentation.
 func (g *Generator) emitBlock(block *ast.BlockStmt) {
 	g.state.indent++
-	for _, stmt := range block.List {
+	g.walkStmts(block.List)
+	g.state.indent--
+}
+
+// walkStmts walks statements, emitting any associated comments before each.
+func (g *Generator) walkStmts(stmts []ast.Stmt) {
+	w := g.state.writer
+	for _, stmt := range stmts {
+		for _, cg := range g.comments[stmt] {
+			for _, c := range cg.List {
+				fmt.Fprintf(w, "%s%s\n", g.indent(), strings.TrimSpace(c.Text))
+			}
+		}
 		ast.Walk(g, stmt)
 	}
-	g.state.indent--
 }
 
 // isBlockTypeSpec returns true for type specs that emit multi-line blocks

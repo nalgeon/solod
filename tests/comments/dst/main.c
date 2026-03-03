@@ -26,7 +26,9 @@ static main_Point offset(main_Point p, so_int dx, so_int dy) {
 const so_int main_MaxCoord = 1000;
 
 int main(void) {
+    // Create a point.
     main_Point p = main_NewPoint(1, 2);
+    // Scale and offset.
     main_Point_Scale(&p, main_MaxCoord);
     p = offset(p, 1, 1);
     (void)p;

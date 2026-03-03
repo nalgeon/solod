@@ -11,6 +11,7 @@ typedef struct person {
 
 int main(void) {
     {
+        // Definition with var and explicit type.
         so_int vInt = 42;
         (void)vInt;
         double vFloat = 3.14;
@@ -36,6 +37,7 @@ int main(void) {
         (void)vNil;
     }
     {
+        // Definition with var and type inference.
         so_int vInt = 42;
         (void)vInt;
         double vFloat = 3.14;
@@ -61,6 +63,7 @@ int main(void) {
         (void)vNil;
     }
     {
+        // Definition with short variable declaration.
         so_int vInt = 42;
         (void)vInt;
         double vFloat = 3.14;
@@ -86,6 +89,7 @@ int main(void) {
         (void)vNil;
     }
     {
+        // Zero values.
         so_int vInt = 0;
         (void)vInt;
         double vFloat = 0;
@@ -108,6 +112,7 @@ int main(void) {
         (void)vNil;
     }
     {
+        // Multiple typed variable declaration.
         so_int a = 11, b = 22, c = 33;
         (void)a;
         (void)b;
@@ -126,6 +131,7 @@ int main(void) {
         (void)p2;
     }
     {
+        // Multiple untyped variable declaration.
         so_int vInt = 42;
         double vFloat = 3.14;
         bool vBool = true;
@@ -143,6 +149,7 @@ int main(void) {
         (void)vStruct;
     }
     {
+        // Multiple variable declaration with short variable declaration.
         so_int vInt = 42;
         double vFloat = 3.14;
         bool vBool = true;
@@ -160,6 +167,7 @@ int main(void) {
         (void)vStruct;
     }
     {
+        // Discarding values with blank identifier.
         so_int v1 = 11;
         so_int v2 = 22;
         so_int v3 = 51;
@@ -173,6 +181,7 @@ int main(void) {
         (void)v4;
     }
     {
+        // Partial redeclaration with short variable declaration.
         so_int a = 11, x = 100;
         so_int b = 22;
         x = 200;

@@ -10,6 +10,7 @@ import (
 
 // emitImports emits #include directives for imports.
 func (g *Generator) emitImports(w io.Writer) {
+	var specs []*ast.ImportSpec
 	for _, file := range g.pkg.Syntax {
 		for _, decl := range file.Decls {
 			gd, ok := decl.(*ast.GenDecl)
@@ -17,11 +18,16 @@ func (g *Generator) emitImports(w io.Writer) {
 				continue
 			}
 			for _, spec := range gd.Specs {
-				g.emitImportSpec(w, spec.(*ast.ImportSpec))
+				specs = append(specs, spec.(*ast.ImportSpec))
 			}
 		}
 	}
-	fmt.Fprintln(w)
+	if len(specs) == 0 {
+		return
+	}
+	for _, spec := range specs {
+		g.emitImportSpec(w, spec)
+	}
 }
 
 // emitImportSpec emits a #include directive for an import.
@@ -56,11 +62,18 @@ func (g *Generator) emitHeaderDecls(w io.Writer) {
 		typeSyms = append(typeSyms, sym)
 	}
 	if len(typeSyms) > 0 {
+		fmt.Fprintln(w)
 		fmt.Fprintln(w, "// -- Types --")
 		for _, sym := range typeSyms {
-			g.emitTypeSpec(w, sym.typeSpec, sym.doc)
+			// The CommentMap might attach the doc comment to either decl
+			// or type spec, depending on whether it's a standalone or
+			// grouped declaration, so check both.
+			hasDocs := g.emitComments(w, sym.genDecl, sym.typeSpec)
+			if !hasDocs && isBlockTypeSpec(sym.typeSpec) {
+				fmt.Fprintln(w)
+			}
+			g.emitTypeSpec(w, sym.typeSpec)
 		}
-		fmt.Fprintln(w)
 	}
 
 	// Phase 2: const/var declarations from the AST.
@@ -76,11 +89,11 @@ func (g *Generator) emitHeaderDecls(w io.Writer) {
 		}
 	}
 	if len(genDecls) > 0 {
+		fmt.Fprintln(w)
 		fmt.Fprintln(w, "// -- Variables and constants --")
 		for _, decl := range genDecls {
 			g.emitHeaderGenDecl(w, decl)
 		}
-		fmt.Fprintln(w)
 	}
 
 	// Phase 3: exported function/method prototypes from collected symbols.
@@ -92,13 +105,13 @@ func (g *Generator) emitHeaderDecls(w io.Writer) {
 		funcSyms = append(funcSyms, sym)
 	}
 	if len(funcSyms) > 0 {
+		fmt.Fprintln(w)
 		fmt.Fprintln(w, "// -- Functions and methods --")
 		for _, sym := range funcSyms {
-			emitDocComment(w, sym.doc)
+			g.emitComments(w, sym.funcDecl)
 			fn := newFuncDecl(g, sym.funcDecl)
 			fmt.Fprintf(w, "%s %s(%s);\n", fn.returnType(), fn.name(), fn.params())
 		}
-		fmt.Fprintln(w)
 	}
 }
 
@@ -127,7 +140,7 @@ func (g *Generator) emitHeaderGenDecl(w io.Writer, decl *ast.GenDecl) {
 			if !emitted {
 				// Emit the doc comment for the first
 				// exported const/var in this declaration.
-				emitDocComment(w, decl.Doc)
+				g.emitComments(w, decl)
 				emitted = true
 			}
 			typ := g.types.Defs[name].Type()

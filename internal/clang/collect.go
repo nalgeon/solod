@@ -1,7 +1,6 @@
 package clang
 
 import (
-	"cmp"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -21,7 +20,7 @@ const (
 type symbol struct {
 	kind     symbolKind
 	exported bool
-	doc      *ast.CommentGroup
+	genDecl  *ast.GenDecl // parent GenDecl (for type symbols, enables comment lookup)
 	typeSpec *ast.TypeSpec
 	funcDecl *ast.FuncDecl
 }
@@ -48,7 +47,7 @@ func (g *Generator) collectSymbols() {
 					g.symbols = append(g.symbols, symbol{
 						kind:     symbolType,
 						exported: ast.IsExported(ts.Name.Name),
-						doc:      cmp.Or(d.Doc, ts.Doc),
+						genDecl:  d,
 						typeSpec: ts,
 					})
 				}
@@ -70,7 +69,6 @@ func (g *Generator) collectSymbols() {
 				g.symbols = append(g.symbols, symbol{
 					kind:     kind,
 					exported: exported,
-					doc:      d.Doc,
 					funcDecl: d,
 				})
 			}
@@ -132,11 +130,11 @@ func (g *Generator) emitForwardDecls(w io.Writer) {
 		specs = append(specs, sym.typeSpec)
 	}
 	if len(specs) > 0 {
+		fmt.Fprintln(w)
 		fmt.Fprintln(w, "// -- Forward declarations (types) --")
 		for _, spec := range specs {
 			g.emitForwardTypeDecl(w, spec)
 		}
-		fmt.Fprintln(w)
 	}
 
 	// Second pass: unexported functions/methods.
@@ -148,12 +146,12 @@ func (g *Generator) emitForwardDecls(w io.Writer) {
 		funcDecls = append(funcDecls, sym.funcDecl)
 	}
 	if len(funcDecls) > 0 {
+		fmt.Fprintln(w)
 		fmt.Fprintln(w, "// -- Forward declarations (functions and methods) --")
 		for _, decl := range funcDecls {
 			fn := newFuncDecl(g, decl)
 			fmt.Fprintf(w, "%s%s %s(%s);\n", fn.spec, fn.returnType(), fn.name(), fn.params())
 		}
-		fmt.Fprintln(w)
 	}
 }
 

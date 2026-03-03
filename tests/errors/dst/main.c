@@ -15,6 +15,7 @@ static so_Error makeTea(so_int arg) {
 
 int main(void) {
     {
+        // Nil and non-nil errors.
         so_Error err = makeTea(7);
         if (err != NULL) {
             so_panic("err != nil");
@@ -28,6 +29,7 @@ int main(void) {
         }
     }
     {
+        // Variable of type error.
         so_Error err = NULL;
         if (err != NULL) {
             so_panic("err != nil");

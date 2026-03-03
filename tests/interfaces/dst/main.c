@@ -64,19 +64,23 @@ static main_Rect* lineAsRect(main_Line l) {
 int main(void) {
     main_Rect r = (main_Rect){.width = 10, .height = 5};
     {
+        // Shape interface is implemented by Rect value.
         main_Shape s = (main_Shape){.self = &r, .Area = main_Rect_Area, .Perim = main_Rect_Perim};
         main_Shape s2 = (main_Shape){.self = &r, .Area = main_Rect_Area, .Perim = main_Rect_Perim};
         (void)s2;
         main_Shape s3 = (main_Shape){.self = &r, .Area = main_Rect_Area, .Perim = main_Rect_Perim};
         (void)s3;
         calcShape(s);
+        // also works
         calcShape((main_Shape){.self = &r, .Area = main_Rect_Area, .Perim = main_Rect_Perim});
+        // also works
         calcShape((main_Shape){.self = &r, .Area = main_Rect_Area, .Perim = main_Rect_Perim});
         (void)shapeIsRect(s);
         main_Rect rval = shapeAsRect(s);
         (void)rval;
     }
     {
+        // Line interface is implemented by *Rect pointer.
         main_Line l = (main_Line){.self = &r, .Length = main_Rect_Length};
         main_Line l2 = (main_Line){.self = &r, .Length = main_Rect_Length};
         (void)l2;

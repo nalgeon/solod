@@ -4,10 +4,12 @@
 
 int main(void) {
     so_String str = so_strlit("Hi 世界!");
+    // Loop over bytes.
     for (so_int i = 0; i < so_len(str); i++) {
         uint8_t chr = so_index(uint8_t, str, i);
         so_println("%s %lld %s %u", "i =", i, "chr =", chr);
     }
+    // Loop over runes.
     for (so_int i = 0; i < so_len(str);) {
         int _iw = 0;
         so_rune r = so_utf8_decode(str, i, &_iw);
@@ -27,6 +29,7 @@ int main(void) {
         _ += __w;
     }
     {
+        // Compare strings.
         so_String s1 = so_strlit("hello");
         so_String s2 = so_strlit("world");
         if (so_string_eq(s1, s2) || so_string_eq(s1, so_strlit("hello"))) {
@@ -34,6 +37,7 @@ int main(void) {
         }
     }
     {
+        // String conversion.
         so_String s = so_strlit("1世3");
         so_Slice bs = so_string_bytes(s);
         if (so_index(uint8_t, bs, 0) != '1') {

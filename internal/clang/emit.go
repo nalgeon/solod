@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/types"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,6 +33,7 @@ func Emit(opts EmitOptions) error {
 	}
 	g.collectExterns()
 	g.collectSymbols()
+	g.collectComments()
 	if err = g.emitHeader(opts.OutDir); err != nil {
 		return err
 	}
@@ -61,6 +63,7 @@ type Generator struct {
 	includes []string        // #include directives from comments
 	symbols  []symbol        // pre-collected top-level declarations
 	embeds   Embeds          // embedded C files from //so:embed
+	comments ast.CommentMap  // all comments across all files
 	panicked bool            // true after first panic caught in Visit
 }
 
@@ -106,11 +109,11 @@ func (g *Generator) emitImpl(dir string) error {
 	for _, inc := range g.includes {
 		fmt.Fprintf(cFile, "%s\n", inc)
 	}
-	fmt.Fprintln(cFile)
 
 	g.emitEmbeds(cFile, g.embeds.impl)
 	g.emitForwardDecls(cFile)
 
+	fmt.Fprintln(cFile)
 	fmt.Fprintln(cFile, "// -- Implementation --")
 	for _, file := range g.pkg.Syntax {
 		ast.Walk(g, file)
@@ -123,11 +126,20 @@ func (g *Generator) emitEmbeds(w io.Writer, files []embedFile) {
 	if len(files) == 0 {
 		return
 	}
+	fmt.Fprintln(w)
 	fmt.Fprintln(w, "// -- Embeds --")
 	for _, ef := range files {
 		fmt.Fprintf(w, "\n%s\n", strings.TrimRight(ef.content, "\n"))
 	}
-	fmt.Fprintln(w)
+}
+
+// collectComments builds a merged CommentMap from all source files.
+func (g *Generator) collectComments() {
+	g.comments = ast.CommentMap{}
+	for _, file := range g.pkg.Syntax {
+		fileComments := ast.NewCommentMap(g.pkg.Fset, file, file.Comments)
+		maps.Copy(g.comments, fileComments)
+	}
 }
 
 // indent returns the current indentation string based on the indent level.
