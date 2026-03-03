@@ -139,6 +139,32 @@ func (g *Generator) emitAnyValue(node ast.Node, expr ast.Expr) {
 	fmt.Fprintf(g.state.writer, "}")
 }
 
+// emitExprAsType emits an expression, wrapping it as an interface literal if the
+// target type is an interface and the expression is a concrete type.
+func (g *Generator) emitExprAsType(node ast.Node, expr ast.Expr, targetType types.Type) {
+	if iface, ok := targetType.Underlying().(*types.Interface); ok && iface.Empty() {
+		g.emitAnyValue(node, expr)
+	} else if isInterfaceType(targetType) && isConcreteNamedType(g.types.TypeOf(expr)) {
+		g.emitInterfaceLit(targetType, expr)
+	} else {
+		g.emitExpr(expr)
+	}
+}
+
+// isConcreteNamedType reports whether t is a named type (or pointer to named type)
+// that is not an interface. This is used to decide if a value can be wrapped
+// as an interface literal (excludes nil, basic types, etc.).
+func isConcreteNamedType(t types.Type) bool {
+	if isInterfaceType(t) {
+		return false
+	}
+	if ptr, ok := t.(*types.Pointer); ok {
+		t = ptr.Elem()
+	}
+	_, ok := t.(*types.Named)
+	return ok
+}
+
 // isInterfaceType reports whether t is an interface type.
 func isInterfaceType(t types.Type) bool {
 	_, ok := t.Underlying().(*types.Interface)

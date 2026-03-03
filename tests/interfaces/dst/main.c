@@ -5,6 +5,7 @@ static so_int calcShape(main_Shape s);
 static so_int calcLine(main_Line l);
 static bool shapeIsRect(main_Shape s);
 static main_Rect shapeAsRect(main_Shape s);
+static main_Shape rectAsShape(main_Rect* r);
 static bool lineIsRect(main_Line l);
 static main_Rect* lineAsRect(main_Line l);
 
@@ -45,6 +46,10 @@ static main_Rect shapeAsRect(main_Shape s) {
     }
     main_Rect r = *((main_Rect*)s.self);
     return r;
+}
+
+static main_Shape rectAsShape(main_Rect* r) {
+    return (main_Shape){.self = r, .Area = main_Rect_Area, .Perim = main_Rect_Perim};
 }
 
 static bool lineIsRect(main_Line l) {
@@ -88,5 +93,16 @@ int main(void) {
         (void)lineIsRect(l);
         main_Rect* rptr = lineAsRect(l);
         (void)rptr;
+    }
+    {
+        // Wrap Rect value into Shape via function.
+        main_Shape s = rectAsShape(&r);
+        (void)s;
+    }
+    // Converting between interfaces (Shape to Line) is not supported.
+    // s := Shape(r)
+    // _, ok := s.(Line)
+    // l := s.(Line)
+    {
     }
 }

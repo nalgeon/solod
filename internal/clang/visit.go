@@ -273,14 +273,7 @@ func (g *Generator) emitVarSpec(spec *ast.ValueSpec) {
 		if len(spec.Values) > i {
 			// Has explicit initializer.
 			fmt.Fprintf(w, "%s%s%s %s = ", g.indent(), specifier, cType, cName)
-			if iface, ok := typ.Underlying().(*types.Interface); ok && iface.Empty() {
-				g.emitAnyValue(spec, spec.Values[i])
-			} else if isInterfaceType(typ) && !isInterfaceType(g.types.TypeOf(spec.Values[i])) {
-				// Value needs to be wrapped as an interface.
-				g.emitInterfaceLit(typ, spec.Values[i])
-			} else {
-				g.emitExpr(spec.Values[i])
-			}
+			g.emitExprAsType(spec, spec.Values[i], typ)
 			fmt.Fprintf(w, ";\n")
 		} else {
 			// No initializer, emit zero value.
@@ -400,7 +393,8 @@ func (g *Generator) emitReturnStmt(stmt *ast.ReturnStmt) {
 		return
 	}
 	fmt.Fprintf(w, "%sreturn ", g.indent())
-	g.emitExpr(stmt.Results[0])
+	retType := g.state.funcSig.Results().At(0).Type()
+	g.emitExprAsType(stmt, stmt.Results[0], retType)
 	fmt.Fprintf(w, ";\n")
 }
 

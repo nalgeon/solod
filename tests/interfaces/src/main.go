@@ -47,6 +47,10 @@ func shapeAsRect(s Shape) Rect {
 	return r
 }
 
+func rectAsShape(r *Rect) Shape {
+	return r
+}
+
 func lineIsRect(l Line) bool {
 	_, ok := l.(*Rect)
 	return ok
@@ -90,5 +94,16 @@ func main() {
 		_ = lineIsRect(l)
 		rptr := lineAsRect(l)
 		_ = rptr
+	}
+	{
+		// Wrap Rect value into Shape via function.
+		s := rectAsShape(&r)
+		_ = s
+	}
+	{
+		// Converting between interfaces (Shape to Line) is not supported.
+		// s := Shape(r)
+		// _, ok := s.(Line)
+		// l := s.(Line)
 	}
 }

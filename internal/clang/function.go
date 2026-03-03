@@ -194,18 +194,11 @@ func (g *Generator) emitFuncCall(call *ast.CallExpr) {
 			if i > 0 {
 				fmt.Fprintf(w, ", ")
 			}
-			if sig != nil && i < sig.Params().Len() &&
-				isInterfaceType(sig.Params().At(i).Type()) &&
-				!isInterfaceType(g.types.TypeOf(arg)) {
-				// Argument needs to be wrapped as an interface.
-				paramType := sig.Params().At(i).Type()
-				if iface, ok := paramType.Underlying().(*types.Interface); ok && iface.Empty() {
-					g.emitAnyValue(call, arg)
-				} else {
-					g.emitInterfaceLit(paramType, arg)
-				}
+			if sig != nil && i < sig.Params().Len() {
+				// Emit arg, wrapping as interface if needed based on parameter type.
+				g.emitExprAsType(call, arg, sig.Params().At(i).Type())
 			} else {
-				// Regular argument.
+				// No signature available (e.g. func literal), emit arg as-is.
 				g.emitExpr(arg)
 			}
 		}
