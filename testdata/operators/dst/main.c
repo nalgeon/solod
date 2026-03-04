@@ -40,6 +40,8 @@ int main(void) {
         so_int b3 = ((b1 | b2) & (b1 & b2)) | (b1 ^ b2);
         b3 = b3 << 2;
         b3 = b3 >> 1;
+        b3 <<= 2;
+        b3 >>= 1;
         b3 = b3 & ~b1;
         (void)b3;
         so_int b4 = 0b1010;

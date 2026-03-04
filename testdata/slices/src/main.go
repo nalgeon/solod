@@ -65,4 +65,32 @@ func main() {
 		}
 	}
 
+	{
+		// Number operations on slice elements.
+		s := []int{1, 2, 3}
+		s[1] += 10
+		s[1] -= 10
+		s[1] *= 10
+		s[1] /= 2
+		s[1] %= 6
+		s[1]++
+		s[1]--
+		if s[1] != 4 {
+			panic("want 4")
+		}
+	}
+
+	{
+		// Bitwise operations on slice elements.
+		s := []int{1, 2, 3}
+		s[1] <<= 2
+		s[1] >>= 1
+		s[1] |= 0b1100
+		s[1] &= 0b1111
+		s[1] ^= 0b0101
+		// s[1] &^= 0b1010  // not supported
+		if s[1] != 9 {
+			panic("want 9")
+		}
+	}
 }

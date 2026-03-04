@@ -64,4 +64,31 @@ int main(void) {
             so_panic("want 24");
         }
     }
+    {
+        // Number operations on slice elements.
+        so_Slice s = (so_Slice){(so_int[3]){1, 2, 3}, 3, 3};
+        so_index(so_int, s, 1) += 10;
+        so_index(so_int, s, 1) -= 10;
+        so_index(so_int, s, 1) *= 10;
+        so_index(so_int, s, 1) /= 2;
+        so_index(so_int, s, 1) %= 6;
+        so_index(so_int, s, 1)++;
+        so_index(so_int, s, 1)--;
+        if (so_index(so_int, s, 1) != 4) {
+            so_panic("want 4");
+        }
+    }
+    {
+        // Bitwise operations on slice elements.
+        so_Slice s = (so_Slice){(so_int[3]){1, 2, 3}, 3, 3};
+        so_index(so_int, s, 1) <<= 2;
+        so_index(so_int, s, 1) >>= 1;
+        so_index(so_int, s, 1) |= 0b1100;
+        so_index(so_int, s, 1) &= 0b1111;
+        so_index(so_int, s, 1) ^= 0b0101;
+        // s[1] &^= 0b1010  // not supported
+        if (so_index(so_int, s, 1) != 9) {
+            so_panic("want 9");
+        }
+    }
 }
