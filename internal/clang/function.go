@@ -147,6 +147,9 @@ func (g *Generator) emitFuncCall(call *ast.CallExpr) {
 			case "append":
 				g.emitAppendCall(call)
 				return
+			case "clear", "close", "complex", "delete", "imag", "real", "recover":
+				g.fail(call, "%s() is not supported", bi.Name())
+				return
 			case "copy":
 				g.emitCopyCall(call)
 				return
