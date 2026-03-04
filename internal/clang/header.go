@@ -33,8 +33,10 @@ func (g *Generator) emitImports(w io.Writer) {
 // emitImportSpec emits a #include directive for an import.
 func (g *Generator) emitImportSpec(w io.Writer, spec *ast.ImportSpec) {
 	path := strings.Trim(spec.Path.Value, `"`)
-	if path == "embed" {
-		// It's only a marker import for embedding files, not an actual dependency.
+	if path == "embed" || path == "unsafe" {
+		// embed is only a marker import for embedding files,
+		// and unsafe is implemented in builtin.h,
+		// so neither requires a #include directive.
 		return
 	}
 	// Strip the imported package's own module prefix.

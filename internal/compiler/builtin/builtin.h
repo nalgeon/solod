@@ -1,6 +1,7 @@
 #pragma once
 
 #include <alloca.h>
+#include <stdalign.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -197,3 +198,12 @@ int so_print(const char* format, ...);
 // println writes the formatted string to stdout with a newline.
 // Returns the number of bytes written.
 int so_println(const char* format, ...);
+
+// --- Unsafe ---
+
+#define unsafe_Alignof(x) alignof(so_typeof(x))
+#define unsafe_Sizeof(x) sizeof(x)
+#define unsafe_String(ptr, len) ((so_String){(const char*)(ptr), (size_t)(len)})
+#define unsafe_StringData(s) ((uint8_t*)(s).ptr)
+#define unsafe_Slice(ptr, len) ((so_Slice){(void*)(ptr), (size_t)(len), (size_t)(len)})
+#define unsafe_SliceData(s) ((void*)(s).ptr)
