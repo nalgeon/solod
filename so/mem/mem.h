@@ -1,10 +1,3 @@
-#pragma once
-
-#include <stdalign.h>
-#include <stddef.h>
-#include <stdint.h>
-#include "so/builtin/builtin.h"
-
 // Alloc allocates memory for a single value of type T using allocator a.
 // Returns a pointer to the allocated memory or an error if allocation fails.
 #define mem_Alloc(T, a) \

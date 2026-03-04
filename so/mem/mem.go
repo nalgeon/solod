@@ -7,51 +7,6 @@ import (
 )
 
 var ErrOutOfMemory = errors.New("out of memory")
-var System Allocator = SystemAllocator{}
-
-// Allocator defines the interface for memory allocators.
-type Allocator interface {
-	// Alloc allocates a block of memory of the given size and alignment.
-	Alloc(size int, align int) (any, error)
-	// Realloc resizes a previously allocated block of memory.
-	Realloc(ptr any, oldSize int, newSize int, align int) (any, error)
-	// Dealloc frees a previously allocated block of memory.
-	Dealloc(ptr any, size int, align int)
-}
-
-// SystemAllocator uses the system's malloc, realloc, and free functions.
-type SystemAllocator struct{}
-
-func (SystemAllocator) Alloc(size int, align int) (any, error) {
-	_ = align
-	if size <= 0 {
-		panic("mem: invalid allocation size")
-	}
-	ptr := calloc(1, uintptr(size))
-	if ptr == nil {
-		return nil, ErrOutOfMemory
-	}
-	return ptr, nil
-}
-
-func (SystemAllocator) Realloc(ptr any, oldSize int, newSize int, align int) (any, error) {
-	_ = oldSize
-	_ = align
-	if newSize <= 0 {
-		panic("mem: invalid allocation size")
-	}
-	newPtr := realloc(ptr, uintptr(newSize))
-	if newPtr == nil {
-		return nil, ErrOutOfMemory
-	}
-	return newPtr, nil
-}
-
-func (SystemAllocator) Dealloc(ptr any, size int, align int) {
-	_ = size
-	_ = align
-	free(ptr)
-}
 
 // Alloc allocates memory for a single value of type T using allocator a.
 // Returns a pointer to the allocated memory or an error if allocation fails.
@@ -107,13 +62,24 @@ func FreeSlice[T any](slice []T) {}
 var Header string
 
 //so:extern
-func malloc(size uintptr) any
+var maxAllocSize = 1 << 10 // 1 KiB, for testing purposes
 
 //so:extern
-func calloc(count uintptr, size uintptr) any
+func calloc(count uintptr, size uintptr) any {
+	if count*size > uintptr(maxAllocSize) {
+		return nil
+	}
+	return make([]byte, count*size)
+}
 
 //so:extern
-func realloc(ptr any, newSize uintptr) any
+func realloc(ptr any, newSize uintptr) any {
+	_ = ptr
+	if newSize > uintptr(maxAllocSize) {
+		return nil
+	}
+	return make([]byte, newSize)
+}
 
 //so:extern
-func free(ptr any)
+func free(ptr any) {}
