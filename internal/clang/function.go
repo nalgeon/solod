@@ -153,6 +153,9 @@ func (g *Generator) emitFuncCall(call *ast.CallExpr) {
 			case "make":
 				g.emitMakeCall(call)
 				return
+			case "new":
+				g.emitNewCall(call)
+				return
 			case "panic":
 				arg, ok := call.Args[0].(*ast.BasicLit)
 				if !ok {
