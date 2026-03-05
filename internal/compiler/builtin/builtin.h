@@ -236,6 +236,6 @@ int so_println(const char* format, ...);
 #define unsafe_Alignof(x) alignof(so_typeof(x))
 #define unsafe_Sizeof(x) sizeof(x)
 #define unsafe_String(ptr, len) ((so_String){(const char*)(ptr), (size_t)(len)})
-#define unsafe_StringData(s) ((uint8_t*)(s).ptr)
+#define unsafe_StringData(s) ((char*)(s).ptr)
 #define unsafe_Slice(ptr, len) ((so_Slice){(void*)(ptr), (size_t)(len), (size_t)(len)})
 #define unsafe_SliceData(s) ((void*)(s).ptr)
