@@ -182,3 +182,60 @@ func Feof(stream *File) bool { _ = stream; return false }
 //
 //so:extern
 func Ferror(stream *File) bool { _ = stream; return false }
+
+// Printf writes args to the standard output stream according to the format string.
+//
+// On success, returns the number of characters written (not counting the
+// terminating null character). On failure, returns a negative value.
+//
+//so:extern
+func Printf(format string, args ...any) int { _ = format; return 0 }
+
+// Fprintf writes args to the output stream according to the format string.
+//
+// On success, returns the number of characters written (not counting the
+// terminating null character). On failure, returns a negative value.
+//
+//so:extern
+func Fprintf(stream *File, format string, args ...any) int {
+	_, _ = stream, format
+	return 0
+}
+
+// Snprintf writes args to the buf according to the format string,
+// but writes at most size bytes (including the terminating null character).
+// If size is zero, nothing is written, and buf may be a null pointer.
+//
+// On success, returns the number of characters that would have been written
+// if size were sufficiently large, not counting the terminating null character.
+// On failure, returns a negative value.
+//
+//so:extern
+func Snprintf(buf []byte, size int, format string, args ...any) int {
+	_, _, _ = buf, size, format
+	return 0
+}
+
+// Scanf reads args from the standard input stream according to the format string.
+//
+// On success, returns the number of receiving arguments successfully assigned.
+// On failure, returns EOF.
+//
+//so:extern
+func Scanf(format string, args ...any) int { _ = format; return 0 }
+
+// Fscanf reads args from the input stream according to the format string.
+//
+// On success, returns the number of receiving arguments successfully assigned.
+// On failure, returns EOF.
+//
+//so:extern
+func Fscanf(stream *File, format string, args ...any) int { _, _ = stream, format; return 0 }
+
+// Sscanf reads args from the string s according to the format string.
+//
+// On success, returns the number of receiving arguments successfully assigned.
+// On failure, returns EOF.
+//
+//so:extern
+func Sscanf(s string, format string, args ...any) int { _, _ = s, format; return 0 }

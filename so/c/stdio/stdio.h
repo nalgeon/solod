@@ -28,3 +28,11 @@
 
 #define stdio_Feof(stream) feof(stream)
 #define stdio_Ferror(stream) ferror(stream)
+
+#define stdio_Printf(format, ...) printf(format, ##__VA_ARGS__)
+#define stdio_Fprintf(stream, format, ...) fprintf(stream, format, ##__VA_ARGS__)
+#define stdio_Snprintf(buf, size, format, ...) snprintf(buf, size, format, ##__VA_ARGS__)
+
+#define stdio_Scanf(format, ...) scanf(format, ##__VA_ARGS__)
+#define stdio_Fscanf(stream, format, ...) fscanf(stream, format, ##__VA_ARGS__)
+#define stdio_Sscanf(s, format, ...) sscanf(s, format, ##__VA_ARGS__)

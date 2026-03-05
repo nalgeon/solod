@@ -91,26 +91,39 @@ func (g *Generator) collectExterns() {
 		}
 
 		// Collect extern symbols from declarations.
-		for _, decl := range file.Decls {
-			switch d := decl.(type) {
-			case *ast.GenDecl:
-				if !hasExternDirective(d.Doc) {
-					continue
-				}
-				for _, spec := range d.Specs {
-					switch s := spec.(type) {
-					case *ast.TypeSpec:
-						g.externs[s.Name.Name] = true
-					case *ast.ValueSpec:
-						for _, name := range s.Names {
-							g.externs[name.Name] = true
-						}
+		g.collectFileExterns(file)
+	}
+
+	// Collect externs from imported packages so that isExternCall
+	// can identify cross-package extern calls (e.g. stdio.Printf).
+	for _, imp := range g.pkg.Imports {
+		for _, file := range imp.Syntax {
+			g.collectFileExterns(file)
+		}
+	}
+}
+
+// collectFileExterns collects extern symbols from a single file's declarations.
+func (g *Generator) collectFileExterns(file *ast.File) {
+	for _, decl := range file.Decls {
+		switch d := decl.(type) {
+		case *ast.GenDecl:
+			if !hasExternDirective(d.Doc) {
+				continue
+			}
+			for _, spec := range d.Specs {
+				switch s := spec.(type) {
+				case *ast.TypeSpec:
+					g.externs[s.Name.Name] = true
+				case *ast.ValueSpec:
+					for _, name := range s.Names {
+						g.externs[name.Name] = true
 					}
 				}
-			case *ast.FuncDecl:
-				if d.Body == nil || hasExternDirective(d.Doc) {
-					g.externs[externFuncKey(d)] = true
-				}
+			}
+		case *ast.FuncDecl:
+			if d.Body == nil || hasExternDirective(d.Doc) {
+				g.externs[externFuncKey(d)] = true
 			}
 		}
 	}

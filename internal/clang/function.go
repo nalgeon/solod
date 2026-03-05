@@ -299,11 +299,18 @@ func (g *Generator) emitCArg(arg ast.Expr) {
 
 // isExternCall reports whether a call expression targets an extern C function.
 func (g *Generator) isExternCall(call *ast.CallExpr) bool {
-	ident, ok := call.Fun.(*ast.Ident)
-	if !ok {
-		return false
+	switch fun := call.Fun.(type) {
+	case *ast.Ident:
+		return g.externs[fun.Name]
+	case *ast.SelectorExpr:
+		// Package-qualified call (e.g. stdio.Printf).
+		if ident, ok := fun.X.(*ast.Ident); ok {
+			if _, ok := g.types.Uses[ident].(*types.PkgName); ok {
+				return g.externs[fun.Sel.Name]
+			}
+		}
 	}
-	return g.externs[ident.Name]
+	return false
 }
 
 // recvTypeName returns the Go type name from a method receiver field.

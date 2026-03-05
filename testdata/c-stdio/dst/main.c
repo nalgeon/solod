@@ -38,4 +38,16 @@ int main(void) {
         }
         stdio_Fclose(f);
     }
+    {
+        // Formatted output.
+        stdio_Printf("hello %d\n", 42);
+        stdio_Fprintf(stdio_Stdout, "value: %d\n", 100);
+        so_Slice buf = so_make_slice(uint8_t, 64, 64);
+        stdio_Snprintf(buf.ptr, 64, "count: %d", 10);
+    }
+    {
+        // Formatted input.
+        int32_t n = 0;
+        stdio_Sscanf("42", "%d", &n);
+    }
 }

@@ -45,4 +45,17 @@ func main() {
 
 		stdio.Fclose(f)
 	}
+	{
+		// Formatted output.
+		stdio.Printf("hello %d\n", 42)
+		stdio.Fprintf(stdio.Stdout, "value: %d\n", 100)
+
+		buf := make([]byte, 64)
+		stdio.Snprintf(buf, 64, "count: %d", 10)
+	}
+	{
+		// Formatted input.
+		var n int32
+		stdio.Sscanf("42", "%d", &n)
+	}
 }
