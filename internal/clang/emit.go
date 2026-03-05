@@ -27,17 +27,35 @@ func Emit(opts EmitOptions) error {
 	if err = os.MkdirAll(opts.OutDir, 0o755); err != nil {
 		return fmt.Errorf("create output directory %s: %w", opts.OutDir, err)
 	}
+
+	// Initialize the generator with package information.
 	g := newGenerator(opts.Pkg)
 	if g.embeds, err = collectEmbeds(opts.Pkg); err != nil {
-		return err
+		return fmt.Errorf("collect embeds: %w", err)
 	}
 	g.collectExterns()
 	g.collectSymbols()
 	g.collectComments()
-	if err = g.emitHeader(opts.OutDir); err != nil {
-		return err
+
+	// Emit header file.
+	hPath := filepath.Join(opts.OutDir, g.pkg.Name+".h")
+	hFile, err := os.Create(hPath)
+	if err != nil {
+		return fmt.Errorf("create header file %s: %w", hPath, err)
 	}
-	return g.emitImpl(opts.OutDir)
+	defer hFile.Close()
+	g.emitHeader(hFile)
+
+	// Emit implementation file.
+	cPath := filepath.Join(opts.OutDir, g.pkg.Name+".c")
+	cFile, err := os.Create(cPath)
+	if err != nil {
+		return fmt.Errorf("create C file %s: %w", cPath, err)
+	}
+	defer cFile.Close()
+	g.emitImpl(cFile)
+
+	return nil
 }
 
 // State holds the code generation state for the current scope.
@@ -77,55 +95,38 @@ func newGenerator(pkg *packages.Package) *Generator {
 }
 
 // emitHeader creates the .h file with typedefs, includes, and extern declarations.
-func (g *Generator) emitHeader(dir string) error {
-	hName := g.pkg.Name + ".h"
-	hPath := filepath.Join(dir, hName)
-	hFile, err := os.Create(hPath)
-	if err != nil {
-		return fmt.Errorf("create header file %s: %w", hPath, err)
-	}
-	defer hFile.Close()
-	fmt.Fprintf(hFile, "#pragma once\n")
-	fmt.Fprintf(hFile, "#include \"so/builtin/builtin.h\"\n")
-	g.emitImports(hFile)
-	g.emitEmbeds(hFile, g.embeds.header)
-	g.emitHeaderDecls(hFile)
-	return nil
+func (g *Generator) emitHeader(w io.Writer) {
+	fmt.Fprintf(w, "#pragma once\n")
+	fmt.Fprintf(w, "#include \"so/builtin/builtin.h\"\n")
+	g.emitImports(w)
+	g.emitEmbeds(w, g.embeds.header)
+	g.emitHeaderDecls(w)
 }
 
 // emitImpl creates the .c implementation file by walking the AST.
-func (g *Generator) emitImpl(dir string) error {
-	cName := g.pkg.Name + ".c"
-	cPath := filepath.Join(dir, cName)
-	cFile, err := os.Create(cPath)
-	if err != nil {
-		return fmt.Errorf("create C file %s: %w", cPath, err)
-	}
-	defer cFile.Close()
-	g.state.writer = cFile
+func (g *Generator) emitImpl(w io.Writer) {
+	g.state.writer = w
 
-	fmt.Fprintf(cFile, "#include \"%s.h\"\n", g.pkg.Name)
-	// Emit additional #include directives collected from comments.
+	fmt.Fprintf(w, "#include \"%s.h\"\n", g.pkg.Name)
 	for _, inc := range g.includes {
-		fmt.Fprintf(cFile, "#include %s\n", inc)
+		fmt.Fprintf(w, "#include %s\n", inc)
 	}
 
-	g.emitEmbeds(cFile, g.embeds.impl)
-	g.emitForwardDecls(cFile)
+	g.emitEmbeds(w, g.embeds.impl)
+	g.emitForwardDecls(w)
 
 	multiFile := len(g.pkg.Syntax) > 1
 	if !multiFile {
-		fmt.Fprintln(cFile)
-		fmt.Fprintln(cFile, "// -- Implementation --")
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "// -- Implementation --")
 	}
 	for _, file := range g.pkg.Syntax {
 		if multiFile {
 			pos := g.pkg.Fset.Position(file.Pos())
-			fmt.Fprintf(cFile, "\n// -- %s --\n", filepath.Base(pos.Filename))
+			fmt.Fprintf(w, "\n// -- %s --\n", filepath.Base(pos.Filename))
 		}
 		ast.Walk(g, file)
 	}
-	return nil
 }
 
 // emitEmbeds writes the content of embedded files, separated by blank lines.

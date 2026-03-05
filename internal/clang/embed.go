@@ -47,7 +47,7 @@ func collectEmbeds(pkg *packages.Package) (Embeds, error) {
 			}
 			content, err := os.ReadFile(filepath.Join(srcDir, filename))
 			if err != nil {
-				return embeds, fmt.Errorf("read embed file %s: %w", filename, err)
+				return embeds, fmt.Errorf("read file %s: %w", filename, err)
 			}
 
 			// Register the embedded file.
