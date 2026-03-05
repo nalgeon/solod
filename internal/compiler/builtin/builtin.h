@@ -76,7 +76,7 @@ typedef struct {
 
 // make_slice creates a zeroed slice of the given type, length, and capacity.
 // cap must be a compile-time constant.
-#define so_make_slice(type, len, cap) ((so_Slice){(type[cap]){0}, (len), (cap)})
+#define so_make_slice(T, len, cap) ((so_Slice){(T[cap]){}, (len), (cap)})
 
 // slice creates a slice from an array or another slice
 // from index 'from' (inclusive) to index 'to' (exclusive).
