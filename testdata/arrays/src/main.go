@@ -100,4 +100,12 @@ func main() {
 			panic("want a[1] == 42")
 		}
 	}
+	{
+		// Array pointers.
+		a := [3]int{1, 2, 3}
+		p := &a
+		if (*p) != a {
+			panic("want p == a")
+		}
+	}
 }

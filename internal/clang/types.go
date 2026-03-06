@@ -7,22 +7,35 @@ import (
 
 // CType represents a C type with optional array dimensions.
 type CType struct {
-	Base string // e.g. "int", "so_int"
-	Dims string // e.g. "[3]", "[2][3]", ""
+	Base       string // e.g. "int", "so_int"
+	Dims       string // e.g. "[3]", "[2][3]", ""
+	PtrToArray bool   // pointer-to-array: so_int (*name)[3]
 }
 
 // Decl formats a C declaration: "int name[3]".
 func (t CType) Decl(name string) string {
+	if t.PtrToArray {
+		return t.Base + " (*" + name + ")" + t.Dims
+	}
 	return t.Base + " " + name + t.Dims
 }
 
 // IsArray reports whether this is an array type.
 func (t CType) IsArray() bool {
-	return t.Dims != ""
+	return t.Dims != "" && !t.PtrToArray
 }
 
 // mapCType maps a Go type to a CType (base + array dims).
 func (g *Generator) mapCType(node ast.Node, typ types.Type) CType {
+	if ptr, ok := types.Unalias(typ).(*types.Pointer); ok {
+		if _, ok := types.Unalias(ptr.Elem()).(*types.Array); ok {
+			return CType{
+				Base:       g.mapType(node, ptr.Elem()),
+				Dims:       arrayDims(ptr.Elem()),
+				PtrToArray: true,
+			}
+		}
+	}
 	return CType{
 		Base: g.mapType(node, typ),
 		Dims: arrayDims(typ),
@@ -66,7 +79,11 @@ func (g *Generator) mapType(node ast.Node, typ types.Type) string {
 		return g.symbolName(obj.Name())
 
 	case *types.Pointer:
-		return g.mapType(node, t.Elem()) + "*"
+		elem := t.Elem()
+		if _, ok := types.Unalias(elem).(*types.Array); ok {
+			return g.mapType(node, elem) + "(*)" + arrayDims(elem)
+		}
+		return g.mapType(node, elem) + "*"
 
 	case *types.Signature:
 		// Look for a named type with the same

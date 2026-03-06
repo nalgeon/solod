@@ -101,4 +101,12 @@ int main(void) {
             so_panic("want a[1] == 42");
         }
     }
+    {
+        // Array pointers.
+        so_int a[3] = {1, 2, 3};
+        so_int (*p)[3] = &a;
+        if (so_array_ne((*p), a, 3 * sizeof(so_int))) {
+            so_panic("want p == a");
+        }
+    }
 }
