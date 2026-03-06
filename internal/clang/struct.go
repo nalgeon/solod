@@ -20,9 +20,9 @@ func (g *Generator) emitStructTypeSpec(w io.Writer, spec *ast.TypeSpec) {
 			if sig, ok := typ.(*types.Signature); ok {
 				g.emitFuncPtrField(w, spec, name.Name, sig, cName)
 			} else {
-				// Regular struct field.
-				cType := g.mapType(field, typ)
-				fmt.Fprintf(w, "%s%s %s;\n", g.indent(), cType, name.Name)
+				// Regular struct field (arrays get dimension suffix).
+				ct := g.mapCType(field, typ)
+				fmt.Fprintf(w, "%s%s;\n", g.indent(), ct.Decl(name.Name))
 			}
 		}
 	}

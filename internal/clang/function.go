@@ -48,9 +48,9 @@ func (g *Generator) emitFuncProto(w io.Writer, decl *ast.FuncDecl) *types.Signat
 	if decl.Type.Params != nil {
 		for _, field := range decl.Type.Params.List {
 			typ := g.types.TypeOf(field.Type)
-			cType := g.mapType(decl, typ)
+			ct := g.mapCType(decl, typ)
 			for _, n := range field.Names {
-				parts = append(parts, cType+" "+n.Name)
+				parts = append(parts, ct.Decl(n.Name))
 			}
 		}
 	}
@@ -141,6 +141,15 @@ func (g *Generator) emitFuncCall(call *ast.CallExpr) {
 				g.emitPrintCall(call, bi.Name())
 				return
 			}
+
+			// len/cap on arrays emit the compile-time size.
+			if (bi.Name() == "len" || bi.Name() == "cap") && len(call.Args) == 1 {
+				if size := arraySize(g.types.TypeOf(call.Args[0])); size >= 0 {
+					fmt.Fprintf(w, "%d", size)
+					return
+				}
+			}
+
 			// Other builtins are emitted as regular calls
 			// with a so_ prefix (e.g. so_len(slice)).
 			fmt.Fprintf(w, "so_%s", ident.Name)

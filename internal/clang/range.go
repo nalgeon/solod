@@ -18,21 +18,40 @@ func (g *Generator) emitIntRange(stmt *ast.RangeStmt) {
 	fmt.Fprintf(w, "%s}\n", g.indent())
 }
 
-// emitSliceRange emits a range loop over a slice or array.
+// emitArrayRange emits a range loop over a fixed-size array.
+func (g *Generator) emitArrayRange(stmt *ast.RangeStmt) {
+	w := g.state.writer
+	key := stmt.Key.(*ast.Ident)
+	arrType := g.types.TypeOf(stmt.X).Underlying().(*types.Array)
+	elemType := g.mapType(stmt, arrType.Elem())
+	cType := g.mapType(stmt, g.types.Defs[key].Type())
+
+	fmt.Fprintf(w, "%sfor (%s %s = 0; %s < %d; %s++) {\n",
+		g.indent(), cType, key.Name, key.Name, arrType.Len(), key.Name)
+
+	// Emit value variable if present (e.g. `for i, v := range nums`).
+	if stmt.Value != nil {
+		if valIdent, ok := stmt.Value.(*ast.Ident); ok && valIdent.Name != "_" {
+			g.state.indent++
+			fmt.Fprintf(w, "%s%s %s = ", g.indent(), elemType, valIdent.Name)
+			g.emitExpr(stmt.X)
+			fmt.Fprintf(w, "[%s];\n", key.Name)
+			g.state.indent--
+		}
+	}
+
+	g.emitBlock(stmt.Body)
+	fmt.Fprintf(w, "%s}\n", g.indent())
+}
+
+// emitSliceRange emits a range loop over a slice.
 func (g *Generator) emitSliceRange(stmt *ast.RangeStmt) {
 	w := g.state.writer
 	key := stmt.Key.(*ast.Ident)
-
-	// Determine element type.
-	var elemType string
-	switch t := g.types.TypeOf(stmt.X).Underlying().(type) {
-	case *types.Slice:
-		elemType = g.mapType(stmt, t.Elem())
-	case *types.Array:
-		elemType = g.mapType(stmt, t.Elem())
-	}
-
+	sliceType := g.types.TypeOf(stmt.X).Underlying().(*types.Slice)
+	elemType := g.mapType(stmt, sliceType.Elem())
 	cType := g.mapType(stmt, g.types.Defs[key].Type())
+
 	fmt.Fprintf(w, "%sfor (%s %s = 0; %s < so_len(", g.indent(), cType, key.Name, key.Name)
 	g.emitExpr(stmt.X)
 	fmt.Fprintf(w, "); %s++) {\n", key.Name)

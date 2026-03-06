@@ -27,7 +27,7 @@ int main(void) {
         // Complex types.
         main_Name n = so_str("Alice");
         (void)n;
-        main_IntArray arr = (so_Slice){(so_int[3]){1, 2, 3}, 3, 3};
+        main_IntArray arr = {1, 2, 3};
         (void)arr;
         main_IntSlice slice = (so_Slice){(so_int[3]){4, 5, 6}, 3, 3};
         (void)slice;

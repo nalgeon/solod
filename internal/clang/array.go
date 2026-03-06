@@ -6,14 +6,11 @@ import (
 	"go/types"
 )
 
-// emitArrayLit emits a fixed-size array literal as a so_Slice compound literal.
-// Example: [5]int{1, 2, 3, 4, 5} → {(int[5]){1, 2, 3, 4, 5}, 5}
+// emitArrayLit emits a fixed-size array literal as a C initializer list.
+// Example: [5]int{1, 2, 3, 4, 5} → {1, 2, 3, 4, 5}
 func (g *Generator) emitArrayLit(n *ast.CompositeLit) {
 	w := g.state.writer
-	arr := g.types.TypeOf(n).Underlying().(*types.Array)
-	elemType := g.mapType(n, arr.Elem())
-	size := int(arr.Len())
-	fmt.Fprintf(w, "(so_Slice){(%s[%d]){", elemType, size)
+	fmt.Fprintf(w, "{")
 
 	if hasKeyedElements(n) {
 		g.emitSparseArrayValues(n)
@@ -26,7 +23,7 @@ func (g *Generator) emitArrayLit(n *ast.CompositeLit) {
 		}
 	}
 
-	fmt.Fprintf(w, "}, %d, %d}", size, size)
+	fmt.Fprintf(w, "}")
 }
 
 // emitSliceLit emits a slice literal as a so_Slice compound literal.
@@ -65,38 +62,58 @@ func (g *Generator) emitSparseArrayValues(n *ast.CompositeLit) {
 	}
 }
 
-// emitSliceExpr emits a slice expression (e.g. nums[1:4]) as so_slice(T, s, low, high).
+// emitSliceExpr emits a slice expression (e.g. nums[1:4]).
+// For arrays: so_array_slice(T, arr, low, high, size).
+// For slices: so_slice(T, s, low, high).
 func (g *Generator) emitSliceExpr(n *ast.SliceExpr) {
 	w := g.state.writer
 
-	// Determine the element type of the slice.
-	var elemType string
 	switch t := g.types.TypeOf(n.X).Underlying().(type) {
 	case *types.Array:
-		elemType = g.mapType(n, t.Elem())
+		elemType := g.mapType(n, t.Elem())
+		fmt.Fprintf(w, "so_array_slice(%s, ", elemType)
+		g.emitExpr(n.X)
+		fmt.Fprintf(w, ", ")
+		if n.Low != nil {
+			g.emitExpr(n.Low)
+		} else {
+			fmt.Fprintf(w, "0")
+		}
+		fmt.Fprintf(w, ", ")
+		if n.High != nil {
+			g.emitExpr(n.High)
+		} else {
+			fmt.Fprintf(w, "%d", t.Len())
+		}
+		fmt.Fprintf(w, ", %d)", t.Len())
+
 	case *types.Slice:
-		elemType = g.mapType(n, t.Elem())
+		elemType := g.mapType(n, t.Elem())
+		fmt.Fprintf(w, "so_slice(%s, ", elemType)
+		g.emitExpr(n.X)
+		fmt.Fprintf(w, ", ")
+		if n.Low != nil {
+			g.emitExpr(n.Low)
+		} else {
+			fmt.Fprintf(w, "0")
+		}
+		fmt.Fprintf(w, ", ")
+		if n.High != nil {
+			g.emitExpr(n.High)
+		} else {
+			g.emitExpr(n.X)
+			fmt.Fprintf(w, ".len")
+		}
+		fmt.Fprintf(w, ")")
+
 	default:
 		g.fail(n, "unsupported slice expression type: %T", t)
 	}
+}
 
-	// Emit the slice expression.
-	fmt.Fprintf(w, "so_slice(%s, ", elemType)
-	g.emitExpr(n.X)
-	fmt.Fprintf(w, ", ")
-	if n.Low != nil {
-		g.emitExpr(n.Low)
-	} else {
-		fmt.Fprintf(w, "0")
-	}
-	fmt.Fprintf(w, ", ")
-	if n.High != nil {
-		g.emitExpr(n.High)
-	} else {
-		g.emitExpr(n.X)
-		fmt.Fprintf(w, ".len")
-	}
-	fmt.Fprintf(w, ")")
+// isArrayType reports whether a type has array dimensions.
+func isArrayType(typ types.Type) bool {
+	return arrayDims(typ) != ""
 }
 
 // hasKeyedElements returns true if any element
@@ -108,4 +125,27 @@ func hasKeyedElements(n *ast.CompositeLit) bool {
 		}
 	}
 	return false
+}
+
+// arrayDims returns the C dimension suffix for an array type.
+// [3]int -> "[3]", [2][3]int -> "[2][3]", non-array -> "".
+// Named types return "" because their typedef already includes the dimensions.
+func arrayDims(typ types.Type) string {
+	typ = types.Unalias(typ)
+	if _, ok := typ.(*types.Named); ok {
+		return ""
+	}
+	var dims string
+	for arr, ok := typ.(*types.Array); ok; arr, ok = arr.Elem().(*types.Array) {
+		dims += fmt.Sprintf("[%d]", arr.Len())
+	}
+	return dims
+}
+
+// arraySize returns the compile-time size of an array type, or -1 if not an array.
+func arraySize(typ types.Type) int64 {
+	if arr, ok := typ.Underlying().(*types.Array); ok {
+		return arr.Len()
+	}
+	return -1
 }

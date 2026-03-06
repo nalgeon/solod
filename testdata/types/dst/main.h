@@ -16,7 +16,7 @@ typedef int32_t main_Rune;
 
 // Complex types.
 typedef so_String main_Name;
-typedef so_Slice main_IntArray;
+typedef so_int main_IntArray[3];
 typedef so_Slice main_IntSlice;
 typedef so_int* main_IntPtr;
 typedef void* main_Any;

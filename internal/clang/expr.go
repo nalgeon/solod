@@ -270,15 +270,23 @@ func (g *Generator) emitStarExpr(n *ast.StarExpr) {
 	g.emitExpr(n.X)
 }
 
-// emitIndexExpr emits an index expression (e.g. a[4]) as so_at(T, s, idx).
+// emitIndexExpr emits an index expression.
+// For arrays: a[i] directly. For slices/strings: so_at(T, s, i).
 func (g *Generator) emitIndexExpr(n *ast.IndexExpr) {
 	w := g.state.writer
 
-	// Determine the element type of the array/slice.
+	// Arrays use direct C indexing.
+	if _, ok := g.types.TypeOf(n.X).Underlying().(*types.Array); ok {
+		g.emitExpr(n.X)
+		fmt.Fprintf(w, "[")
+		g.emitExpr(n.Index)
+		fmt.Fprintf(w, "]")
+		return
+	}
+
+	// Slices and strings use so_at.
 	var elemType string
 	switch t := g.types.TypeOf(n.X).Underlying().(type) {
-	case *types.Array:
-		elemType = g.mapType(n, t.Elem())
 	case *types.Slice:
 		elemType = g.mapType(n, t.Elem())
 	case *types.Basic:
@@ -291,7 +299,6 @@ func (g *Generator) emitIndexExpr(n *ast.IndexExpr) {
 		g.fail(n, "unsupported index expression type: %T", t)
 	}
 
-	// Emit the index expression.
 	fmt.Fprintf(w, "so_at(%s, ", elemType)
 	g.emitExpr(n.X)
 	fmt.Fprintf(w, ", ")

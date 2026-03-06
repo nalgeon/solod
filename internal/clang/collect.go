@@ -192,8 +192,8 @@ func (g *Generator) emitForwardTypeDecl(w io.Writer, spec *ast.TypeSpec) {
 		fmt.Fprintf(w, "typedef %s (*%s)(%s);\n", retType, cName, strings.Join(params, ", "))
 	default:
 		typ := g.types.Defs[spec.Name].Type()
-		cType := g.mapType(spec, typ.Underlying())
-		fmt.Fprintf(w, "typedef %s %s;\n", cType, cName)
+		ct := g.mapCType(spec, typ.Underlying())
+		fmt.Fprintf(w, "typedef %s;\n", ct.Decl(cName))
 	}
 }
 

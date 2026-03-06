@@ -80,9 +80,13 @@ typedef struct {
 // cap must be a compile-time constant.
 #define so_make_slice(T, len, cap) ((so_Slice){(T[cap]){}, (len), (cap)})
 
-// slice creates a slice from an array or another slice
+// slice creates a slice from another slice
 // from index 'from' (inclusive) to index 'to' (exclusive).
 #define so_slice(T, s, from, to) ((so_Slice){(T*)(s).ptr + (from), (to) - (from), (s).cap - (from)})
+
+// array_slice creates a slice from a C array.
+// 'size' is the total array size (known at compile time).
+#define so_array_slice(T, arr, from, to, size) ((so_Slice){(T*)(arr) + (from), (to) - (from), (size) - (from)})
 
 // string_bytes wraps a string's raw bytes as a byte slice.
 #define so_string_bytes(s) ((so_Slice){(void*)(s).ptr, (s).len, (s).len})

@@ -3,7 +3,7 @@ package main
 type Person struct {
 	Name string
 	Age  int
-	Nums []int
+	Nums [3]int
 }
 
 func (p *Person) Sleep() int {
@@ -16,7 +16,6 @@ func main() {
 	p.Sleep()
 	println(p.Name, "is now", p.Age, "years old.")
 
-	p.Nums = make([]int, 0, 4)
-	p.Nums = append(p.Nums, 7, 42, 13)
+	p.Nums[0] = 42
 	println("1st lucky number is", p.Nums[0])
 }

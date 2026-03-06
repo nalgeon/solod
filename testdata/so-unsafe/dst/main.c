@@ -67,8 +67,8 @@ int main(void) {
     }
     {
         // Slice.
-        so_Slice a = (so_Slice){(so_int[5]){1, 2, 3, 4, 5}, 5, 5};
-        so_Slice slice = unsafe_Slice(&so_at(so_int, a, 0), so_len(a));
+        so_int a[5] = {1, 2, 3, 4, 5};
+        so_Slice slice = unsafe_Slice(&a[0], 5);
         if (so_len(slice) != 5) {
             so_panic("want len(slice) == 5");
         }

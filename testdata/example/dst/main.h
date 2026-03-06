@@ -6,7 +6,7 @@
 typedef struct main_Person {
     so_String Name;
     so_int Age;
-    so_Slice Nums;
+    so_int Nums[3];
 } main_Person;
 
 // -- Functions and methods --

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"go/types"
 )
 
 // emitAssignStmt emits an assignment statement.
@@ -33,6 +34,7 @@ func (g *Generator) emitAssignStmt(stmt *ast.AssignStmt) {
 				i++
 				continue
 			}
+
 			def := g.types.Defs[ident]
 			if def == nil {
 				// Redeclared variable - emit plain assignment.
@@ -42,9 +44,31 @@ func (g *Generator) emitAssignStmt(stmt *ast.AssignStmt) {
 				i++
 				continue
 			}
+
 			typ := def.Type()
-			cType := g.mapType(stmt, typ)
-			fmt.Fprintf(w, "%s%s %s = ", g.indent(), cType, ident.Name)
+			ct := g.mapCType(stmt, typ)
+
+			if ct.IsArray() {
+				// Arrays can't be grouped with other variables.
+				if _, isLit := stmt.Rhs[i].(*ast.CompositeLit); isLit {
+					// Composite literal: so_int d[3] = {1, 2, 3};
+					fmt.Fprintf(w, "%s%s = ", g.indent(), ct.Decl(ident.Name))
+					g.emitExpr(stmt.Rhs[i])
+					fmt.Fprintf(w, ";\n")
+				} else {
+					// Variable: declaration + memcpy.
+					fmt.Fprintf(w, "%s%s;\n", g.indent(), ct.Decl(ident.Name))
+					fmt.Fprintf(w, "%smemcpy(%s, ", g.indent(), ident.Name)
+					g.emitExpr(stmt.Rhs[i])
+					fmt.Fprintf(w, ", sizeof(%s));\n", ident.Name)
+				}
+				i++
+				continue
+			}
+
+			// Emit a variable declaration for this variable
+			// (grouped with subsequent variables of the same type).
+			fmt.Fprintf(w, "%s%s = ", g.indent(), ct.Decl(ident.Name))
 			g.emitExpr(stmt.Rhs[i])
 			i++
 			for i < len(stmt.Lhs) {
@@ -57,7 +81,10 @@ func (g *Generator) emitAssignStmt(stmt *ast.AssignStmt) {
 					break
 				}
 				nextCType := g.mapType(stmt, nextDef.Type())
-				if nextCType != cType {
+				if nextCType != ct.Base {
+					break
+				}
+				if isArrayType(nextDef.Type()) {
 					break
 				}
 				fmt.Fprintf(w, ", %s = ", nextIdent.Name)
@@ -78,6 +105,7 @@ func (g *Generator) emitAssignStmt(stmt *ast.AssignStmt) {
 		}
 		// Regular assignment.
 		for i, lhs := range stmt.Lhs {
+			// Blank identifier - emit a void expression.
 			if ident, ok := lhs.(*ast.Ident); ok && ident.Name == "_" {
 				fmt.Fprintf(w, "%s(void)", g.indent())
 				if g.needsVoidParens(stmt.Rhs[i]) {
@@ -90,6 +118,26 @@ func (g *Generator) emitAssignStmt(stmt *ast.AssignStmt) {
 				fmt.Fprintf(w, ";\n")
 				continue
 			}
+
+			// Array assignment uses memcpy.
+			lhsType := g.types.TypeOf(lhs)
+			if arr, ok := lhsType.Underlying().(*types.Array); ok {
+				fmt.Fprintf(w, "%smemcpy(", g.indent())
+				g.emitExpr(lhs)
+				fmt.Fprintf(w, ", ")
+				if _, isLit := stmt.Rhs[i].(*ast.CompositeLit); isLit {
+					// Compound literal: (int[3]){1, 2, 3}
+					elemType := g.mapType(stmt, arr.Elem())
+					fmt.Fprintf(w, "(%s[%d])", elemType, arr.Len())
+				}
+				g.emitExpr(stmt.Rhs[i])
+				fmt.Fprintf(w, ", sizeof(")
+				g.emitExpr(lhs)
+				fmt.Fprintf(w, "));\n")
+				continue
+			}
+
+			// Non-array assignment.
 			fmt.Fprintf(w, "%s", g.indent())
 			g.emitExpr(lhs)
 			fmt.Fprintf(w, " = ")
@@ -111,4 +159,3 @@ func (g *Generator) emitAssignStmt(stmt *ast.AssignStmt) {
 		g.fail(stmt, "unsupported AssignStmt token: %s", stmt.Tok)
 	}
 }
-

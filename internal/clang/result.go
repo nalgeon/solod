@@ -15,7 +15,11 @@ func (g *Generator) returnType(node ast.Node, sig *types.Signature) string {
 		return "so_Result"
 	}
 	if sig.Results().Len() == 1 {
-		return g.mapType(node, sig.Results().At(0).Type())
+		ret := sig.Results().At(0).Type()
+		if _, ok := ret.Underlying().(*types.Array); ok {
+			g.fail(node, "returning arrays from functions is not supported")
+		}
+		return g.mapType(node, ret)
 	}
 	return "void"
 }
@@ -40,7 +44,9 @@ func (g *Generator) resultField(node ast.Node, sig *types.Signature) string {
 func resultFieldName(g *Generator, node ast.Node, typ types.Type) string {
 	typ = types.Unalias(typ)
 	switch t := typ.(type) {
-	case *types.Array, *types.Slice:
+	case *types.Array:
+		g.fail(node, "arrays in multi-return are not supported")
+	case *types.Slice:
 		return "as_slice"
 	case *types.Pointer:
 		return "as_ptr"

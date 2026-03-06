@@ -12,8 +12,8 @@ int main(void) {
         stdio_Fputs("hello", f);
         stdio_Fputc(10, f);
         stdio_Fflush(f);
-        so_Slice buf = (so_Slice){(uint8_t[64]){0}, 64, 64};
-        stdio_Fwrite(&so_at(uint8_t, buf, 0), 1, 64, f);
+        uint8_t buf[64] = {0};
+        stdio_Fwrite(&buf[0], 1, 64, f);
         stdio_Fclose(f);
     }
     {
@@ -26,10 +26,10 @@ int main(void) {
         if (ch == stdio_EOF) {
             so_panic("unexpected EOF");
         }
-        so_Slice buf = (so_Slice){(uint8_t[64]){0}, 64, 64};
+        uint8_t buf[64] = {0};
         stdio_Fseek(f, 0, 0);
-        stdio_Fgets(&so_at(uint8_t, buf, 0), 64, f);
-        stdio_Fread(&so_at(uint8_t, buf, 0), 1, 64, f);
+        stdio_Fgets(&buf[0], 64, f);
+        stdio_Fread(&buf[0], 1, 64, f);
         so_int pos = stdio_Ftell(f);
         if (pos < 0) {
             so_panic("ftell error");
@@ -46,8 +46,8 @@ int main(void) {
         // Formatted output.
         stdio_Printf("hello %d\n", 42);
         stdio_Fprintf(stdio_Stdout, "value: %d\n", 100);
-        so_Slice buf = (so_Slice){(uint8_t[64]){0}, 64, 64};
-        stdio_Snprintf(&so_at(uint8_t, buf, 0), 64, "count: %d", 10);
+        uint8_t buf[64] = {0};
+        stdio_Snprintf(&buf[0], 64, "count: %d", 10);
     }
     {
         // Formatted input.

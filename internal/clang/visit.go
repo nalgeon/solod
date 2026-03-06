@@ -279,7 +279,7 @@ func (g *Generator) emitVarSpec(spec *ast.ValueSpec) {
 			continue
 		}
 		typ := g.types.Defs[name].Type()
-		cType := g.mapType(spec, typ)
+		ct := g.mapCType(spec, typ)
 		specifier := ""
 		if g.state.indent == 0 {
 			// Package-level variable.
@@ -290,13 +290,13 @@ func (g *Generator) emitVarSpec(spec *ast.ValueSpec) {
 		cName := g.symbolName(name.Name)
 		if len(spec.Values) > i {
 			// Has explicit initializer.
-			fmt.Fprintf(w, "%s%s%s %s = ", g.indent(), specifier, cType, cName)
+			fmt.Fprintf(w, "%s%s%s = ", g.indent(), specifier, ct.Decl(cName))
 			g.emitExprAsType(spec, spec.Values[i], typ)
 			fmt.Fprintf(w, ";\n")
 		} else {
 			// No initializer, emit zero value.
 			zeroVal := g.zeroValue(spec, typ)
-			fmt.Fprintf(w, "%s%s%s %s = %s;\n", g.indent(), specifier, cType, cName, zeroVal)
+			fmt.Fprintf(w, "%s%s%s = %s;\n", g.indent(), specifier, ct.Decl(cName), zeroVal)
 		}
 	}
 }
@@ -319,9 +319,9 @@ func (g *Generator) emitTypeSpec(w io.Writer, spec *ast.TypeSpec) {
 				}
 			}
 		}
-		cType := g.mapType(spec, resolved)
+		ct := g.mapCType(spec, resolved)
 		cName := g.symbolName(spec.Name.Name)
-		fmt.Fprintf(w, "typedef %s %s;\n", cType, cName)
+		fmt.Fprintf(w, "typedef %s;\n", ct.Decl(cName))
 
 	case *ast.InterfaceType:
 		iface := g.types.Defs[spec.Name].Type().Underlying().(*types.Interface)
@@ -394,7 +394,9 @@ func (g *Generator) emitIncDecStmt(stmt *ast.IncDecStmt) {
 // emitRangeStmt emits a range-based for statement.
 func (g *Generator) emitRangeStmt(stmt *ast.RangeStmt) {
 	switch t := g.types.TypeOf(stmt.X).Underlying().(type) {
-	case *types.Array, *types.Slice:
+	case *types.Array:
+		g.emitArrayRange(stmt)
+	case *types.Slice:
 		g.emitSliceRange(stmt)
 	case *types.Basic:
 		if t.Kind() == types.String {

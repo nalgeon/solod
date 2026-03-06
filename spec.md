@@ -5,6 +5,7 @@ Solod (So) is a strict subset of Go that transpiles to regular C. This document 
 [Values](#values) •
 [Variables](#variables) •
 [Strings](#strings) •
+[Arrays](#arrays) •
 [Slices](#slices) •
 [If/else](#ifelse) •
 [For](#for) •
@@ -154,22 +155,58 @@ rs := []rune(s)  // rune slice
 
 String concatenation with `+` is not supported. Use the standard library for joining strings.
 
-## Slices
+## Arrays
 
-Slices and arrays are both represented as `so_Slice` type in C (a struct with a data pointer, `len`, and `cap`).
+Arrays are represented as plain C arrays (`T name[N]`). They are value types - copied on struct assignment and support direct indexing.
 
-Slice and array literals:
+Array literals:
+
+```go
+var a [5]int                       // zero-initialized
+b := [5]int{1, 2, 3, 4, 5}         // explicit values
+c := [...]int{1, 2, 3, 4, 5}       // inferred size
+d := [...]int{100, 3: 400, 500}    // designated initializers
+```
+
+Named array types:
+
+```go
+type IntArray [3]int
+var arr IntArray
+```
+
+Arrays can be struct fields:
+
+```go
+type Box struct {
+    nums [3]int
+}
+```
+
+`len()` and `cap()` on arrays are emitted as compile-time constants.
+
+Slicing an array produces a `so_Slice`:
 
 ```go
 nums := [...]int{1, 2, 3, 4, 5}
-strs := []string{"a", "b", "c"}
-twoD := [][]int{{1, 2, 3}, {4, 5, 6}}
+s := nums[1:4]  // s is a so_Slice
 ```
 
-Indexed initialization (translates to C99 designated initializers):
+Limitations:
+
+- Arrays decay to pointers when passed to functions (no value semantics on calls).
+- Cannot return arrays from functions.
+- Array assignment uses `memcpy`.
+
+## Slices
+
+Slices are represented as `so_Slice` type in C (a struct with a data pointer, `len`, and `cap`).
+
+Slice literals:
 
 ```go
-sparse := [...]int{100, 3: 400, 500}
+strs := []string{"a", "b", "c"}
+twoD := [][]int{{1, 2, 3}, {4, 5, 6}}
 ```
 
 Slicing:

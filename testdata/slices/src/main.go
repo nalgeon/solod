@@ -32,6 +32,31 @@ func main() {
 	}
 
 	{
+		// Slicing a slice.
+		nums := []int{1, 2, 3, 4, 5}
+
+		s1 := nums[:]
+		if s1[0] != 1 || s1[4] != 5 {
+			panic("want s1[0] == 1 && s1[4] == 5")
+		}
+
+		s2 := nums[2:]
+		if s2[0] != 3 || s2[2] != 5 {
+			panic("want s2[0] == 3 && s2[2] == 5")
+		}
+
+		s3 := nums[:3]
+		if s3[0] != 1 || s3[2] != 3 {
+			panic("want s3[0] == 1 && s3[2] == 3")
+		}
+
+		s4 := nums[1:4]
+		if s4[0] != 2 || s4[2] != 4 {
+			panic("want s4[0] == 2 && s4[2] == 4")
+		}
+	}
+
+	{
 		// Slice literals.
 		strSlice := []string{"a", "b", "c"}
 		sLen := len(strSlice) // sLen == 3

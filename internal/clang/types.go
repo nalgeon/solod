@@ -1,10 +1,33 @@
 package clang
 
 import (
-	"fmt"
 	"go/ast"
 	"go/types"
 )
+
+// CType represents a C type with optional array dimensions.
+type CType struct {
+	Base string // e.g. "int", "so_int"
+	Dims string // e.g. "[3]", "[2][3]", ""
+}
+
+// Decl formats a C declaration: "int name[3]".
+func (t CType) Decl(name string) string {
+	return t.Base + " " + name + t.Dims
+}
+
+// IsArray reports whether this is an array type.
+func (t CType) IsArray() bool {
+	return t.Dims != ""
+}
+
+// mapCType maps a Go type to a CType (base + array dims).
+func (g *Generator) mapCType(node ast.Node, typ types.Type) CType {
+	return CType{
+		Base: g.mapType(node, typ),
+		Dims: arrayDims(typ),
+	}
+}
 
 // mapType maps a Go type to its C equivalent.
 func (g *Generator) mapType(node ast.Node, typ types.Type) string {
@@ -12,7 +35,15 @@ func (g *Generator) mapType(node ast.Node, typ types.Type) string {
 
 	// Complex types (e.g. pointers, named types, structs).
 	switch t := typ.(type) {
-	case *types.Array, *types.Slice:
+	case *types.Array:
+		// Return the innermost non-array element type.
+		elem := t.Elem()
+		for inner, ok := elem.(*types.Array); ok; inner, ok = elem.(*types.Array) {
+			elem = inner.Elem()
+		}
+		return g.mapType(node, elem)
+
+	case *types.Slice:
 		return "so_Slice"
 
 	case *types.Interface:
@@ -99,10 +130,8 @@ func (g *Generator) mapType(node ast.Node, typ types.Type) string {
 // zeroValue returns the C zero value for a Go type.
 func (g *Generator) zeroValue(node ast.Node, typ types.Type) string {
 	// Arrays.
-	if arr, ok := typ.Underlying().(*types.Array); ok {
-		elemType := g.mapType(node, arr.Elem())
-		size := arr.Len()
-		return fmt.Sprintf("(so_Slice){(%s[%d]){0}, %d, %d}", elemType, size, size, size)
+	if _, ok := typ.Underlying().(*types.Array); ok {
+		return "{0}"
 	}
 
 	// Pointers.

@@ -33,7 +33,7 @@ package main
 type Person struct {
     Name string
     Age  int
-    Nums []int
+    Nums [3]int
 }
 
 func (p *Person) Sleep() int {
@@ -46,8 +46,7 @@ func main() {
     p.Sleep()
     println(p.Name, "is now", p.Age, "years old.")
 
-    p.Nums = make([]int, 0, 4)
-    p.Nums = append(p.Nums, 7, 42, 13)
+    p.Nums[0] = 42
     println("1st lucky number is", p.Nums[0])
 }
 ```
@@ -61,11 +60,10 @@ Translates to a header file `main.h`:
 typedef struct main_Person {
     so_String Name;
     so_int Age;
-    so_Slice Nums;
+    so_int Nums[3];
 } main_Person;
 
 so_int main_Person_Sleep(void* self);
-
 ```
 
 Plus an implementation file `main.c`:
@@ -83,9 +81,8 @@ int main(void) {
     main_Person p = (main_Person){.Name = so_str("Alice"), .Age = 30};
     main_Person_Sleep(&p);
     so_println("%s %s %" PRId64 " %s", p.Name.ptr, "is now", p.Age, "years old.");
-    p.Nums = so_make_slice(so_int, 0, 4);
-    p.Nums = so_append(so_int, p.Nums, 7, 42, 13);
-    so_println("%s %" PRId64, "1st lucky number is", so_at(so_int, p.Nums, 0));
+    p.Nums[0] = 42;
+    so_println("%s %" PRId64, "1st lucky number is", p.Nums[0]);
 }
 ```
 
