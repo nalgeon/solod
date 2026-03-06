@@ -26,7 +26,7 @@ int main(void) {
         if (num < 0) {
             so_panic("want num >= 0");
         } else if (num < 10) {
-            so_println("%lld %s", num, "has 1 digit");
+            so_println("%" PRId64 " %s", num, "has 1 digit");
         } else {
             so_panic("want 0 <= num < 10");
         }

@@ -7,12 +7,12 @@ static void xclose(void* a);
 // -- Implementation --
 
 static void xopen(so_int* x) {
-    so_println("%s %lld", "open", *x);
+    so_println("%s %" PRId64, "open", *x);
 }
 
 static void xclose(void* a) {
     so_int* x = (so_int*)a;
-    so_println("%s %lld", "close", *x);
+    so_println("%s %" PRId64, "close", *x);
 }
 
 int main(void) {

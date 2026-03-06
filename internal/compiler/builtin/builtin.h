@@ -1,6 +1,7 @@
 #pragma once
 
 #include <alloca.h>
+#include <inttypes.h>
 #include <stdalign.h>
 #include <stdbool.h>
 #include <stdint.h>

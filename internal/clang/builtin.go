@@ -132,15 +132,8 @@ func (g *Generator) emitNewCall(call *ast.CallExpr) {
 // emitPrintCall emits a print/println call with an auto-generated format string.
 func (g *Generator) emitPrintCall(call *ast.CallExpr, name string) {
 	w := g.state.writer
-
-	var specs []string
-	for _, arg := range call.Args {
-		typ := g.types.TypeOf(arg)
-		specs = append(specs, g.formatSpec(call, typ))
-	}
-
-	format := strings.Join(specs, " ")
-	fmt.Fprintf(w, "so_%s(\"%s\"", name, format)
+	format := g.buildFormatString(call)
+	fmt.Fprintf(w, "so_%s(%s", name, format)
 	for _, arg := range call.Args {
 		fmt.Fprintf(w, ", ")
 		g.emitCArg(arg)
@@ -148,13 +141,46 @@ func (g *Generator) emitPrintCall(call *ast.CallExpr, name string) {
 	fmt.Fprintf(w, ")")
 }
 
-// formatSpec returns the C printf format specifier for a Go type.
-func (g *Generator) formatSpec(node ast.Node, typ types.Type) string {
+// buildFormatString constructs a C format string for the given print/println call,
+// using the types of the arguments. It breaks out of string literals when macros
+// are needed (e.g. "Value: %" PRId64) to avoid issues with macro expansion.
+func (g *Generator) buildFormatString(call *ast.CallExpr) string {
+	var format strings.Builder
+	inStr := false
+	for i, arg := range call.Args {
+		spec, macro := g.formatSpec(call, g.types.TypeOf(arg))
+		if !inStr {
+			if format.Len() > 0 {
+				format.WriteByte(' ')
+			}
+			format.WriteByte('"')
+			inStr = true
+		}
+		if i > 0 {
+			format.WriteByte(' ')
+		}
+		format.WriteString(spec)
+		if macro != "" {
+			format.WriteString(`" `)
+			format.WriteString(macro)
+			inStr = false
+		}
+	}
+	if inStr {
+		format.WriteByte('"')
+	}
+	return format.String()
+}
+
+// formatSpec returns the C printf format specifier and optional macro name
+// for a Go type. When macro is non-empty (e.g. "PRId64"), the specifier
+// ends with "%" and the macro must follow outside the string literal.
+func (g *Generator) formatSpec(node ast.Node, typ types.Type) (spec, macro string) {
 	if _, ok := typ.(*types.Pointer); ok {
-		return "%p"
+		return "%p", ""
 	}
 	if isErrorType(typ) {
-		return "%p"
+		return "%p", ""
 	}
 	basic, ok := typ.Underlying().(*types.Basic)
 	if !ok {
@@ -163,21 +189,21 @@ func (g *Generator) formatSpec(node ast.Node, typ types.Type) string {
 	}
 	switch basic.Kind() {
 	case types.Bool:
-		return "%d"
+		return "%d", ""
 	case types.Float32, types.Float64, types.UntypedFloat:
-		return "%f"
+		return "%f", ""
 	case types.Int, types.UntypedInt:
-		return "%lld"
+		return "%", "PRId64"
 	case types.Int8, types.Int16, types.Int32:
-		return "%d"
+		return "%d", ""
 	case types.Int64:
-		return "%lld"
+		return "%", "PRId64"
 	case types.Uint8, types.Uint16, types.Uint32:
-		return "%u"
+		return "%u", ""
 	case types.Uint, types.Uint64, types.Uintptr:
-		return "%llu"
+		return "%", "PRIu64"
 	case types.String:
-		return "%s"
+		return "%s", ""
 	default:
 		g.fail(node, "unsupported type for print: %s", typ)
 		panic("unreachable")

@@ -5,14 +5,14 @@
 int main(void) {
     so_int i = 1;
     for (; i <= 3;) {
-        so_println("%lld", i);
+        so_println("%" PRId64, i);
         i = i + 1;
     }
     for (so_int j = 0; j < 3; j++) {
-        so_println("%lld", j);
+        so_println("%" PRId64, j);
     }
     for (so_int k = 0; k < 3; k++) {
-        so_println("%s %lld", "range", k);
+        so_println("%s %" PRId64, "range", k);
     }
     for (;;) {
         so_println("%s", "loop");
@@ -22,6 +22,6 @@ int main(void) {
         if (n % 2 == 0) {
             continue;
         }
-        so_println("%lld", n);
+        so_println("%" PRId64, n);
     }
 }

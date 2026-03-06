@@ -18,5 +18,5 @@ int main(void) {
     so_String vString = so_str("hello");
     person alice = (person){.name = so_str("alice")};
     person* vPtr = &alice;
-    so_println("%lld %f %d %u %d %s %p", vInt, vFloat, vBool, vByte, vRune, vString.ptr, vPtr);
+    so_println("%" PRId64 " %f %d %u %d %s %p", vInt, vFloat, vBool, vByte, vRune, vString.ptr, vPtr);
 }
