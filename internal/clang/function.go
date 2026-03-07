@@ -109,56 +109,14 @@ func (g *Generator) emitFuncDecl(decl *ast.FuncDecl) {
 func (g *Generator) emitFuncCall(call *ast.CallExpr) {
 	w := g.state.writer
 	if ident, ok := call.Fun.(*ast.Ident); ok {
-		// Simple function call (e.g. println("hello")).
 		if bi, ok := g.types.Uses[ident].(*types.Builtin); ok {
-			switch bi.Name() {
-			case "append":
-				g.emitAppendCall(call)
-				return
-			case "clear", "close", "complex", "delete", "imag", "real", "recover":
-				g.fail(call, "%s() is not supported", bi.Name())
-				return
-			case "copy":
-				g.emitCopyCall(call)
-				return
-			case "make":
-				g.emitMakeCall(call)
-				return
-			case "min", "max":
-				g.emitMinMaxCall(call, bi.Name())
-				return
-			case "new":
-				g.emitNewCall(call)
-				return
-			case "panic":
-				arg, ok := call.Args[0].(*ast.BasicLit)
-				if !ok {
-					g.fail(call, "panic() only supports string literals")
-				}
-				fmt.Fprintf(w, "so_panic(%s)", arg.Value)
-				return
-			case "print", "println":
-				g.emitPrintCall(call, bi.Name())
+			if g.emitBuiltin(call, ident, bi) {
 				return
 			}
-
-			// len/cap on arrays emit the compile-time size.
-			if (bi.Name() == "len" || bi.Name() == "cap") && len(call.Args) == 1 {
-				if size := arraySize(g.types.TypeOf(call.Args[0])); size >= 0 {
-					fmt.Fprintf(w, "%d", size)
-					return
-				}
-			}
-
-			// Other builtins are emitted as regular calls
-			// with a so_ prefix (e.g. so_len(slice)).
-			fmt.Fprintf(w, "so_%s", ident.Name)
 		} else {
-			// Regular function call.
 			g.emitExpr(call.Fun)
 		}
 	} else {
-		// Complex function expression (e.g. selector or func literal).
 		g.emitExpr(call.Fun)
 	}
 

@@ -7,6 +7,56 @@ import (
 	"strings"
 )
 
+// emitBuiltin handles a builtin function call. Returns true if the call
+// was fully emitted (including arguments), false if only the function
+// name was emitted and the caller must still emit arguments.
+func (g *Generator) emitBuiltin(call *ast.CallExpr, ident *ast.Ident, bi *types.Builtin) bool {
+	w := g.state.writer
+	switch bi.Name() {
+	case "append":
+		g.emitAppendCall(call)
+		return true
+	case "clear", "close", "complex", "delete", "imag", "real", "recover":
+		g.fail(call, "%s() is not supported", bi.Name())
+		return true
+	case "copy":
+		g.emitCopyCall(call)
+		return true
+	case "make":
+		g.emitMakeCall(call)
+		return true
+	case "min", "max":
+		g.emitMinMaxCall(call, bi.Name())
+		return true
+	case "new":
+		g.emitNewCall(call)
+		return true
+	case "panic":
+		arg, ok := call.Args[0].(*ast.BasicLit)
+		if !ok {
+			g.fail(call, "panic() only supports string literals")
+		}
+		fmt.Fprintf(w, "so_panic(%s)", arg.Value)
+		return true
+	case "print", "println":
+		g.emitPrintCall(call, bi.Name())
+		return true
+	}
+
+	// len/cap on arrays emit the compile-time size.
+	if (bi.Name() == "len" || bi.Name() == "cap") && len(call.Args) == 1 {
+		if size := arraySize(g.types.TypeOf(call.Args[0])); size >= 0 {
+			fmt.Fprintf(w, "%d", size)
+			return true
+		}
+	}
+
+	// Other builtins are emitted as regular calls
+	// with a so_ prefix (e.g. so_len(slice)).
+	fmt.Fprintf(w, "so_%s", ident.Name)
+	return false
+}
+
 // emitAppendCall emits an append() builtin call.
 func (g *Generator) emitAppendCall(call *ast.CallExpr) {
 	w := g.state.writer
