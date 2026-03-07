@@ -109,4 +109,18 @@ int main(void) {
             so_panic("want p == a");
         }
     }
+    {
+        // Variable-length arrays are not possible, because
+        // Go's type checker resolves n to a constant.
+        const so_int n = 3;
+        (void)n;
+        so_int a[3] = {};
+        if (a[0] != 0 || a[1] != 0 || a[2] != 0) {
+            so_panic("want a == {0, 0, 0}");
+        }
+        a[0] = 42;
+        if (a[0] != 42) {
+            so_panic("want a[0] == 42");
+        }
+    }
 }

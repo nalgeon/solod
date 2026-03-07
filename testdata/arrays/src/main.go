@@ -108,4 +108,18 @@ func main() {
 			panic("want p == a")
 		}
 	}
+	{
+		// Variable-length arrays are not possible, because
+		// Go's type checker resolves n to a constant.
+		const n = 3
+		_ = n
+		a := [n]int{}
+		if a[0] != 0 || a[1] != 0 || a[2] != 0 {
+			panic("want a == {0, 0, 0}")
+		}
+		a[0] = 42
+		if a[0] != 42 {
+			panic("want a[0] == 42")
+		}
+	}
 }
