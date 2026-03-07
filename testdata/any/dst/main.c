@@ -94,4 +94,19 @@ int main(void) {
         acceptAny(p);
         acceptPoint((point*)p);
     }
+    {
+        // Any casts.
+        so_int n = 42;
+        void* a = &n;
+        uint8_t* b = (uint8_t*)a;
+        if (*b != 42) {
+            so_panic("want *b == 42");
+        }
+        so_String s1 = so_str("hello");
+        a = &s1;
+        so_String* s2 = (so_String*)a;
+        if (s2 != &s1) {
+            so_panic("want s2 == s1");
+        }
+    }
 }

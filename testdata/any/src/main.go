@@ -83,4 +83,19 @@ func main() {
 		acceptAny(any(p))
 		acceptPoint(any(p).(*point))
 	}
+	{
+		// Any casts.
+		n := 42
+		var a any = n
+		b := a.(*byte)
+		if *b != 42 {
+			panic("want *b == 42")
+		}
+		s1 := "hello"
+		a = &s1
+		s2 := a.(*string)
+		if s2 != &s1 {
+			panic("want s2 == s1")
+		}
+	}
 }
