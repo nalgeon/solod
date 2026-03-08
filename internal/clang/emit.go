@@ -68,6 +68,8 @@ type State struct {
 	recvName string
 	// Current function's signature (for multi-return).
 	funcSig *types.Signature
+	// Deferred generic calls to emit before returns, panics, and function end.
+	defers []string
 	// Counter for unique temp variable names.
 	tempCount int
 }

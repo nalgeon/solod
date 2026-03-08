@@ -88,20 +88,32 @@ func (g *Generator) emitFuncDecl(decl *ast.FuncDecl) {
 		g.emitMethodDecl(decl)
 		return
 	}
+
+	// Init emission state.
 	w := g.state.writer
 	sig := g.funcSig(decl)
 	g.rejectNamedReturns(decl, sig)
 	g.state.funcSig = sig
 	g.state.tempCount = 0
+
+	// Emit comments and function prototype.
 	if !g.emitComments(w, decl) {
 		fmt.Fprintln(w)
 	}
 	g.emitFuncProto(w, decl)
 	fmt.Fprintln(w, " {")
+
+	// Emit function body, handling deferred calls if needed.
 	g.state.indent++
 	g.walkStmts(decl.Body.List)
+	if len(g.state.defers) > 0 && !endsWithReturn(decl.Body.List) {
+		g.emitDeferredCalls()
+	}
 	g.state.indent--
 	fmt.Fprintf(w, "}\n")
+
+	// Reset state.
+	g.state.defers = nil
 	g.state.funcSig = nil
 }
 
@@ -255,6 +267,15 @@ func (g *Generator) isExternCall(call *ast.CallExpr) bool {
 		}
 	}
 	return false
+}
+
+// endsWithReturn reports whether a statement list ends with a return statement.
+func endsWithReturn(stmts []ast.Stmt) bool {
+	if len(stmts) == 0 {
+		return false
+	}
+	_, ok := stmts[len(stmts)-1].(*ast.ReturnStmt)
+	return ok
 }
 
 // recvTypeName returns the Go type name from a method receiver field.

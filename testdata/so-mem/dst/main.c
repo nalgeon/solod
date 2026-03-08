@@ -1,6 +1,20 @@
 #include "main.h"
 
+// -- Forward declarations (functions and methods) --
+static void withDefer(void);
+
 // -- Implementation --
+
+static void withDefer(void) {
+    main_Point* p = mem_New(main_Point);
+    p->x = 11;
+    p->y = 22;
+    if (p->x != 11 || p->y != 22) {
+        mem_Free(main_Point, p);
+        so_panic("unexpected value");
+    }
+    mem_Free(main_Point, p);
+}
 
 int main(void) {
     {
@@ -55,4 +69,5 @@ int main(void) {
         }
         mem_FreeSlice(so_int, slice);
     }
+    withDefer();
 }

@@ -49,7 +49,9 @@ func (g *Generator) emitFuncPtrField(w io.Writer, node ast.Node, fieldName strin
 func (g *Generator) emitMethodDecl(decl *ast.FuncDecl) {
 	w := g.state.writer
 	sig := g.funcSig(decl)
+	g.rejectNamedReturns(decl, sig)
 
+	// Init emission state.
 	recv := decl.Recv.List[0]
 	cStructType := g.symbolName(recvTypeName(recv))
 	named := len(recv.Names) > 0 // does the receiver have a name?
@@ -63,9 +65,10 @@ func (g *Generator) emitMethodDecl(decl *ast.FuncDecl) {
 		}
 	}
 
-	g.rejectNamedReturns(decl, sig)
 	g.state.funcSig = sig
 	g.state.tempCount = 0
+
+	// Emit comments and function prototype.
 	if !g.emitComments(w, decl) {
 		fmt.Fprintln(w)
 	}
@@ -73,6 +76,7 @@ func (g *Generator) emitMethodDecl(decl *ast.FuncDecl) {
 	fmt.Fprintln(w, " {")
 	g.state.indent++
 
+	// Emit receiver variable from self parameter.
 	if named {
 		recvName := recv.Names[0].Name
 		fmt.Fprintf(w, "%s%s* %s = (%s*)self;\n", g.indent(), cStructType, recvName, cStructType)
@@ -80,9 +84,16 @@ func (g *Generator) emitMethodDecl(decl *ast.FuncDecl) {
 		fmt.Fprintf(w, "%s(void)self;\n", g.indent())
 	}
 
+	// Emit method body, handling deferred calls if needed.
 	g.walkStmts(decl.Body.List)
+	if len(g.state.defers) > 0 && !endsWithReturn(decl.Body.List) {
+		g.emitDeferredCalls()
+	}
 	g.state.indent--
 	fmt.Fprintf(w, "}\n")
+
+	// Reset state.
+	g.state.defers = nil
 	g.state.funcSig = nil
 }
 

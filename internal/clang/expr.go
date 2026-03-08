@@ -395,6 +395,7 @@ func (g *Generator) needsVoidParens(expr ast.Expr) bool {
 	return true
 }
 
+// isCompare reports whether a token is a comparison operator.
 func isCompare(op token.Token) bool {
 	switch op {
 	case token.EQL, token.NEQ, token.LSS, token.GTR, token.LEQ, token.GEQ:

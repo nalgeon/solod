@@ -175,6 +175,20 @@ func (g *Generator) emitNewCall(call *ast.CallExpr) {
 	fmt.Fprintf(w, "}")
 }
 
+// isPanicCall reports whether an expression is a call to the panic builtin.
+func (g *Generator) isPanicCall(expr ast.Expr) bool {
+	call, ok := expr.(*ast.CallExpr)
+	if !ok {
+		return false
+	}
+	ident, ok := call.Fun.(*ast.Ident)
+	if !ok {
+		return false
+	}
+	bi, ok := g.types.Uses[ident].(*types.Builtin)
+	return ok && bi.Name() == "panic"
+}
+
 // emitPanicCall emits a panic() builtin call as so_panic(arg).
 func (g *Generator) emitPanicCall(call *ast.CallExpr) {
 	arg := call.Args[0]

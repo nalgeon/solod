@@ -100,10 +100,28 @@ func (g *Generator) emitBranchStmt(stmt *ast.BranchStmt) {
 	fmt.Fprintf(g.state.writer, "%s%s;\n", g.indent(), stmt.Tok)
 }
 
-// emitDeferStmt emits a defer statement as so_defer(fn, arg).
+// emitDeferStmt emits a defer statement. Generic calls (with type args) are
+// captured and emitted inline before returns, panics, and function end.
+// Non-generic calls use so_defer(fn, arg).
 func (g *Generator) emitDeferStmt(stmt *ast.DeferStmt) {
-	w := g.state.writer
 	call := stmt.Call
+
+	// Check if the deferred call is generic (has type args).
+	if ident := exprIdent(call.Fun); ident != nil {
+		if inst, ok := g.types.Instances[ident]; ok && inst.TypeArgs.Len() > 0 {
+			// Render the generic call to a string and save for later emission.
+			var buf strings.Builder
+			saved := g.state.writer
+			g.state.writer = &buf
+			g.emitGenericCall(call, call.Fun, inst)
+			g.state.writer = saved
+			g.state.defers = append(g.state.defers, buf.String())
+			return
+		}
+	}
+
+	// Non-generic defer: emit so_defer(fn, arg).
+	w := g.state.writer
 	if len(call.Args) != 1 {
 		g.fail(stmt, "defer call must have exactly 1 argument")
 	}
@@ -115,8 +133,12 @@ func (g *Generator) emitDeferStmt(stmt *ast.DeferStmt) {
 }
 
 // emitExprStmt emits an expression statement.
+// Emits deferred generic calls before panic() calls.
 func (g *Generator) emitExprStmt(stmt *ast.ExprStmt) {
 	w := g.state.writer
+	if g.isPanicCall(stmt.X) {
+		g.emitDeferredCalls()
+	}
 	fmt.Fprintf(w, "%s", g.indent())
 	g.emitExpr(stmt.X)
 	fmt.Fprintf(w, ";\n")
@@ -433,8 +455,9 @@ func (g *Generator) emitRangeStmt(stmt *ast.RangeStmt) {
 	}
 }
 
-// emitReturnStmt emits a return statement.
+// emitReturnStmt emits a return statement, preceded by any deferred generic calls.
 func (g *Generator) emitReturnStmt(stmt *ast.ReturnStmt) {
+	g.emitDeferredCalls()
 	w := g.state.writer
 	if len(stmt.Results) == 0 {
 		fmt.Fprintf(w, "%sreturn;\n", g.indent())
@@ -479,6 +502,13 @@ func (g *Generator) emitComments(w io.Writer, nodes ...ast.Node) bool {
 		fmt.Fprintln(w, line)
 	}
 	return true
+}
+
+// emitDeferredCalls emits saved generic deferred calls in LIFO order.
+func (g *Generator) emitDeferredCalls() {
+	for i := len(g.state.defers) - 1; i >= 0; i-- {
+		fmt.Fprintf(g.state.writer, "%s%s;\n", g.indent(), g.state.defers[i])
+	}
 }
 
 // emitBlock emits the statements within a block, adjusting indentation.

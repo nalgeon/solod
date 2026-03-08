@@ -8,6 +8,17 @@ type Point struct {
 	x, y int
 }
 
+func withDefer() {
+	p := mem.New[Point]()
+	defer mem.Free(p)
+
+	p.x = 11
+	p.y = 22
+	if p.x != 11 || p.y != 22 {
+		panic("unexpected value")
+	}
+}
+
 func main() {
 	{
 		// mem.Alloc and mem.Dealloc
@@ -57,4 +68,5 @@ func main() {
 		}
 		mem.FreeSlice[int](slice)
 	}
+	withDefer()
 }
