@@ -34,13 +34,15 @@ run-cases:
 	@failed=0; \
 	for dir in testdata/*/; do \
 		name=$$(basename $$dir); \
-		if make run-case name=$$name > /dev/null 2>&1; then \
+		if make run-case name=$$name > /tmp/so_test_out.txt 2>&1; then \
 			echo "PASS $$name"; \
 		else \
 			echo "FAIL $$name"; \
+			cat /tmp/so_test_out.txt; \
 			failed=1; \
 		fi; \
 	done; \
+	rm -f /tmp/so_test_out.txt; \
 	if [ $$failed -eq 0 ]; then \
 		echo "PASS"; \
 	else \
