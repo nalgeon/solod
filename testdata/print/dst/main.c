@@ -19,4 +19,8 @@ int main(void) {
     person alice = (person){.name = so_str("alice")};
     person* vPtr = &alice;
     so_println("%" PRId64 " %f %d %u %d %s %p", vInt, vFloat, vBool, vByte, vRune, vString.ptr, vPtr);
+    so_print("%s", "a");
+    so_print("");
+    so_print("%s", "b");
+    so_println("");
 }

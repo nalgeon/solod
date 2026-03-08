@@ -15,6 +15,11 @@ func main() {
 	var vPtr = &alice
 	println(vInt, vFloat, vBool, vByte, vRune, vString, vPtr)
 
+	print("a")
+	print()
+	print("b")
+	println()
+
 	// Complex types are not supported.
 	// arr := [3]int{1, 2, 3}
 	// println(arr)

@@ -182,6 +182,10 @@ func (g *Generator) emitNewCall(call *ast.CallExpr) {
 // emitPrintCall emits a print/println call with an auto-generated format string.
 func (g *Generator) emitPrintCall(call *ast.CallExpr, name string) {
 	w := g.state.writer
+	if len(call.Args) == 0 {
+		fmt.Fprintf(w, "so_%s(\"\")", name)
+		return
+	}
 	format := g.buildFormatString(call)
 	fmt.Fprintf(w, "so_%s(%s", name, format)
 	for _, arg := range call.Args {
