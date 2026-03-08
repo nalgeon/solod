@@ -662,15 +662,21 @@ The zero value of `error` is `nil` (`NULL` in C).
 
 ## Panic
 
-`panic()` accepts a string literal and immediately terminates the program:
+`panic()` accepts a string literal, string variable, or error value and immediately terminates the program:
 
 ```go
 panic("something went wrong")
+
+msg := "runtime error"
+panic(msg)
+
+var err = errors.New("not found")
+panic(err)
 ```
 
-In C, this is emitted as a macro call `so_panic("something went wrong")`.
+In C, this is emitted as a macro call `so_panic(...)`.
 
-`panic` with non-literal expressions is not supported. `recover` is not supported.
+`recover` is not supported.
 
 ## Defer
 

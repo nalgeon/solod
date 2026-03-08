@@ -32,11 +32,7 @@ func (g *Generator) emitBuiltin(call *ast.CallExpr, ident *ast.Ident, bi *types.
 		g.emitNewCall(call)
 		return true
 	case "panic":
-		arg, ok := call.Args[0].(*ast.BasicLit)
-		if !ok {
-			g.fail(call, "panic() only supports string literals")
-		}
-		fmt.Fprintf(w, "so_panic(%s)", arg.Value)
+		g.emitPanicCall(call)
 		return true
 	case "print", "println":
 		g.emitPrintCall(call, bi.Name())
@@ -177,6 +173,18 @@ func (g *Generator) emitNewCall(call *ast.CallExpr) {
 	fmt.Fprintf(w, "&(%s){", cType)
 	g.emitExpr(call.Args[0])
 	fmt.Fprintf(w, "}")
+}
+
+// emitPanicCall emits a panic() builtin call as so_panic(arg).
+func (g *Generator) emitPanicCall(call *ast.CallExpr) {
+	arg := call.Args[0]
+	typ := g.types.TypeOf(arg)
+	if !g.hasStringType(arg) && !isErrorType(typ) {
+		g.fail(call, "panic() only supports string and error arguments, got %s", typ)
+	}
+	fmt.Fprintf(g.state.writer, "so_panic(")
+	g.emitCArg(arg)
+	fmt.Fprintf(g.state.writer, ")")
 }
 
 // emitPrintCall emits a print/println call with an auto-generated format string.
