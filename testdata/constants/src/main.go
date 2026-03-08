@@ -27,12 +27,14 @@ const (
 	StateError     ServerState = "error"
 )
 
-// Iota is not supported.
-// const (
-// 	Sunday = iota
-// 	Monday
-// 	Tuesday
-// )
+// Iota constant group.
+type Day int
+
+const (
+	Sunday Day = iota
+	Monday
+	Tuesday
+)
 
 func main() {
 	{
@@ -54,6 +56,11 @@ func main() {
 
 		state := StateConnected
 		_ = state == StateIdle
+	}
+	{
+		// Using iota constants.
+		day := Monday
+		_ = day == Sunday
 	}
 	{
 		// Using _ on file level is not supported,

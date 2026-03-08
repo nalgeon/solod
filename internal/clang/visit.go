@@ -3,6 +3,7 @@ package clang
 import (
 	"fmt"
 	"go/ast"
+	"go/constant"
 	"go/token"
 	"go/types"
 	"io"
@@ -208,21 +209,44 @@ func (g *Generator) emitConstSpec(spec *ast.ValueSpec) {
 	for i, name := range spec.Names {
 		typ := g.types.Defs[name].Type()
 		cType := g.mapType(spec, typ)
+
+		// Check if this is an iota-based constant (implicit value or explicit iota usage).
+		isIota := i >= len(spec.Values) || containsIota(spec.Values[i])
+
+		// Determine constant specifier and name.
+		specifier, constName := "", name.Name
 		if g.state.indent == 0 {
 			// Package-level constant.
-			specifier := "static "
-			if ast.IsExported(name.Name) {
-				specifier = ""
+			if !ast.IsExported(constName) {
+				specifier = "static "
 			}
-			fmt.Fprintf(w, "%sconst %s %s = ", specifier, cType, g.symbolName(name.Name))
-			g.emitExpr(spec.Values[i])
-			fmt.Fprintf(w, ";\n")
-		} else {
-			// Local constant (e.g. inside a function).
-			fmt.Fprintf(w, "%sconst %s %s = ", g.indent(), cType, name.Name)
-			g.emitExpr(spec.Values[i])
-			fmt.Fprintf(w, ";\n")
+			constName = g.symbolName(constName)
 		}
+
+		// Emit the constant declaration.
+		fmt.Fprintf(w, "%s%sconst %s %s = ", g.indent(), specifier, cType, constName)
+		if isIota {
+			g.emitConstVal(spec, name)
+		} else {
+			g.emitExpr(spec.Values[i])
+		}
+		fmt.Fprintf(w, ";\n")
+	}
+}
+
+// emitConstVal emits the type-checker-resolved value of a constant.
+func (g *Generator) emitConstVal(node ast.Node, name *ast.Ident) {
+	obj := g.types.Defs[name].(*types.Const)
+	val := obj.Val()
+	switch val.Kind() {
+	case constant.Int:
+		v, ok := constant.Int64Val(val)
+		if !ok {
+			g.fail(node, "iota value overflows int64")
+		}
+		fmt.Fprintf(g.state.writer, "%d", v)
+	default:
+		g.fail(node, "unsupported iota constant kind: %s", val.Kind())
 	}
 }
 

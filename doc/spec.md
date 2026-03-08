@@ -603,7 +603,27 @@ const (
 
 Each constant is emitted as a C `const`. Exported constants are public, unexported ones are `static`.
 
-`iota` is not supported.
+`iota` is supported for integer-typed constants:
+
+```go
+type Day int
+
+const (
+    Sunday Day = iota
+    Monday
+    Tuesday
+)
+```
+
+Iota values are evaluated at compile time and translated to integer literals:
+
+```c
+typedef so_int main_Day;
+
+const main_Day main_Sunday = 0;
+const main_Day main_Monday = 1;
+const main_Day main_Tuesday = 2;
+```
 
 ## Errors
 

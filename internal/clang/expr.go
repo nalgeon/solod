@@ -414,3 +414,16 @@ func exprIdent(expr ast.Expr) *ast.Ident {
 	}
 	return nil
 }
+
+// containsIota reports whether an expression contains the iota identifier.
+func containsIota(expr ast.Expr) bool {
+	found := false
+	ast.Inspect(expr, func(n ast.Node) bool {
+		if ident, ok := n.(*ast.Ident); ok && ident.Name == "iota" {
+			found = true
+			return false
+		}
+		return !found
+	})
+	return found
+}
