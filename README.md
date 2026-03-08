@@ -7,7 +7,7 @@ Highlights:
 - Go in, C out. You write regular Go code and get readable C11 as output.
 - Zero runtime. No garbage collection, no reference counting, no hidden allocations.
 - Everything is stack-allocated by default. Heap is opt-in through the standard library.
-- Native C interop. Call C from So and So from C — no CGO, no wrappers, no overhead.
+- Native C interop. Call C from So and So from C — no CGO, no overhead.
 - Go tooling works out of the box — syntax highlighting, LSP, linting and "go test".
 
 So supports structs, methods, interfaces, slices, multiple returns, and defer. To keep things simple, there are no maps, channels, goroutines, closures, or generics.
@@ -86,21 +86,21 @@ int main(void) {
 }
 ```
 
-Learn more about the supported language features in [spec.md](doc/spec.md) and check out more examples in [examples].
+Check out more examples in [So by example](example/README.md) and learn about the supported language features in the [spec](doc/spec.md).
 
 ## Installation and usage
 
 Install the So command line tool:
 
 ```
-go install github.com/nalgeon/solod/cmd/so@main
+go install github.com/nalgeon/solod/cmd/so@latest
 ```
 
 Create a new Go project and add the Solod dependency to use the So standard library:
 
 ```
 go mod init example
-go get github.com/nalgeon/solod@main
+go get github.com/nalgeon/solod@latest
 ```
 
 Write regular Go code, but use So packages instead of the standard Go packages:
@@ -136,7 +136,7 @@ Or you can transpile, compile, and run without saving the binary:
 so run .
 ```
 
-All commands work with Go modules, not individual files (no `so run main.go`).
+All commands work with Go modules, not individual files (`so run .`, not `so run main.go`).
 
 Keep in mind that So is new, so it's still a bit rough around the edges.
 
@@ -222,7 +222,7 @@ A high-level standard library similar to Go's stdlib is also planned.
 
 ⏳ Low-level stdlib (libc wrappers).
 
-⬜ Core stdlib packages: errors, fmt, io, time, ...
+⬜ Core stdlib packages: fmt, io, strings, time, ...
 
 ⬜ Hardened transpiler.
 
