@@ -737,7 +737,7 @@ f := Fopen("/tmp/test.txt", "w")
 // not Fopen(so_str("/tmp/test.txt"), so_str("w"))
 ```
 
-The `so/c` package includes helpers for converting C pointers back to So string and slice types: `c.String(ptr)` and `c.Bytes(ptr, n)`.
+The `so/c` package includes helpers for converting C pointers back to So string and slice types: `c.String(ptr)` and `c.Bytes(ptr, n)`. It also provides `c.CharPtr(ptr)` to cast a `*byte` (`uint8_t*`) to `char*` for C functions that expect `char*` (e.g. `strftime`).
 
 ## Embeds
 

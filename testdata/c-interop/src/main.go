@@ -5,6 +5,13 @@ import (
 	"github.com/nalgeon/solod/so/c/stdlib"
 )
 
+//so:include <string.h>
+
+// char *strcat( char *dest, const char *src );
+//
+//so:extern
+func strcat(dest *byte, src string) *byte
+
 func main() {
 	{
 		// c.String: convert C string to So string.
@@ -38,5 +45,19 @@ func main() {
 			panic("want slice[0] == 'H'")
 		}
 		stdlib.Free(buf)
+	}
+	{
+		// Passing (char*) strings to C functions.
+		var buf [64]byte
+		strcat(c.CharPtr(&buf[0]), "Hello, ")
+		strcat(c.CharPtr(&buf[0]), "world!")
+		println(c.String(&buf[0]))
+	}
+	{
+		// Returning (char*) strings from C functions.
+		var buf [64]byte
+		strcat(c.CharPtr(&buf[0]), "Hello, ")
+		s := c.String(strcat(c.CharPtr(&buf[0]), "world!"))
+		println(s)
 	}
 }

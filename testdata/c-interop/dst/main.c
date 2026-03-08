@@ -1,4 +1,5 @@
 #include "main.h"
+#include <string.h>
 
 // -- Implementation --
 
@@ -35,5 +36,19 @@ int main(void) {
             so_panic("want slice[0] == 'H'");
         }
         stdlib_Free(buf);
+    }
+    {
+        // Passing (char*) strings to C functions.
+        uint8_t buf[64] = {0};
+        strcat(c_CharPtr(&buf[0]), "Hello, ");
+        strcat(c_CharPtr(&buf[0]), "world!");
+        so_println("%s", c_String(&buf[0]).ptr);
+    }
+    {
+        // Returning (char*) strings from C functions.
+        uint8_t buf[64] = {0};
+        strcat(c_CharPtr(&buf[0]), "Hello, ");
+        so_String s = c_String(strcat(c_CharPtr(&buf[0]), "world!"));
+        so_println("%s", s.ptr);
     }
 }

@@ -19,3 +19,9 @@ func Bytes(ptr *byte, n int) []byte { _, _ = ptr, n; return nil }
 //
 //so:extern
 func String(ptr *byte) string { _ = ptr; return "" }
+
+// CharPtr casts a *byte (uint8_t*) to char* for C functions
+// that expect char* instead of uint8_t*.
+//
+//so:extern
+func CharPtr(ptr *byte) *byte { _ = ptr; return nil }

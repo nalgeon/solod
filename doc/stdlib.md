@@ -37,6 +37,7 @@ C-to-So type bridge for pointers and strings.
 
 - `Bytes` - wrap a C pointer and length as a byte slice.
 - `String` - convert a null-terminated C string to a So string.
+- `CharPtr` - cast a `*byte` (`uint8_t*`) to `char*` for C interop.
 
 ## so/c/assert
 
