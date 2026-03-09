@@ -11,6 +11,14 @@ int main(void) {
     for (so_int j = 0; j < 3; j++) {
         so_println("%" PRId64, j);
     }
+    so_int start = 5;
+    for (start--; start >= 0; start--) {
+        if (start == 2) {
+            break;
+        }
+    }
+    for (start = 5; start >= 0; start--) {
+    }
     for (so_int k = 0; k < 3; k++) {
         so_println("%s %" PRId64, "range", k);
     }

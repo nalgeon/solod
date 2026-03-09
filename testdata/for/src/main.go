@@ -11,6 +11,16 @@ func main() {
 		println(j)
 	}
 
+	start := 5
+	for start--; start >= 0; start-- {
+		if start == 2 {
+			break
+		}
+	}
+
+	for start = 5; start >= 0; start-- {
+	}
+
 	for k := range 3 {
 		println("range", k)
 	}

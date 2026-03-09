@@ -150,11 +150,7 @@ func (g *Generator) emitForStmt(stmt *ast.ForStmt) {
 	fmt.Fprintf(w, "%sfor (", g.indent())
 
 	if stmt.Init != nil {
-		assign := stmt.Init.(*ast.AssignStmt)
-		ident := assign.Lhs[0].(*ast.Ident)
-		cType := g.mapType(stmt, g.types.Defs[ident].Type())
-		fmt.Fprintf(w, "%s %s = ", cType, ident.Name)
-		g.emitExpr(assign.Rhs[0])
+		g.emitForClause(stmt.Init)
 	}
 	fmt.Fprintf(w, ";")
 
@@ -166,14 +162,38 @@ func (g *Generator) emitForStmt(stmt *ast.ForStmt) {
 
 	if stmt.Post != nil {
 		fmt.Fprintf(w, " ")
-		inc := stmt.Post.(*ast.IncDecStmt)
-		g.emitExpr(inc.X)
-		fmt.Fprintf(w, "%s", inc.Tok.String())
+		g.emitForClause(stmt.Post)
 	}
 
 	fmt.Fprintf(w, ") {\n")
 	g.emitBlock(stmt.Body)
 	fmt.Fprintf(w, "%s}\n", g.indent())
+}
+
+// emitForClause emits a simple statement inline (no indent, no semicolon)
+// for use in for-loop Init and Post positions.
+func (g *Generator) emitForClause(stmt ast.Stmt) {
+	w := g.state.writer
+	switch s := stmt.(type) {
+	case *ast.AssignStmt:
+		if s.Tok == token.DEFINE {
+			ident := s.Lhs[0].(*ast.Ident)
+			cType := g.mapType(s, g.types.Defs[ident].Type())
+			fmt.Fprintf(w, "%s %s = ", cType, ident.Name)
+			g.emitExpr(s.Rhs[0])
+		} else {
+			g.emitExpr(s.Lhs[0])
+			fmt.Fprintf(w, " %s ", s.Tok)
+			g.emitExpr(s.Rhs[0])
+		}
+	case *ast.IncDecStmt:
+		g.emitExpr(s.X)
+		fmt.Fprintf(w, "%s", s.Tok)
+	case *ast.ExprStmt:
+		g.emitExpr(s.X)
+	default:
+		g.fail(stmt, "unsupported for-loop clause: %T", stmt)
+	}
 }
 
 // emitGenDecl emits a general declaration (var, import, etc.).
