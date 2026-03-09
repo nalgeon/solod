@@ -20,6 +20,21 @@ typedef uint8_t so_byte;
 typedef int32_t so_rune;
 typedef int64_t so_int;
 
+// --- Alloca safety ---
+
+// MaxAllocaSize is the maximum size that can be
+// allocated with alloca (64 KB by default).
+#ifndef so_MaxAllocaSize
+#define so_MaxAllocaSize (64 << 10)
+#endif
+
+#define so_alloca(size) ({                                \
+    size_t _size = (size);                                \
+    if (_size > so_MaxAllocaSize)                         \
+        so_panic("alloca: size exceeds maximum allowed"); \
+    _size ? alloca(_size) : NULL;                         \
+})
+
 // --- String type ---
 
 // String is a pointer to array of bytes plus a length.
@@ -32,12 +47,12 @@ typedef struct {
 #define so_str(s) ((so_String){s, sizeof(s) - 1})
 
 // cstr returns a null-terminated C string copy on the stack.
-#define so_cstr(s) ({                \
-    so_String _s = (s);              \
-    char* _buf = alloca(_s.len + 1); \
-    memcpy(_buf, _s.ptr, _s.len);    \
-    _buf[_s.len] = '\0';             \
-    _buf;                            \
+#define so_cstr(s) ({                   \
+    so_String _s = (s);                 \
+    char* _buf = so_alloca(_s.len + 1); \
+    memcpy(_buf, _s.ptr, _s.len);       \
+    _buf[_s.len] = '\0';                \
+    _buf;                               \
 })
 
 // string_slice creates a substring [from, to).
@@ -117,8 +132,13 @@ typedef struct {
 
 // make_slice creates a zero-initialized slice on the stack.
 // Allocates memory on the stack until the calling function returns.
-#define so_make_slice(T, len, cap) \
-    ((so_Slice){memset(alloca(sizeof(T) * (cap)), 0, sizeof(T) * (cap)), (len), (cap)})
+#define so_make_slice(T, len, cap) ({ \
+    size_t _cap = (cap);              \
+    size_t _n = sizeof(T) * _cap;     \
+    void* _p = so_alloca(_n);         \
+    if (_p) memset(_p, 0, _n);        \
+    (so_Slice){_p, (len), _cap};      \
+})
 
 // slice creates a slice from another slice
 // from index 'from' (inclusive) to index 'to' (exclusive).
@@ -132,36 +152,36 @@ typedef struct {
 
 // string_bytes copies a string's bytes into a byte slice.
 // Allocates memory on the stack until the calling function returns.
-#define so_string_bytes(s) ({                    \
-    so_String _s = (s);                          \
-    void* _buf = _s.len ? alloca(_s.len) : NULL; \
-    if (_buf) memcpy(_buf, _s.ptr, _s.len);      \
-    (so_Slice){_buf, _s.len, _s.len};            \
+#define so_string_bytes(s) ({               \
+    so_String _s = (s);                     \
+    void* _buf = so_alloca(_s.len);         \
+    if (_buf) memcpy(_buf, _s.ptr, _s.len); \
+    (so_Slice){_buf, _s.len, _s.len};       \
 })
 
 // string_runes decodes a string's UTF-8 bytes into a rune slice.
 // Allocates memory on the stack until the calling function returns.
-#define so_string_runes(s, maxlen) ({                   \
-    int32_t* _buf = alloca((maxlen) * sizeof(int32_t)); \
-    so_string_runes_impl((s), _buf);                    \
+#define so_string_runes(s, maxlen) ({                      \
+    int32_t* _buf = so_alloca((maxlen) * sizeof(int32_t)); \
+    so_string_runes_impl((s), _buf);                       \
 })
 so_Slice so_string_runes_impl(so_String s, int32_t* buf);
 
 // bytes_string copies a byte slice into a string.
 // Allocates memory on the stack until the calling function returns.
-#define so_bytes_string(bs) ({                     \
-    so_Slice _bs = (bs);                           \
-    char* _buf = _bs.len ? alloca(_bs.len) : NULL; \
-    if (_buf) memcpy(_buf, _bs.ptr, _bs.len);      \
-    (so_String){_buf, _bs.len};                    \
+#define so_bytes_string(bs) ({                \
+    so_Slice _bs = (bs);                      \
+    char* _buf = so_alloca(_bs.len);          \
+    if (_buf) memcpy(_buf, _bs.ptr, _bs.len); \
+    (so_String){_buf, _bs.len};               \
 })
 
 // runes_string encodes a rune slice into a UTF-8 string.
 // Allocates memory on the stack until the calling function returns.
-#define so_runes_string(rs) ({                                       \
-    size_t _rlen = (rs).len;                                         \
-    char* _buf = _rlen ? alloca(_rlen * 4) : NULL;                   \
-    _rlen ? so_runes_string_impl((rs), _buf) : (so_String){NULL, 0}; \
+#define so_runes_string(rs) ({           \
+    so_Slice _rs = (rs);                 \
+    char* _buf = so_alloca(_rs.len * 4); \
+    so_runes_string_impl(_rs, _buf);     \
 })
 so_String so_runes_string_impl(so_Slice rs, char* buf);
 

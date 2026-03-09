@@ -62,7 +62,7 @@ func NewSlice[T any](len int, cap int) []T {
 func FreeSlice[T any](slice []T) {}
 
 // MaxAllocaSize is the maximum size that can be allocated with Alloca.
-// Defined as a mem_MaxAllocaSize constant in the C code.
+// Defined as the so_MaxAllocaSize constant in the C code.
 //
 //so:extern
 var MaxAllocaSize = 64 << 10 // 64 KiB
