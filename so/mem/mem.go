@@ -1,3 +1,4 @@
+// Package mem provides memory allocation facilities.
 package mem
 
 import (
