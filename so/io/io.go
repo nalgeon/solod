@@ -11,8 +11,17 @@
 // various implementations, unless otherwise informed clients should not
 // assume they are safe for parallel execution.
 //
-// CAUTION: This package is under development. DO NOT use yet.
-// Source: https://github.com/golang/go/blob/go1.26.0/src/io/io.go
+// Based on the [io] package, with the following modifications:
+//   - Copy and CopyBuffer don't use WriterTo and ReaderFrom.
+//   - CopyN doesn't use ReaderFrom.
+//   - Discard doesn't use sync.Pool.
+//   - NopCloser doesn't use WriterTo.
+//   - RuneReader.ReadRune returns a struct instead of multi-return.
+//   - WriteString doesn't use WriterTo.
+//
+// CAUTION: This package is under development, do not use yet.
+//
+// [io]: https://github.com/golang/go/blob/go1.26.1/src/io/io.go
 package io
 
 import (
