@@ -11,14 +11,16 @@ import (
 )
 
 func TestTranslate(t *testing.T) {
-	testDirs, err := filepath.Glob("../../testdata/*")
+	testDirs, err := filepath.Glob("../../testdata/*/*")
 	be.Err(t, err, nil)
 
 	for _, testDir := range testDirs {
 		if !isDir(testDir) {
 			continue
 		}
-		t.Run(filepath.Base(testDir), func(t *testing.T) {
+		parts := strings.Split(testDir, string(filepath.Separator))
+		name := strings.Join(parts[len(parts)-2:], "/")
+		t.Run(name, func(t *testing.T) {
 			testPackage(t, testDir)
 		})
 	}

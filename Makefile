@@ -32,8 +32,9 @@ dist:
 
 run-cases:
 	@failed=0; \
-	for dir in testdata/*/; do \
-		name=$$(basename $$dir); \
+	for dir in testdata/lang/*/ testdata/std/*/; do \
+		name=$${dir#testdata/}; \
+		name=$${name%/}; \
 		if make run-case name=$$name > /tmp/so_test_out.txt 2>&1; then \
 			echo "PASS $$name"; \
 		else \
