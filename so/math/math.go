@@ -1,5 +1,6 @@
 // Package math provides basic constants and mathematical functions.
-// CAUTION: This package is under development. DO NOT use yet.
+//
+// CAUTION: This package is under development, do not use yet.
 package math
 
 //so:include <math.h>
