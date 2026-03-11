@@ -31,6 +31,10 @@ Memory allocation with a pluggable allocator interface.
 - `Allocator` interface - custom allocator support (`Alloc`, `Realloc`, `Free`).
 - `SystemAllocator` - default allocator backed by C `calloc`/`realloc`/`free`.
 
+## [so/unicode](https://pkg.go.dev/github.com/nalgeon/solod/so/unicode)
+
+Data and functions to test certain properties of Unicode code points. Offers an API similar to Go's `unicode` package, but with fewer Unicode features (no support for graphic characters, punctuation, symbols, etc.).
+
 ## [so/unicode/utf8](https://pkg.go.dev/github.com/nalgeon/solod/so/unicode/utf8)
 
 Functions to convert between runes and UTF-8 byte sequences. Offers the same API as Go's `unicode/utf8` package.
