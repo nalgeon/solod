@@ -290,7 +290,7 @@ func testReadAtLeast(t *testing.T, rb ReadWriter) {
 	}
 	rb.Write([]byte("4"))
 
-	// TODO: Uncomment after porting bytes.Buffer to So and importing it in the test.
+	// TODO: Awaits porting bytes.Buffer to So and importing it in the test.
 	// n, err = ReadAtLeast(rb, buf, 2)
 	// want := ErrUnexpectedEOF
 	// if rb, ok := rb.(*dataAndErrorBuffer); ok && rb.err != EOF {
@@ -304,7 +304,7 @@ func testReadAtLeast(t *testing.T, rb ReadWriter) {
 	// }
 }
 
-// TODO: Awaits Pipe and ErrClosedPipe in So.
+// TODO: Awaits pipe.go.
 // func TestTeeReader(t *testing.T) {
 // 	src := []byte("hello, world")
 // 	dst := make([]byte, len(src))
@@ -442,84 +442,82 @@ func (w largeWriter) Write(p []byte) (int, error) {
 	return len(p) + 1, w.err
 }
 
-// TODO: Awaits ErrInvalidWrite in So.
-// func TestCopyLargeWriter(t *testing.T) {
-// 	want := ErrInvalidWrite
-// 	rb := new(Buffer)
-// 	wb := largeWriter{}
-// 	rb.WriteString("hello, world.")
-// 	if _, err := Copy(wb, rb); err != want {
-// 		t.Errorf("Copy error: got %v, want %v", err, want)
-// 	}
+func TestCopyLargeWriter(t *testing.T) {
+	want := ErrInvalidWrite
+	rb := new(Buffer)
+	wb := largeWriter{}
+	rb.WriteString("hello, world.")
+	if _, err := Copy(wb, rb); err != want {
+		t.Errorf("Copy error: got %v, want %v", err, want)
+	}
 
-// 	want = errors.New("largeWriterError")
-// 	rb = new(Buffer)
-// 	wb = largeWriter{err: want}
-// 	rb.WriteString("hello, world.")
-// 	if _, err := Copy(wb, rb); err != want {
-// 		t.Errorf("Copy error: got %v, want %v", err, want)
-// 	}
-// }
+	want = errors.New("largeWriterError")
+	rb = new(Buffer)
+	wb = largeWriter{err: want}
+	rb.WriteString("hello, world.")
+	if _, err := Copy(wb, rb); err != want {
+		t.Errorf("Copy error: got %v, want %v", err, want)
+	}
+}
 
-// TODO: Awaits ErrWhence and ErrOffset in So.
-// func TestOffsetWriter_Seek(t *testing.T) {
-// 	tmpfilename := "TestOffsetWriter_Seek"
-// 	tmpfile, err := os.CreateTemp(t.TempDir(), tmpfilename)
-// 	if err != nil {
-// 		t.Fatalf("CreateTemp(%s) failed: %v", tmpfilename, err)
-// 	}
-// 	defer tmpfile.Close()
-// 	w := NewOffsetWriter(tmpfile, 0)
+func TestOffsetWriter_Seek(t *testing.T) {
+	tmpfilename := "TestOffsetWriter_Seek"
+	tmpfile, err := os.CreateTemp(t.TempDir(), tmpfilename)
+	if err != nil {
+		t.Fatalf("CreateTemp(%s) failed: %v", tmpfilename, err)
+	}
+	defer tmpfile.Close()
+	w := NewOffsetWriter(tmpfile, 0)
 
-// 	// Should throw error errWhence if whence is not valid
-// 	t.Run("errWhence", func(t *testing.T) {
-// 		for _, whence := range []int{-3, -2, -1, 3, 4, 5} {
-// 			var offset int64 = 0
-// 			gotOff, gotErr := w.Seek(offset, whence)
-// 			if gotOff != 0 || gotErr != ErrWhence {
-// 				t.Errorf("For whence %d, offset %d, OffsetWriter.Seek got: (%d, %v), want: (%d, %v)",
-// 					whence, offset, gotOff, gotErr, 0, ErrWhence)
-// 			}
-// 		}
-// 	})
+	// Should throw error errWhence if whence is not valid
+	t.Run("errWhence", func(t *testing.T) {
+		for _, whence := range []int{-3, -2, -1, 3, 4, 5} {
+			var offset int64 = 0
+			gotOff, gotErr := w.Seek(offset, whence)
+			if gotOff != 0 || gotErr != ErrWhence {
+				t.Errorf("For whence %d, offset %d, OffsetWriter.Seek got: (%d, %v), want: (%d, %v)",
+					whence, offset, gotOff, gotErr, 0, ErrWhence)
+			}
+		}
+	})
 
-// 	// Should throw error errOffset if offset is negative
-// 	t.Run("errOffset", func(t *testing.T) {
-// 		for _, whence := range []int{SeekStart, SeekCurrent} {
-// 			for offset := int64(-3); offset < 0; offset++ {
-// 				gotOff, gotErr := w.Seek(offset, whence)
-// 				if gotOff != 0 || gotErr != ErrOffset {
-// 					t.Errorf("For whence %d, offset %d, OffsetWriter.Seek got: (%d, %v), want: (%d, %v)",
-// 						whence, offset, gotOff, gotErr, 0, ErrOffset)
-// 				}
-// 			}
-// 		}
-// 	})
+	// Should throw error errOffset if offset is negative
+	t.Run("errOffset", func(t *testing.T) {
+		for _, whence := range []int{SeekStart, SeekCurrent} {
+			for offset := int64(-3); offset < 0; offset++ {
+				gotOff, gotErr := w.Seek(offset, whence)
+				if gotOff != 0 || gotErr != ErrOffset {
+					t.Errorf("For whence %d, offset %d, OffsetWriter.Seek got: (%d, %v), want: (%d, %v)",
+						whence, offset, gotOff, gotErr, 0, ErrOffset)
+				}
+			}
+		}
+	})
 
-// 	// Normal tests
-// 	t.Run("normal", func(t *testing.T) {
-// 		tests := []struct {
-// 			offset    int64
-// 			whence    int
-// 			returnOff int64
-// 		}{
-// 			// keep in order
-// 			{whence: SeekStart, offset: 1, returnOff: 1},
-// 			{whence: SeekStart, offset: 2, returnOff: 2},
-// 			{whence: SeekStart, offset: 3, returnOff: 3},
-// 			{whence: SeekCurrent, offset: 1, returnOff: 4},
-// 			{whence: SeekCurrent, offset: 2, returnOff: 6},
-// 			{whence: SeekCurrent, offset: 3, returnOff: 9},
-// 		}
-// 		for idx, tt := range tests {
-// 			gotOff, gotErr := w.Seek(tt.offset, tt.whence)
-// 			if gotOff != tt.returnOff || gotErr != nil {
-// 				t.Errorf("%d:: For whence %d, offset %d, OffsetWriter.Seek got: (%d, %v), want: (%d, <nil>)",
-// 					idx+1, tt.whence, tt.offset, gotOff, gotErr, tt.returnOff)
-// 			}
-// 		}
-// 	})
-// }
+	// Normal tests
+	t.Run("normal", func(t *testing.T) {
+		tests := []struct {
+			offset    int64
+			whence    int
+			returnOff int64
+		}{
+			// keep in order
+			{whence: SeekStart, offset: 1, returnOff: 1},
+			{whence: SeekStart, offset: 2, returnOff: 2},
+			{whence: SeekStart, offset: 3, returnOff: 3},
+			{whence: SeekCurrent, offset: 1, returnOff: 4},
+			{whence: SeekCurrent, offset: 2, returnOff: 6},
+			{whence: SeekCurrent, offset: 3, returnOff: 9},
+		}
+		for idx, tt := range tests {
+			gotOff, gotErr := w.Seek(tt.offset, tt.whence)
+			if gotOff != tt.returnOff || gotErr != nil {
+				t.Errorf("%d:: For whence %d, offset %d, OffsetWriter.Seek got: (%d, %v), want: (%d, <nil>)",
+					idx+1, tt.whence, tt.offset, gotOff, gotErr, tt.returnOff)
+			}
+		}
+	})
+}
 
 func TestOffsetWriter_WriteAt(t *testing.T) {
 	const content = "0123456789ABCDEF"
