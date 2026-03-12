@@ -32,6 +32,8 @@ Memory allocation with a pluggable allocator interface.
 
 - `Alloc` / `Free` - allocate/free a single value.
 - `AllocSlice` / `FreeSlice` - allocate/free a slice.
+- `Append` / `TryAppend` - append elements to a heap slice, growing if needed.
+- `Extend` / `TryExtend` - append another slice to a heap slice, growing if needed.
 - `Allocator` interface - custom allocator support (`Alloc`, `Realloc`, `Free`).
 - `SystemAllocator` - default allocator backed by C `calloc`/`realloc`/`free`.
 

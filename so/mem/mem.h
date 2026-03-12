@@ -1,3 +1,5 @@
+#include <stddef.h>
+
 // Alloc allocates a single value of type T using allocator a.
 // Returns a pointer to the allocated memory or panics on failure.
 // If the allocator is nil, uses the system allocator.
@@ -56,6 +58,102 @@
     mem_Allocator _a = (a);                                                \
     if (!_a.self) _a = mem_System;                                         \
     _a.Free(_a.self, (s).ptr, sizeof(T) * (s).cap, alignof(so_typeof(T))); \
+})
+
+// nextslicecap computes the capacity for a grown slice using Go's growth
+// formula: 2x for small slices (< 256 elements), transitioning to ~1.25x
+// for larger ones.
+static inline size_t mem_nextslicecap(size_t newLen, size_t oldCap) {
+    size_t newcap = oldCap;
+    size_t doublecap = newcap + newcap;
+    if (newLen > doublecap) return newLen;
+    const size_t threshold = 256;
+    if (oldCap < threshold) return doublecap;
+    for (;;) {
+        newcap += (newcap + 3 * threshold) >> 2;
+        if (newcap >= newLen) break;
+    }
+    return newcap;
+}
+
+// slicegrow grows a slice's backing allocation to hold at least newLen elements.
+// Returns a result with the updated slice or an error if reallocation fails.
+// If the allocator is nil, uses the system allocator.
+#define mem_slicegrow(a, s, newLen, elemSize, elemAlign) ({                               \
+    mem_Allocator _sg_a = (a);                                                            \
+    if (!_sg_a.self) _sg_a = mem_System;                                                  \
+    so_Slice _sg_s = (s);                                                                 \
+    size_t _sg_newLen = (newLen);                                                         \
+    so_Result _sg_res = {.val.as_slice = _sg_s, .err = NULL};                             \
+    if (_sg_newLen > _sg_s.cap) {                                                         \
+        size_t _sg_newcap = mem_nextslicecap(_sg_newLen, _sg_s.cap);                      \
+        so_Result _sg_rr = _sg_a.Realloc(_sg_a.self, _sg_s.ptr,                           \
+                                         (so_int)(_sg_s.cap * (elemSize)),                \
+                                         (so_int)(_sg_newcap * (elemSize)), (elemAlign)); \
+        if (_sg_rr.err != NULL) {                                                         \
+            _sg_res.err = _sg_rr.err;                                                     \
+        } else {                                                                          \
+            _sg_s.ptr = _sg_rr.val.as_ptr;                                                \
+            _sg_s.cap = _sg_newcap;                                                       \
+            _sg_res.val.as_slice = _sg_s;                                                 \
+        }                                                                                 \
+    }                                                                                     \
+    _sg_res;                                                                              \
+})
+
+// TryAppend appends elements to a heap-allocated slice, growing it if needed.
+// Returns a result with the updated slice or an error if reallocation fails.
+// If the allocator is nil, uses the system allocator.
+#define mem_TryAppend(T, a, s, ...) ({                               \
+    so_Slice _s = (s);                                               \
+    T _vals[] = {__VA_ARGS__};                                       \
+    size_t _n = sizeof(_vals) / sizeof(T);                           \
+    so_Result _gr = mem_slicegrow((a), _s, _s.len + _n,              \
+                                  sizeof(T), alignof(so_typeof(T))); \
+    if (_gr.err == NULL) {                                           \
+        _s = _gr.val.as_slice;                                       \
+        memcpy((T*)_s.ptr + _s.len, _vals, sizeof(_vals));           \
+        _s.len += _n;                                                \
+        _gr.val.as_slice = _s;                                       \
+    }                                                                \
+    _gr;                                                             \
+})
+
+// Append appends elements to a heap-allocated slice, growing it if needed.
+// Returns the updated slice or panics on allocation failure.
+// If the allocator is nil, uses the system allocator.
+#define mem_Append(T, a, s, ...) ({                           \
+    so_Result _res = mem_TryAppend(T, (a), (s), __VA_ARGS__); \
+    if (_res.err != NULL)                                     \
+        so_panic(_res.err->msg);                              \
+    _res.val.as_slice;                                        \
+})
+
+// TryExtend appends all elements from another slice, growing if needed.
+// Returns a result with the updated slice or an error if reallocation fails.
+// If the allocator is nil, uses the system allocator.
+#define mem_TryExtend(T, a, s, other) ({                             \
+    so_Slice _s = (s);                                               \
+    so_Slice _src = (other);                                         \
+    so_Result _gr = mem_slicegrow((a), _s, _s.len + _src.len,        \
+                                  sizeof(T), alignof(so_typeof(T))); \
+    if (_gr.err == NULL) {                                           \
+        _s = _gr.val.as_slice;                                       \
+        memcpy((T*)_s.ptr + _s.len, _src.ptr, _src.len * sizeof(T)); \
+        _s.len += _src.len;                                          \
+        _gr.val.as_slice = _s;                                       \
+    }                                                                \
+    _gr;                                                             \
+})
+
+// Extend appends all elements from another slice, growing if needed.
+// Returns the updated slice or panics on allocation failure.
+// If the allocator is nil, uses the system allocator.
+#define mem_Extend(T, a, s, other) ({                     \
+    so_Result _res = mem_TryExtend(T, (a), (s), (other)); \
+    if (_res.err != NULL)                                 \
+        so_panic(_res.err->msg);                          \
+    _res.val.as_slice;                                    \
 })
 
 // MaxAllocaSize is the maximum size that can be allocated with Alloca.

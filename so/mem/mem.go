@@ -59,6 +59,42 @@ func TryAllocSlice[T any](a Allocator, len int, cap int) ([]T, error) {
 //so:extern
 func FreeSlice[T any](a Allocator, slice []T) {}
 
+// Append appends elements to a heap-allocated slice, growing it if needed.
+// Returns the updated slice or panics on allocation failure.
+// If the allocator is nil, uses the system allocator.
+//
+//so:extern
+func Append[T any](a Allocator, s []T, elems ...T) []T {
+	return append(s, elems...)
+}
+
+// TryAppend appends elements to a heap-allocated slice, growing it if needed.
+// Returns the updated slice or an error if allocation fails.
+// If the allocator is nil, uses the system allocator.
+//
+//so:extern
+func TryAppend[T any](a Allocator, s []T, elems ...T) ([]T, error) {
+	return append(s, elems...), nil
+}
+
+// Extend appends all elements from another slice, growing if needed.
+// Returns the updated slice or panics on allocation failure.
+// If the allocator is nil, uses the system allocator.
+//
+//so:extern
+func Extend[T any](a Allocator, s []T, other []T) []T {
+	return append(s, other...)
+}
+
+// TryExtend appends all elements from another slice, growing if needed.
+// Returns the updated slice or an error if allocation fails.
+// If the allocator is nil, uses the system allocator.
+//
+//so:extern
+func TryExtend[T any](a Allocator, s []T, other []T) ([]T, error) {
+	return append(s, other...), nil
+}
+
 // MaxAllocaSize is the maximum size that can be allocated with Alloca.
 // Defined as the so_MaxAllocaSize constant in the C code.
 //
