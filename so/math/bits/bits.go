@@ -5,11 +5,9 @@
 // Package bits implements bit counting and manipulation
 // functions for the predeclared unsigned integer types.
 //
-// Functions in this package may be implemented directly by
-// the compiler, for better performance. For those functions
-// the code in this package will not be used. Which
-// functions are implemented by the compiler depends on the
-// architecture and the Go release.
+// Based on the [math/bits] package.
+//
+// [math/bits]: https://github.com/golang/go/blob/go1.26.1/src/math/bits/bits.go
 package bits
 
 import (
