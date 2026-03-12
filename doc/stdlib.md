@@ -22,6 +22,10 @@ Error creation from text messages.
 
 To avoid heap allocations, `New` can only be used at the package level.
 
+## [so/math/bits](https://pkg.go.dev/github.com/nalgeon/solod/so/math/bits)
+
+Bit counting and manipulation functions. Offers the same API as Go's `math/bits` package.
+
 ## [so/mem](https://pkg.go.dev/github.com/nalgeon/solod/so/mem)
 
 Memory allocation with a pluggable allocator interface.
