@@ -9,6 +9,7 @@ Solod (So) is a strict subset of Go that transpiles to regular C. This document 
 [Slices](#slices) •
 [If/else](#ifelse) •
 [For](#for) •
+[Goto](#goto) •
 [Functions](#functions) •
 [Multiple returns](#multiple-return-values) •
 [Variadic functions](#variadic-functions) •
@@ -337,6 +338,26 @@ for k := range 3 {
 Range over a slice and range over a string are also supported.
 
 `break` and `continue` work as expected.
+
+## Goto
+
+Labels and `goto` map directly to C:
+
+```go
+for i := range 10 {
+    if i%2 == 0 {
+        goto next
+    }
+next:
+    fails++
+    if fails > 2 {
+        goto fallback
+    }
+}
+
+fallback:
+    println("done")
+```
 
 ## Functions
 

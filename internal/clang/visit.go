@@ -61,6 +61,9 @@ func (g *Generator) Visit(node ast.Node) ast.Visitor {
 	case *ast.FuncDecl:
 		g.emitFuncDecl(n)
 		return nil
+	case *ast.GenDecl:
+		g.emitGenDecl(n)
+		return nil
 	case *ast.Ident:
 		// Package name or other identifiers
 		// visited during file walk.
@@ -71,8 +74,8 @@ func (g *Generator) Visit(node ast.Node) ast.Visitor {
 	case *ast.IncDecStmt:
 		g.emitIncDecStmt(n)
 		return nil
-	case *ast.GenDecl:
-		g.emitGenDecl(n)
+	case *ast.LabeledStmt:
+		g.emitLabeledStmt(n)
 		return nil
 	case *ast.RangeStmt:
 		g.emitRangeStmt(n)
@@ -95,9 +98,14 @@ func (g *Generator) Visit(node ast.Node) ast.Visitor {
 	return g
 }
 
-// emitBranchStmt emits a break or continue statement.
+// emitBranchStmt emits a break, continue, or goto statement.
 func (g *Generator) emitBranchStmt(stmt *ast.BranchStmt) {
-	fmt.Fprintf(g.state.writer, "%s%s;\n", g.indent(), stmt.Tok)
+	w := g.state.writer
+	if stmt.Label != nil {
+		fmt.Fprintf(w, "%s%s %s;\n", g.indent(), stmt.Tok, stmt.Label.Name)
+	} else {
+		fmt.Fprintf(w, "%s%s;\n", g.indent(), stmt.Tok)
+	}
 }
 
 // emitDeferStmt emits a defer statement. Generic calls (with type args) are
@@ -455,6 +463,13 @@ func (g *Generator) emitIncDecStmt(stmt *ast.IncDecStmt) {
 	fmt.Fprintf(w, "%s", g.indent())
 	g.emitExpr(stmt.X)
 	fmt.Fprintf(w, "%s;\n", stmt.Tok)
+}
+
+// emitLabeledStmt emits a label followed by its statement.
+func (g *Generator) emitLabeledStmt(stmt *ast.LabeledStmt) {
+	w := g.state.writer
+	fmt.Fprintf(w, "%s%s:\n", g.indent(), stmt.Label.Name)
+	ast.Walk(g, stmt.Stmt)
 }
 
 // emitRangeStmt emits a range-based for statement.
