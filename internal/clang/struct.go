@@ -186,7 +186,7 @@ func (g *Generator) emitMethodCall(sel *ast.SelectorExpr, args []ast.Expr) {
 	}
 
 	// Regular method call: r.Area() → main_Rect_Area(&r)
-	cStructType := g.symbolName(named.Obj().Name())
+	cStructType := g.mapType(sel, named)
 	cName := cStructType + "_" + sel.Sel.Name
 	fmt.Fprintf(w, "%s(", cName)
 

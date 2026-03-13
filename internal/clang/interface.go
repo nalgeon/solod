@@ -48,8 +48,8 @@ func (g *Generator) emitInterfaceLit(ifaceType types.Type, expr ast.Expr) {
 	}
 	concreteNamed := concreteType.(*types.Named)
 
-	cIface := g.symbolName(named.Obj().Name())
-	cConcrete := g.symbolName(concreteNamed.Obj().Name())
+	cIface := g.mapType(expr, named)
+	cConcrete := g.mapType(expr, concreteNamed)
 
 	if isPtr {
 		fmt.Fprintf(w, "(%s){.self = ", cIface)
@@ -76,7 +76,7 @@ func (g *Generator) emitTypeAssertion(w io.Writer, stmt *ast.AssignStmt, ta *ast
 		assertedType = ptr.Elem()
 	}
 	concreteNamed := assertedType.(*types.Named)
-	cConcrete := g.symbolName(concreteNamed.Obj().Name())
+	cConcrete := g.mapType(ta, concreteNamed)
 
 	okIdent := stmt.Lhs[1].(*ast.Ident)
 	if stmt.Tok == token.DEFINE {
@@ -109,7 +109,7 @@ func (g *Generator) emitTypeAssertExpr(n *ast.TypeAssertExpr) {
 
 	// Cast to a pointer or value type, depending on the request.
 	concreteNamed := targetType.(*types.Named)
-	cConcrete := g.symbolName(concreteNamed.Obj().Name())
+	cConcrete := g.mapType(n, concreteNamed)
 	if isPtr {
 		// Pointer assertion: ival.(*Type) → (Type*)ival.self
 		fmt.Fprintf(g.state.writer, "(%s*)", cConcrete)
