@@ -31,6 +31,10 @@ func main() {
 		for _, r := range str {
 			println("r =", r)
 		}
+		var r rune
+		for _, r = range str {
+			_ = r
+		}
 		for i, r := range "go" {
 			println("i =", i, "r =", r)
 		}

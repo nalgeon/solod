@@ -39,6 +39,13 @@ int main(void) {
             so_println("%s %d", "r =", r);
             _ += __w;
         }
+        so_rune r = 0;
+        for (so_int _ = 0; _ < so_len(str);) {
+            int __w = 0;
+            r = so_utf8_decode(str, _, &__w);
+            (void)r;
+            _ += __w;
+        }
         for (so_int i = 0; i < so_len(so_str("go"));) {
             int _iw = 0;
             so_rune r = so_utf8_decode(so_str("go"), i, &_iw);
