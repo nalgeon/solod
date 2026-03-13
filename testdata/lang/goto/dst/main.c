@@ -8,13 +8,13 @@ int main(void) {
         if (i % 2 == 0) {
             goto next;
         }
-        next:
+        next:;
         fails++;
         if (fails > 2) {
             goto fallback;
         }
     }
-    fallback:
+    fallback:;
     if (fails != 3) {
         so_panic("want fails == 3");
     }

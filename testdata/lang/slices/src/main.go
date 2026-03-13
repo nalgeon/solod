@@ -81,6 +81,18 @@ func main() {
 	}
 
 	{
+		// Three-index slice expression.
+		nums := []int{1, 2, 3, 4, 5}
+		s := nums[1:3:4]
+		if len(s) != 2 || cap(s) != 3 {
+			panic("want len 2, cap 3")
+		}
+		if s[0] != 2 || s[1] != 3 {
+			panic("want s[0] == 2 && s[1] == 3")
+		}
+	}
+
+	{
 		// Slice literals.
 		empty := []int{}
 		_ = empty

@@ -468,7 +468,7 @@ func (g *Generator) emitIncDecStmt(stmt *ast.IncDecStmt) {
 // emitLabeledStmt emits a label followed by its statement.
 func (g *Generator) emitLabeledStmt(stmt *ast.LabeledStmt) {
 	w := g.state.writer
-	fmt.Fprintf(w, "%s%s:\n", g.indent(), stmt.Label.Name)
+	fmt.Fprintf(w, "%s%s:;\n", g.indent(), stmt.Label.Name)
 	ast.Walk(g, stmt.Stmt)
 }
 

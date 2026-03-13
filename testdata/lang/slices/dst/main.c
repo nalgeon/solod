@@ -74,6 +74,17 @@ int main(void) {
         }
     }
     {
+        // Three-index slice expression.
+        so_Slice nums = (so_Slice){(so_int[5]){1, 2, 3, 4, 5}, 5, 5};
+        so_Slice s = so_slice3(so_int, nums, 1, 3, 4);
+        if (so_len(s) != 2 || so_cap(s) != 3) {
+            so_panic("want len 2, cap 3");
+        }
+        if (so_at(so_int, s, 0) != 2 || so_at(so_int, s, 1) != 3) {
+            so_panic("want s[0] == 2 && s[1] == 3");
+        }
+    }
+    {
         // Slice literals.
         so_Slice empty = (so_Slice){0};
         (void)empty;

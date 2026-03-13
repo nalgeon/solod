@@ -238,7 +238,11 @@ s3 := nums[:3]   // up to index 3
 s4 := nums[1:4]  // from 1 to 4
 ```
 
-Full slice expressions are not supported.
+Full slice expressions (`s[low:high:max]`) are supported to limit the capacity of the resulting slice:
+
+```go
+s := nums[1:3:4]  // len=2, cap=3
+```
 
 Built-in operations:
 

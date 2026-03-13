@@ -90,7 +90,11 @@ func (g *Generator) emitSliceExpr(n *ast.SliceExpr) {
 	switch t := g.types.TypeOf(n.X).Underlying().(type) {
 	case *types.Array:
 		elemType := g.mapType(n, t.Elem())
-		fmt.Fprintf(w, "so_array_slice(%s, ", elemType)
+		if n.Slice3 {
+			fmt.Fprintf(w, "so_array_slice3(%s, ", elemType)
+		} else {
+			fmt.Fprintf(w, "so_array_slice(%s, ", elemType)
+		}
 		g.emitExpr(n.X)
 		fmt.Fprintf(w, ", ")
 		if n.Low != nil {
@@ -104,7 +108,13 @@ func (g *Generator) emitSliceExpr(n *ast.SliceExpr) {
 		} else {
 			fmt.Fprintf(w, "%d", t.Len())
 		}
-		fmt.Fprintf(w, ", %d)", t.Len())
+		if n.Slice3 {
+			fmt.Fprintf(w, ", ")
+			g.emitExpr(n.Max)
+			fmt.Fprintf(w, ")")
+		} else {
+			fmt.Fprintf(w, ", %d)", t.Len())
+		}
 
 	case *types.Basic:
 		if t.Kind() != types.String {
@@ -130,7 +140,11 @@ func (g *Generator) emitSliceExpr(n *ast.SliceExpr) {
 
 	case *types.Slice:
 		elemType := g.mapType(n, t.Elem())
-		fmt.Fprintf(w, "so_slice(%s, ", elemType)
+		if n.Slice3 {
+			fmt.Fprintf(w, "so_slice3(%s, ", elemType)
+		} else {
+			fmt.Fprintf(w, "so_slice(%s, ", elemType)
+		}
 		g.emitExpr(n.X)
 		fmt.Fprintf(w, ", ")
 		if n.Low != nil {
@@ -144,6 +158,10 @@ func (g *Generator) emitSliceExpr(n *ast.SliceExpr) {
 		} else {
 			g.emitExpr(n.X)
 			fmt.Fprintf(w, ".len")
+		}
+		if n.Slice3 {
+			fmt.Fprintf(w, ", ")
+			g.emitExpr(n.Max)
 		}
 		fmt.Fprintf(w, ")")
 
