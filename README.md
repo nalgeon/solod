@@ -168,7 +168,7 @@ Supported operating systems: Linux, macOS, Windows.
 
 ## Design decisions
 
-_Simplicity is key_. Fewer features are always better. Every new feature is strongly discouraged by default and should be added only if there are very convincing real-world use cases to support it.
+_Simplicity is key_. Fewer features are always better. Every new feature is strongly discouraged by default and should be added only if there are very convincing real-world use cases to support it. This applies to the standard library too — So tries to export as little of Go's stdlib API as possible while still remaining highly useful for real-world use cases.
 
 _No heap allocations_ are allowed in language built-ins (like maps, slices, new, or append). Heap allocations are allowed in the standard library, but they must clearly state when an allocation happens and who owns the allocated data.
 
