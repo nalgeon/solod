@@ -10,7 +10,7 @@ Highlights:
 - Native C interop. Call C from So and So from C — no CGO, no overhead.
 - Go tooling works out of the box — syntax highlighting, LSP, linting and "go test".
 
-So supports structs, methods, interfaces, slices, multiple returns, and defer. To keep things simple, there are no maps, channels, goroutines, closures, or generics.
+So supports structs, methods, interfaces, slices, multiple returns, and defer. To keep things simple, there are no channels, goroutines, closures, or generics.
 
 So is for systems programming in C, but with Go's syntax, type safety, and tooling.
 
@@ -226,6 +226,8 @@ There are low-level packages that wrap the libc API (`so/c/stdlib`, `so/c/stdio`
 ✅ Low-level stdlib (libc wrappers). Done for now; I will add more if needed.
 
 ⏳ Core stdlib packages: fmt, io, strings, time, ...
+
+⬜ Maps.
 
 ⬜ Hardened transpiler.
 
