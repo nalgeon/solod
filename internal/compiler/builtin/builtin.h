@@ -103,7 +103,7 @@ static inline bool so_string_gte(so_String s1, so_String s2) {
 // utf8_decode decodes one UTF-8 rune from string s at byte offset i.
 // Stores the byte width in *w.
 // Returns the decoded rune, or 0xFFFD for invalid UTF-8.
-so_rune so_utf8_decode(so_String s, so_int i, int* w);
+so_rune so_utf8_decode(so_String s, so_int i, so_int* w);
 
 // --- Arrays ---
 

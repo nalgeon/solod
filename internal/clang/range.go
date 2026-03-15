@@ -120,34 +120,31 @@ func (g *Generator) emitStringRange(stmt *ast.RangeStmt) {
 	w := g.state.writer
 	if stmt.Key == nil {
 		// Basic form: `for range str { ... }`
-		fmt.Fprintf(w, "%sfor (so_int _i = 0; _i < so_len(", g.indent())
+		fmt.Fprintf(w, "%sfor (so_int _i = 0, _iw = 0; _i < so_len(", g.indent())
 		g.emitExpr(stmt.X)
-		fmt.Fprintf(w, ");) {\n")
+		fmt.Fprintf(w, "); _i += _iw) {\n")
 		g.state.indent++
-		fmt.Fprintf(w, "%sint _iw = 0;\n", g.indent())
+		fmt.Fprintf(w, "%s_iw = 0;\n", g.indent())
 		fmt.Fprintf(w, "%sso_utf8_decode(", g.indent())
 		g.emitExpr(stmt.X)
 		fmt.Fprintf(w, ", _i, &_iw);\n")
 		g.state.indent--
 		g.emitBlock(stmt.Body)
-		g.state.indent++
-		fmt.Fprintf(w, "%s_i += _iw;\n", g.indent())
-		g.state.indent--
 		fmt.Fprintf(w, "%s}\n", g.indent())
 		return
 	}
 
 	key := stmt.Key.(*ast.Ident)
 	keyDecl := g.rangeKeyDecl(stmt, key)
+	widthVar := "_" + key.Name + "w"
 
-	fmt.Fprintf(w, "%sfor (%s%s = 0; %s < so_len(", g.indent(), keyDecl, key.Name, key.Name)
+	fmt.Fprintf(w, "%sfor (%s%s = 0, %s = 0; %s < so_len(", g.indent(), keyDecl, key.Name, widthVar, key.Name)
 	g.emitExpr(stmt.X)
-	fmt.Fprintf(w, ");) {\n")
+	fmt.Fprintf(w, "); %s += %s) {\n", key.Name, widthVar)
 
 	// Decode rune and width once per iteration.
 	g.state.indent++
-	widthVar := "_" + key.Name + "w"
-	fmt.Fprintf(w, "%sint %s = 0;\n", g.indent(), widthVar)
+	fmt.Fprintf(w, "%s%s = 0;\n", g.indent(), widthVar)
 	if stmt.Value != nil {
 		if valIdent, ok := stmt.Value.(*ast.Ident); ok && valIdent.Name != "_" {
 			valDecl := "so_rune "
@@ -166,11 +163,6 @@ func (g *Generator) emitStringRange(stmt *ast.RangeStmt) {
 	g.state.indent--
 
 	g.emitBlock(stmt.Body)
-
-	// Advance index by rune width.
-	g.state.indent++
-	fmt.Fprintf(w, "%s%s += %s;\n", g.indent(), key.Name, widthVar)
-	g.state.indent--
 
 	fmt.Fprintf(w, "%s}\n", g.indent())
 }

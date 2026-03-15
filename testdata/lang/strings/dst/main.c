@@ -21,41 +21,51 @@ int main(void) {
     {
         // Loop over string runes.
         so_String str = so_str("Hi 世界!");
-        for (so_int i = 0; i < so_len(str);) {
-            int _iw = 0;
+        for (so_int i = 0, _iw = 0; i < so_len(str); i += _iw) {
+            _iw = 0;
             so_rune r = so_utf8_decode(str, i, &_iw);
             so_println("%s %" PRId64 " %s %d", "i =", i, "r =", r);
-            i += _iw;
         }
-        for (so_int i = 0; i < so_len(str);) {
-            int _iw = 0;
+        for (so_int i = 0, _iw = 0; i < so_len(str); i += _iw) {
+            _iw = 0;
             so_utf8_decode(str, i, &_iw);
             so_println("%s %" PRId64, "i =", i);
-            i += _iw;
         }
-        for (so_int _ = 0; _ < so_len(str);) {
-            int __w = 0;
+        for (so_int _ = 0, __w = 0; _ < so_len(str); _ += __w) {
+            __w = 0;
             so_rune r = so_utf8_decode(str, _, &__w);
             so_println("%s %d", "r =", r);
-            _ += __w;
         }
         so_rune r = 0;
-        for (so_int _ = 0; _ < so_len(str);) {
-            int __w = 0;
+        for (so_int _ = 0, __w = 0; _ < so_len(str); _ += __w) {
+            __w = 0;
             r = so_utf8_decode(str, _, &__w);
             (void)r;
-            _ += __w;
         }
-        for (so_int i = 0; i < so_len(so_str("go"));) {
-            int _iw = 0;
+        for (so_int i = 0, _iw = 0; i < so_len(so_str("go")); i += _iw) {
+            _iw = 0;
             so_rune r = so_utf8_decode(so_str("go"), i, &_iw);
             so_println("%s %" PRId64 " %s %d", "i =", i, "r =", r);
-            i += _iw;
         }
-        for (so_int _i = 0; _i < so_len(str);) {
-            int _iw = 0;
+        for (so_int _i = 0, _iw = 0; _i < so_len(str); _i += _iw) {
+            _iw = 0;
             so_utf8_decode(str, _i, &_iw);
-            _i += _iw;
+        }
+    }
+    {
+        // Continue in range-over-string loop.
+        so_String s = so_str("hello");
+        so_int n = 0;
+        for (so_int _ = 0, __w = 0; _ < so_len(s); _ += __w) {
+            __w = 0;
+            so_rune c = so_utf8_decode(s, _, &__w);
+            if (c == U'l') {
+                continue;
+            }
+            n++;
+        }
+        if (n != 3) {
+            so_panic("want n == 3");
         }
     }
     {

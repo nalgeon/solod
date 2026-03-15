@@ -43,6 +43,21 @@ func main() {
 	}
 
 	{
+		// Continue in range-over-string loop.
+		s := "hello"
+		n := 0
+		for _, c := range s {
+			if c == 'l' {
+				continue
+			}
+			n++
+		}
+		if n != 3 {
+			panic("want n == 3")
+		}
+	}
+
+	{
 		// Compare strings.
 		s1 := "hello"
 		s2 := "world"

@@ -5,7 +5,7 @@
 // utf8_decode decodes one UTF-8 rune from string s at byte offset i.
 // Stores the byte width in *w.
 // Returns the decoded rune, or 0xFFFD for invalid UTF-8.
-so_rune so_utf8_decode(so_String s, so_int i, int* w) {
+so_rune so_utf8_decode(so_String s, so_int i, so_int* w) {
     const uint8_t* p = (const uint8_t*)s.ptr + i;
     so_int remaining = (so_int)s.len - i;
     if (remaining <= 0) {
@@ -50,7 +50,7 @@ so_rune so_utf8_decode(so_String s, so_int i, int* w) {
 so_Slice so_string_runes_impl(so_String s, so_rune* buf) {
     size_t n = 0;
     for (so_int i = 0; i < (so_int)s.len;) {
-        int w = 0;
+        so_int w = 0;
         buf[n++] = so_utf8_decode(s, i, &w);
         i += w;
     }
