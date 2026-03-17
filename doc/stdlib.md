@@ -9,6 +9,7 @@ High-level:
 [io](#soio) •
 [math/bits](#somathbits) •
 [mem](#somem) •
+[os](#soos) •
 [slices](#soslices) •
 [strings](#sostrings) •
 [unicode](#sounicode) •
@@ -102,6 +103,25 @@ Types:
 
 - `Allocator` interface - custom allocator support (`Alloc`, `Realloc`, `Free`).
 - `SystemAllocator` - default allocator backed by C `calloc`/`realloc`/`free`.
+
+## [so/os](https://pkg.go.dev/github.com/nalgeon/solod/so/os)
+
+File I/O and filesystem operations. Offers an API similar to Go's `os` package, but with fewer features.
+
+Functions:
+
+- `Create` creates or truncates a file for reading and writing.
+- `Open` opens a file for reading.
+- `ReadFile` reads an entire file into a byte slice.
+- `WriteFile` writes a byte slice to a file, creating or truncating it.
+- `Rename` renames (moves) a file.
+- `Remove` removes a file or empty directory.
+
+Types:
+
+- `File` represents an open file.
+
+`so/os` is currently built on libc's `stdio.h`, so it's much more limited than Go's `os` package.
 
 ## [so/slices](https://pkg.go.dev/github.com/nalgeon/solod/so/slices)
 
