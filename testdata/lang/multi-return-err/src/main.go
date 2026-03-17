@@ -31,22 +31,21 @@ func returnSlice() ([]int, error) {
 	return []int{1, 2, 3}, nil
 }
 
-// Returning struct values is not supported.
-// func returnStruct() (File, error) {
-// 	return File{size: 42}, nil
-// }
-
 func returnPtr() (*File, error) {
 	return &file, nil
 }
 
-// Returning interface values is not supported.
-// func returnIface() (Reader, error) {
-// 	return &file, nil
-// }
-
 func forwardCall() (int, error) {
 	return divide(10, 3)
+}
+
+type FileResult struct {
+	val File
+	err error
+}
+
+func create(size int) (File, error) {
+	return File{size: size}, nil
 }
 
 func main() {
@@ -103,5 +102,13 @@ func main() {
 		q, err := forwardCall()
 		_ = q
 		_ = err
+	}
+
+	{
+		// Custom struct + error.
+		f, err := create(42)
+		if f.size != 42 || err != nil {
+			panic("Custom struct failed")
+		}
 	}
 }

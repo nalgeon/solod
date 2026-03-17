@@ -7,6 +7,7 @@ static so_Result returnString(void);
 static so_Result returnSlice(void);
 static so_Result returnPtr(void);
 static so_Result forwardCall(void);
+static main_FileResult create(so_int size);
 
 // -- Implementation --
 static main_File file = {0};
@@ -33,20 +34,16 @@ static so_Result returnSlice(void) {
     return (so_Result){.val.as_slice = (so_Slice){(so_int[3]){1, 2, 3}, 3, 3}, .err = NULL};
 }
 
-// Returning struct values is not supported.
-// func returnStruct() (File, error) {
-// 	return File{size: 42}, nil
-// }
 static so_Result returnPtr(void) {
     return (so_Result){.val.as_ptr = &file, .err = NULL};
 }
 
-// Returning interface values is not supported.
-// func returnIface() (Reader, error) {
-// 	return &file, nil
-// }
 static so_Result forwardCall(void) {
     return divide(10, 3);
+}
+
+static main_FileResult create(so_int size) {
+    return (main_FileResult){.val = (main_File){.size = size}, .err = NULL};
 }
 
 int main(void) {
@@ -120,5 +117,14 @@ int main(void) {
         so_Error err = _res11.err;
         (void)q;
         (void)err;
+    }
+    {
+        // Custom struct + error.
+        main_FileResult _res12 = create(42);
+        main_File f = _res12.val;
+        so_Error err = _res12.err;
+        if (f.size != 42 || err != NULL) {
+            so_panic("Custom struct failed");
+        }
     }
 }

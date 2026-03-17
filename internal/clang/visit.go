@@ -483,13 +483,27 @@ func (g *Generator) emitRangeStmt(stmt *ast.RangeStmt) {
 func (g *Generator) emitReturnStmt(stmt *ast.ReturnStmt) {
 	g.emitDeferredCalls()
 	w := g.state.writer
+
 	if len(stmt.Results) == 0 {
+		// No return values.
 		fmt.Fprintf(w, "%sreturn;\n", g.indent())
 		return
 	}
+
 	if len(stmt.Results) > 1 {
-		// Multiple return values are wrapped in a so_Result struct.
+		// Multiple return values are wrapped in a result struct.
 		info := g.multiReturnFields(stmt, g.state.funcSig)
+		if info.resultType != "" {
+			// (T, error) where T is a custom struct type.
+			fmt.Fprintf(w, "%sreturn (%s){.val = ", g.indent(), info.resultType)
+			g.emitExpr(stmt.Results[0])
+			fmt.Fprintf(w, ", .err = ")
+			g.emitExpr(stmt.Results[1])
+			fmt.Fprintf(w, "};\n")
+			return
+		}
+
+		// (T, error) or (T, T) where T is a supported type.
 		fmt.Fprintf(w, "%sreturn (so_Result){.val.%s = ", g.indent(), info.field1)
 		g.emitExpr(stmt.Results[0])
 		if info.hasError {
@@ -501,6 +515,8 @@ func (g *Generator) emitReturnStmt(stmt *ast.ReturnStmt) {
 		fmt.Fprintf(w, "};\n")
 		return
 	}
+
+	// Single return value.
 	fmt.Fprintf(w, "%sreturn ", g.indent())
 	retType := g.state.funcSig.Results().At(0).Type()
 	g.emitExprAsType(stmt, stmt.Results[0], retType)

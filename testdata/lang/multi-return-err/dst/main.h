@@ -12,6 +12,11 @@ typedef struct main_File {
     so_int size;
 } main_File;
 
+typedef struct main_FileResult {
+    main_File val;
+    so_Error err;
+} main_FileResult;
+
 // -- Variables and constants --
 
 // -- Functions and methods --

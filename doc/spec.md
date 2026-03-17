@@ -470,18 +470,25 @@ func forwardDivmod() (int, int) {
 Supported return types:
 
 ```go
-bool
-byte
-float64
-int
-int64
-rune
-string
-[]T
-*T
+bool byte float64
+int int64 rune
+string []T *T
 ```
 
-Not supported: returning struct values or interface values, named return values.
+So also supports the `(T, error)` pattern, where `T` is a struct type. To use it, you need to define a struct type called `{T}Result` with two fields: `val T` and `err error`:
+
+```go
+type FileResult struct {
+    val File
+    err error
+}
+
+func create(size int) (File, error) {
+    return File{size: size}, nil
+}
+```
+
+Not supported: returning interface values, named return values.
 
 ## Variadic functions
 
