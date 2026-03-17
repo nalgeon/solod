@@ -4,6 +4,7 @@
 package os
 
 import (
+	"github.com/nalgeon/solod/so/c"
 	"github.com/nalgeon/solod/so/errors"
 	"github.com/nalgeon/solod/so/io"
 	"github.com/nalgeon/solod/so/mem"
@@ -100,6 +101,22 @@ func Remove(name string) error {
 		return mapError()
 	}
 	return nil
+}
+
+// Getenv retrieves the value of the environment variable named by the key.
+// It returns the value, which will be empty if the variable is not present.
+func Getenv(key string) string {
+	ptr := getenv(key).(*byte)
+	if ptr == nil {
+		return ""
+	}
+	return c.String(ptr)
+}
+
+// Exit causes the current program to exit with the given status code.
+// Conventionally, code zero indicates success, non-zero an error.
+func Exit(code int) {
+	exit(code)
 }
 
 // mapError maps errno to a sentinel error.

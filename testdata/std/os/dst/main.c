@@ -145,4 +145,148 @@ int main(void) {
             so_panic("Open nonexistent: wrong error");
         }
     }
+    {
+        // Seek.
+        so_String name = so_str("test_seek.txt");
+        os_FileResult _res9 = os_Create(name);
+        os_File f = _res9.val;
+        so_Error err = _res9.err;
+        if (err != NULL) {
+            so_panic("Create failed");
+        }
+        os_File_Write(&f, so_string_bytes(so_str("abcdef")));
+        so_Result _res10 = os_File_Seek(&f, 0, io_SeekStart);
+        int64_t pos = _res10.val.as_i64;
+        err = _res10.err;
+        if (err != NULL) {
+            os_Remove(name);
+            so_panic("Seek failed");
+        }
+        if (pos != 0) {
+            os_Remove(name);
+            so_panic("Seek: wrong position");
+        }
+        so_Slice buf = so_make_slice(so_byte, 6, 6);
+        so_Result _res11 = os_File_Read(&f, buf);
+        so_int n = _res11.val.as_int;
+        err = _res11.err;
+        if (err != NULL) {
+            os_Remove(name);
+            so_panic("Read after Seek failed");
+        }
+        if (so_string_ne(so_bytes_string(so_slice(so_byte, buf, 0, n)), so_str("abcdef"))) {
+            os_Remove(name);
+            so_panic("Seek: wrong data");
+        }
+        os_File_Close(&f);
+        os_Remove(name);
+    }
+    {
+        // ReadAt.
+        so_String name = so_str("test_readat.txt");
+        so_Error err = os_WriteFile(name, so_string_bytes(so_str("hello world")));
+        if (err != NULL) {
+            so_panic("WriteFile failed");
+        }
+        os_FileResult _res12 = os_Open(name);
+        os_File f = _res12.val;
+        err = _res12.err;
+        if (err != NULL) {
+            os_Remove(name);
+            so_panic("Open failed");
+        }
+        so_Slice buf = so_make_slice(so_byte, 5, 5);
+        so_Result _res13 = os_File_ReadAt(&f, buf, 6);
+        so_int n = _res13.val.as_int;
+        err = _res13.err;
+        if (err != NULL) {
+            os_Remove(name);
+            so_panic("ReadAt failed");
+        }
+        if (n != 5) {
+            os_Remove(name);
+            so_panic("ReadAt: wrong count");
+        }
+        if (so_string_ne(so_bytes_string(so_slice(so_byte, buf, 0, n)), so_str("world"))) {
+            os_Remove(name);
+            so_panic("ReadAt: wrong data");
+        }
+        os_File_Close(&f);
+        os_Remove(name);
+    }
+    {
+        // WriteAt.
+        so_String name = so_str("test_writeat.txt");
+        os_FileResult _res14 = os_Create(name);
+        os_File f = _res14.val;
+        so_Error err = _res14.err;
+        if (err != NULL) {
+            so_panic("Create failed");
+        }
+        os_File_Write(&f, so_string_bytes(so_str("hello world")));
+        so_Result _res15 = os_File_WriteAt(&f, so_string_bytes(so_str("WORLD")), 6);
+        err = _res15.err;
+        if (err != NULL) {
+            os_Remove(name);
+            so_panic("WriteAt failed");
+        }
+        os_File_Close(&f);
+        so_Result _res16 = os_ReadFile((mem_Allocator){0}, name);
+        so_Slice b = _res16.val.as_slice;
+        err = _res16.err;
+        if (err != NULL) {
+            os_Remove(name);
+            so_panic("ReadFile failed");
+        }
+        if (so_string_ne(so_bytes_string(b), so_str("hello WORLD"))) {
+            mem_FreeSlice(so_byte, (mem_Allocator){0}, b);
+            os_Remove(name);
+            so_panic("WriteAt: wrong data");
+        }
+        mem_FreeSlice(so_byte, (mem_Allocator){0}, b);
+        os_Remove(name);
+    }
+    {
+        // WriteString.
+        so_String name = so_str("test_writestr.txt");
+        os_FileResult _res17 = os_Create(name);
+        os_File f = _res17.val;
+        so_Error err = _res17.err;
+        if (err != NULL) {
+            so_panic("Create failed");
+        }
+        so_Result _res18 = os_File_WriteString(&f, so_str("hello"));
+        so_int n = _res18.val.as_int;
+        err = _res18.err;
+        if (err != NULL) {
+            os_Remove(name);
+            so_panic("WriteString failed");
+        }
+        if (n != 5) {
+            os_Remove(name);
+            so_panic("WriteString: wrong count");
+        }
+        os_File_Close(&f);
+        so_Result _res19 = os_ReadFile((mem_Allocator){0}, name);
+        so_Slice b = _res19.val.as_slice;
+        err = _res19.err;
+        if (err != NULL) {
+            os_Remove(name);
+            so_panic("ReadFile failed");
+        }
+        if (so_string_ne(so_bytes_string(b), so_str("hello"))) {
+            mem_FreeSlice(so_byte, (mem_Allocator){0}, b);
+            os_Remove(name);
+            so_panic("WriteString: wrong data");
+        }
+        mem_FreeSlice(so_byte, (mem_Allocator){0}, b);
+        os_Remove(name);
+    }
+    {
+        // Getenv.
+        so_String path = os_Getenv(so_str("PATH"));
+        if (so_len(path) == 0) {
+            so_panic("Getenv PATH: empty");
+        }
+    }
 }

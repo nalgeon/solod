@@ -116,10 +116,12 @@ Functions:
 - `WriteFile` writes a byte slice to a file, creating or truncating it.
 - `Rename` renames (moves) a file.
 - `Remove` removes a file or empty directory.
+- `Getenv` returns the value of an environment variable.
+- `Exit` terminates the program with the given status code.
 
 Types:
 
-- `File` represents an open file.
+- `File` represents an open file with methods for reading and writing data.
 
 `so/os` is currently built on libc's `stdio.h`, so it's much more limited than Go's `os` package.
 
