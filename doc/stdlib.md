@@ -12,6 +12,7 @@ High-level:
 [os](#soos) •
 [slices](#soslices) •
 [strings](#sostrings) •
+[time](#sotime) •
 [unicode](#sounicode) •
 [unicode/utf8](#sounicodeutf8)
 
@@ -158,6 +159,28 @@ Types:
 
 - `Builder` efficiently builds a string, minimizing memory copying.
 - `Reader` reads data from a string.
+
+## [so/time](https://pkg.go.dev/github.com/nalgeon/solod/so/time)
+
+Measuring and displaying time. Offers an API similar to Go's `time` package, but with only fixed time zones (no IANA timezone database). Parsing and formatting are not yet supported.
+
+Constants:
+
+- `Nanosecond`, `Microsecond`, `Millisecond`, `Second`, `Minute`, `Hour` - common durations.
+
+Functions:
+
+- `Now` returns the current time in UTC (with monotonic clock reading).
+- `Date` returns the Time for a given year, month, day, hour, min, sec, nsec, and location.
+- `Unix`, `UnixMilli`, `UnixMicro` create a Time from a Unix timestamp.
+- `Since` and `Until` return the duration elapsed since or until a given time.
+- `FixedZone` returns a Location with a fixed UTC offset.
+
+Types:
+
+- `Time` represents an instant in time with nanosecond precision.
+- `Duration` represents elapsed time as an int64 nanosecond count.
+- `Location` represents a single fixed time zone.
 
 ## [so/unicode](https://pkg.go.dev/github.com/nalgeon/solod/so/unicode)
 

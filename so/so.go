@@ -7,7 +7,13 @@ import _ "embed"
 var so_h string
 
 //so:extern
+const MinInt32 = int32(-1 << 31)
+
+//so:extern
 const MaxInt32 = int32(1<<31 - 1)
+
+//so:extern
+const MinInt64 = int64(-1 << 63)
 
 //so:extern
 const MaxInt64 = int64(1<<63 - 1)
