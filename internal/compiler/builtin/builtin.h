@@ -331,6 +331,7 @@ typedef union {
     so_byte as_byte;
     so_rune as_rune;
     so_int as_int;
+    int32_t as_i32;
     int64_t as_i64;
     so_uint as_uint;
     uint32_t as_u32;

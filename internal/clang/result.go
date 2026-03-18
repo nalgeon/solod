@@ -166,6 +166,11 @@ func resultFieldName(g *Generator, node ast.Node, typ types.Type) string {
 		return "as_double"
 	case types.Int, types.UntypedInt:
 		return "as_int"
+	case types.Int32:
+		if basic.Name() == "rune" {
+			return "as_rune"
+		}
+		return "as_i32"
 	case types.Int64:
 		return "as_i64"
 	case types.Uint:
@@ -174,7 +179,7 @@ func resultFieldName(g *Generator, node ast.Node, typ types.Type) string {
 		return "as_u32"
 	case types.Uint64:
 		return "as_u64"
-	case types.Int32, types.UntypedRune:
+	case types.UntypedRune:
 		return "as_rune"
 	case types.String, types.UntypedString:
 		return "as_string"
