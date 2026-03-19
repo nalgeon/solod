@@ -34,10 +34,19 @@ func (g *Generator) emitArrayRange(stmt *ast.RangeStmt) {
 	if _, ok := stmt.X.(*ast.CompositeLit); ok {
 		g.fail(stmt.X, "for-range over literal not supported")
 	}
+
+	// Unwrap pointer-to-array to get the array type.
+	typ := g.types.TypeOf(stmt.X).Underlying()
+	ptrDeref := false
+	if ptr, ok := typ.(*types.Pointer); ok {
+		typ = ptr.Elem().Underlying()
+		ptrDeref = true
+	}
+	arrType := typ.(*types.Array)
+
 	w := g.state.writer
 	if stmt.Key == nil {
 		// Basic form: `for range arr { ... }`
-		arrType := g.types.TypeOf(stmt.X).Underlying().(*types.Array)
 		fmt.Fprintf(w, "%sfor (so_int _i = 0; _i < %d; _i++) {\n", g.indent(), arrType.Len())
 		g.emitBlock(stmt.Body)
 		fmt.Fprintf(w, "%s}\n", g.indent())
@@ -45,7 +54,6 @@ func (g *Generator) emitArrayRange(stmt *ast.RangeStmt) {
 	}
 
 	key := stmt.Key.(*ast.Ident)
-	arrType := g.types.TypeOf(stmt.X).Underlying().(*types.Array)
 	elemType := g.mapType(stmt, arrType.Elem())
 	keyDecl := g.rangeKeyDecl(stmt, key)
 
@@ -61,8 +69,14 @@ func (g *Generator) emitArrayRange(stmt *ast.RangeStmt) {
 				valDecl = ""
 			}
 			fmt.Fprintf(w, "%s%s%s = ", g.indent(), valDecl, valIdent.Name)
-			g.emitExpr(stmt.X)
-			fmt.Fprintf(w, "[%s];\n", key.Name)
+			if ptrDeref {
+				fmt.Fprintf(w, "(*")
+				g.emitExpr(stmt.X)
+				fmt.Fprintf(w, ")[%s];\n", key.Name)
+			} else {
+				g.emitExpr(stmt.X)
+				fmt.Fprintf(w, "[%s];\n", key.Name)
+			}
 			g.state.indent--
 		}
 	}

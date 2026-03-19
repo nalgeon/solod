@@ -132,6 +132,21 @@ func main() {
 		}
 	}
 	{
+		// Array pointer len, range.
+		a := [3]int{10, 20, 30}
+		p := &a
+		if len(p) != 3 {
+			panic("want len(p) == 3")
+		}
+		sum := 0
+		for _, v := range p {
+			sum += v
+		}
+		if sum != 60 {
+			panic("want sum == 60")
+		}
+	}
+	{
 		// Variable-length arrays are not possible, because
 		// Go's type checker resolves n to a constant.
 		const n = 3

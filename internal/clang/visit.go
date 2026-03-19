@@ -460,7 +460,14 @@ func (g *Generator) emitLabeledStmt(stmt *ast.LabeledStmt) {
 
 // emitRangeStmt emits a range-based for statement.
 func (g *Generator) emitRangeStmt(stmt *ast.RangeStmt) {
-	switch t := g.types.TypeOf(stmt.X).Underlying().(type) {
+	typ := g.types.TypeOf(stmt.X).Underlying()
+	// Unwrap pointer-to-array so `for range p` dispatches to emitArrayRange.
+	if ptr, ok := typ.(*types.Pointer); ok {
+		if _, ok := ptr.Elem().Underlying().(*types.Array); ok {
+			typ = ptr.Elem().Underlying()
+		}
+	}
+	switch t := typ.(type) {
 	case *types.Array:
 		g.emitArrayRange(stmt)
 	case *types.Slice:

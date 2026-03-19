@@ -128,6 +128,22 @@ int main(void) {
         }
     }
     {
+        // Array pointer len, range.
+        so_int a[3] = {10, 20, 30};
+        so_int (*p)[3] = &a;
+        if (3 != 3) {
+            so_panic("want len(p) == 3");
+        }
+        so_int sum = 0;
+        for (so_int _ = 0; _ < 3; _++) {
+            so_int v = (*p)[_];
+            sum += v;
+        }
+        if (sum != 60) {
+            so_panic("want sum == 60");
+        }
+    }
+    {
         // Variable-length arrays are not possible, because
         // Go's type checker resolves n to a constant.
         const so_int n = 3;

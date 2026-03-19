@@ -218,8 +218,13 @@ func arrayDims(typ types.Type) string {
 }
 
 // arraySize returns the compile-time size of an array type, or -1 if not an array.
+// Unwraps pointer-to-array (e.g. *[32]byte) to support len(p)/cap(p).
 func arraySize(typ types.Type) int64 {
-	if arr, ok := typ.Underlying().(*types.Array); ok {
+	t := typ.Underlying()
+	if ptr, ok := t.(*types.Pointer); ok {
+		t = ptr.Elem().Underlying()
+	}
+	if arr, ok := t.(*types.Array); ok {
 		return arr.Len()
 	}
 	return -1

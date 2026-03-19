@@ -410,6 +410,18 @@ func (g *Generator) emitIndexExpr(n *ast.IndexExpr) {
 func (g *Generator) emitUnaryExpr(n *ast.UnaryExpr) {
 	w := g.state.writer
 	if n.Op == token.AND {
+		// &arrayParam: C array params decay to pointers, so &param
+		// gives T** instead of T(*)[N]. Emit a cast instead.
+		if ident, ok := n.X.(*ast.Ident); ok {
+			if _, ok := g.types.TypeOf(n.X).Underlying().(*types.Array); ok {
+				if g.isArrayParam(ident) {
+					ct := g.mapCType(n, g.types.TypeOf(n))
+					fmt.Fprintf(w, "(%s)", ct.Decl(""))
+					g.emitExpr(n.X)
+					return
+				}
+			}
+		}
 		if _, ok := n.X.(*ast.CompositeLit); ok {
 			// &Person{...} → &(Person){...}
 			fmt.Fprintf(w, "&")
@@ -476,6 +488,21 @@ func (g *Generator) needsVoidParens(expr ast.Expr) bool {
 	}
 	// Binary expression - needs parentheses.
 	return true
+}
+
+// isArrayParam reports whether ident refers to a function parameter.
+func (g *Generator) isArrayParam(ident *ast.Ident) bool {
+	if g.state.funcSig == nil {
+		return false
+	}
+	obj := g.types.ObjectOf(ident)
+	params := g.state.funcSig.Params()
+	for param := range params.Variables() {
+		if param == obj {
+			return true
+		}
+	}
+	return false
 }
 
 // isCompare reports whether a token is a comparison operator.
