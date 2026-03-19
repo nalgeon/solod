@@ -372,6 +372,18 @@ func (g *Generator) emitIndexExpr(n *ast.IndexExpr) {
 		return
 	}
 
+	// Pointer-to-array: p[i] becomes (*p)[i].
+	if ptr, ok := g.types.TypeOf(n.X).Underlying().(*types.Pointer); ok {
+		if _, ok := ptr.Elem().Underlying().(*types.Array); ok {
+			fmt.Fprintf(w, "(*")
+			g.emitExpr(n.X)
+			fmt.Fprintf(w, ")[")
+			g.emitExpr(n.Index)
+			fmt.Fprintf(w, "]")
+			return
+		}
+	}
+
 	// Slices and strings use so_at.
 	var elemType string
 	switch t := g.types.TypeOf(n.X).Underlying().(type) {

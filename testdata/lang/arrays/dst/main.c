@@ -114,6 +114,18 @@ int main(void) {
         if (so_array_ne((*p), a, 3 * sizeof(so_int))) {
             so_panic("want p == a");
         }
+        if ((*p)[1] != 2) {
+            so_panic("want p[1] == 2");
+        }
+    }
+    {
+        // Array pointer slicing.
+        so_int a[5] = {1, 2, 3, 4, 5};
+        so_int (*p)[5] = &a;
+        so_Slice s = so_array_slice(so_int, (*p), 1, 4, 5);
+        if (so_len(s) != 3 || so_at(so_int, s, 0) != 2 || so_at(so_int, s, 2) != 4) {
+            so_panic("want p[1:4] == {2, 3, 4}");
+        }
     }
     {
         // Variable-length arrays are not possible, because

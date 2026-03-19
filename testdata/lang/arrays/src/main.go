@@ -118,6 +118,18 @@ func main() {
 		if (*p) != a {
 			panic("want p == a")
 		}
+		if p[1] != 2 {
+			panic("want p[1] == 2")
+		}
+	}
+	{
+		// Array pointer slicing.
+		a := [5]int{1, 2, 3, 4, 5}
+		p := &a
+		s := p[1:4]
+		if len(s) != 3 || s[0] != 2 || s[2] != 4 {
+			panic("want p[1:4] == {2, 3, 4}")
+		}
 	}
 	{
 		// Variable-length arrays are not possible, because

@@ -86,8 +86,18 @@ func (g *Generator) emitSparseArrayValues(n *ast.CompositeLit) {
 // For slices: so_slice(T, s, low, high).
 func (g *Generator) emitSliceExpr(n *ast.SliceExpr) {
 	w := g.state.writer
+	typ := g.types.TypeOf(n.X).Underlying()
 
-	switch t := g.types.TypeOf(n.X).Underlying().(type) {
+	// Unwrap pointer-to-array: p[a:b] becomes (*p)[a:b].
+	ptrDeref := false
+	if ptr, ok := typ.(*types.Pointer); ok {
+		if _, ok := ptr.Elem().Underlying().(*types.Array); ok {
+			typ = ptr.Elem().Underlying()
+			ptrDeref = true
+		}
+	}
+
+	switch t := typ.(type) {
 	case *types.Array:
 		elemType := g.mapType(n, t.Elem())
 		if n.Slice3 {
@@ -95,7 +105,13 @@ func (g *Generator) emitSliceExpr(n *ast.SliceExpr) {
 		} else {
 			fmt.Fprintf(w, "so_array_slice(%s, ", elemType)
 		}
-		g.emitExpr(n.X)
+		if ptrDeref {
+			fmt.Fprintf(w, "(*")
+			g.emitExpr(n.X)
+			fmt.Fprintf(w, ")")
+		} else {
+			g.emitExpr(n.X)
+		}
 		fmt.Fprintf(w, ", ")
 		if n.Low != nil {
 			g.emitExpr(n.Low)
