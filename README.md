@@ -178,6 +178,7 @@ _Go compatibility_. So code is valid Go code. No exceptions.
 Non-goals:
 
 - Raw performance. You can definitely write C code by hand that runs faster than code produced by So. Also, some features in So, like interfaces, are currently implemented in a way that's not very efficient, mainly to keep things simple.
+- Hiding C. So is a cleaner way to write C, not a replacement for it. You should know C to use So effectively.
 - Go feature parity. Less is more. Iterators aren't coming, and neither are generic methods.
 
 ## Frequently asked questions
