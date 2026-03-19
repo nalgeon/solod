@@ -42,6 +42,13 @@ const (
 // second format use a smaller unit (milli-, micro-, or nanoseconds) to ensure
 // that the leading digit is non-zero. The zero duration formats as 0s.
 func (d Duration) String(buf [32]byte) string {
+	n := d.format(&buf)
+	return string(buf[n:])
+}
+
+// format formats the representation of d into the end of buf and
+// returns the offset of the first character.
+func (d Duration) format(buf *[32]byte) int {
 	// Largest time is 2540400h10m10.000000000s
 	w := len(buf)
 
@@ -60,7 +67,7 @@ func (d Duration) String(buf [32]byte) string {
 		w--
 		if u == 0 {
 			buf[w] = '0'
-			return string(buf[w:])
+			return w
 		} else if u < uint64(Microsecond) {
 			// print nanoseconds
 			prec = 0
@@ -110,7 +117,7 @@ func (d Duration) String(buf [32]byte) string {
 		buf[w] = '-'
 	}
 
-	return string(buf[w:])
+	return w
 }
 
 // fmtFrac formats the fraction of v/10**prec (e.g., ".12345") into the
