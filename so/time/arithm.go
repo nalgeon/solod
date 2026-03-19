@@ -183,7 +183,7 @@ const (
 	absoluteYears = 292277022400
 
 	// Offsets to convert between internal and absolute or Unix times.
-	absoluteToInternal int64 = -(absoluteYears*365.2425 + marchThruDecember) * secondsPerDay
+	absoluteToInternal int64 = -(absoluteYears*146097/400 + marchThruDecember) * secondsPerDay
 	internalToAbsolute       = -absoluteToInternal
 
 	unixToInternal int64 = (1969*365 + 1969/4 - 1969/100 + 1969/400) * secondsPerDay

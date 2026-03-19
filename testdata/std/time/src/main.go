@@ -74,7 +74,6 @@ func main() {
 		}
 		println("UTC:", t.String(make([]byte, 64)))
 		utc5 := time.Offset(5 * 3600)
-		layout := "%Y-%m-%dT%H:%M:%S%z"
-		println("UTC+5:", t.Format(layout, utc5, make([]byte, 64)))
+		println("UTC+5:", t.Format(time.RFC3339, utc5, make([]byte, 64)))
 	}
 }
