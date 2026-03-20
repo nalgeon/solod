@@ -34,20 +34,18 @@ static so_int circle_area(void* self) {
     return 3 * c->radius * c->radius;
 }
 
-// Methods on primitive types are not supported.
-// type HttpStatus int
-// func (s HttpStatus) String() string {
-// 	switch s {
-// 	case 200:
-// 		return "OK"
-// 	case 404:
-// 		return "Not Found"
-// 	case 500:
-// 		return "Error"
-// 	default:
-// 		return "Other"
-// 	}
-// }
+so_String main_HttpStatus_String(main_HttpStatus s) {
+    if (s == 200) {
+        return so_str("OK");
+    } else if (s == 404) {
+        return so_str("Not Found");
+    } else if (s == 500) {
+        return so_str("Error");
+    } else {
+        return so_str("Other");
+    }
+}
+
 int main(void) {
     main_Rect r = (main_Rect){.width = 10, .height = 5};
     {
@@ -100,6 +98,17 @@ int main(void) {
         so_int cArea = circle_area(&c);
         if (cArea != 147) {
             so_panic("unexpected area");
+        }
+    }
+    {
+        // Method on primitive type.
+        main_HttpStatus s = 200;
+        if (so_string_ne(main_HttpStatus_String(s), so_str("OK"))) {
+            so_panic("unexpected string");
+        }
+        s = 404;
+        if (so_string_ne(main_HttpStatus_String(s), so_str("Not Found"))) {
+            so_panic("unexpected string");
         }
     }
 }

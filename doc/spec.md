@@ -599,7 +599,15 @@ rp.Area()     // called on pointer
 rp.resize(2)  // called on pointer (dereferenced automatically)
 ```
 
-Methods on primitive/named types are not supported.
+Methods on named primitive types are also supported:
+
+```go
+type HttpStatus int
+
+func (s HttpStatus) String() string {
+    // ...
+}
+```
 
 ## Interfaces
 

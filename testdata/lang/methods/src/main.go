@@ -27,21 +27,20 @@ func (c *circle) area() int {
 	return 3 * c.radius * c.radius
 }
 
-// Methods on primitive types are not supported.
-// type HttpStatus int
+// Methods on primitive types are also supported.
+type HttpStatus int
 
-// func (s HttpStatus) String() string {
-// 	switch s {
-// 	case 200:
-// 		return "OK"
-// 	case 404:
-// 		return "Not Found"
-// 	case 500:
-// 		return "Error"
-// 	default:
-// 		return "Other"
-// 	}
-// }
+func (s HttpStatus) String() string {
+	if s == 200 {
+		return "OK"
+	} else if s == 404 {
+		return "Not Found"
+	} else if s == 500 {
+		return "Error"
+	} else {
+		return "Other"
+	}
+}
 
 func main() {
 	r := Rect{width: 10, height: 5}
@@ -95,6 +94,17 @@ func main() {
 		cArea := c.area()
 		if cArea != 147 {
 			panic("unexpected area")
+		}
+	}
+	{
+		// Method on primitive type.
+		var s HttpStatus = 200
+		if s.String() != "OK" {
+			panic("unexpected string")
+		}
+		s = 404
+		if s.String() != "Not Found" {
+			panic("unexpected string")
 		}
 	}
 }
