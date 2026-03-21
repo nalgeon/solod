@@ -10,6 +10,7 @@ Solod (So) is a strict subset of Go that transpiles to regular C. "So by example
 [If/else](./06-if-else/main.go) •
 [Arrays](./08-arrays/main.go) •
 [Slices](./09-slices/main.go) •
+[Maps](./10-maps/main.go) •
 [Functions](./11-functions/main.go) •
 [Multiple returns](./12-returns/main.go) •
 [Variadic functions](./13-variadics/main.go) •
