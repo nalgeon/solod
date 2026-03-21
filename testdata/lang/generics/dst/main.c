@@ -15,9 +15,10 @@ int main(void) {
         freeObj(so_int, v);
     }
     {
-        // Generic extern function (multiple type parameters).
-        so_int m = newMap(so_String, so_int, 10);
-        if (m != 10) {
+        // Generic extern function (multiple type parameters),
+        // generic extern type, generic extern method.
+        main_Map m = newMap(so_String, so_int, 10);
+        if (main_Map_Len(so_String, so_int, &m) != 10) {
             so_panic("unexpected map size");
         }
     }

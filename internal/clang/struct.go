@@ -192,6 +192,18 @@ func (g *Generator) emitMethodCall(sel *ast.SelectorExpr, args []ast.Expr) {
 	cName := cStructType + "_" + sel.Sel.Name
 	fmt.Fprintf(w, "%s(", cName)
 
+	// Prepend type arguments for generic method calls.
+	typeArgs := named.TypeArgs()
+	for i := 0; i < typeArgs.Len(); i++ {
+		if i > 0 {
+			fmt.Fprintf(w, ", ")
+		}
+		fmt.Fprintf(w, "%s", g.mapType(sel, typeArgs.At(i)))
+	}
+	if typeArgs.Len() > 0 {
+		fmt.Fprintf(w, ", ")
+	}
+
 	// Pass receiver based on method's declared receiver type and call-site type.
 	declSig := selection.Obj().Type().(*types.Signature)
 	_, isMethodPtrRecv := declSig.Recv().Type().(*types.Pointer)

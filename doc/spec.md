@@ -22,6 +22,7 @@ Solod (So) is a strict subset of Go that transpiles to regular C. This document 
 [Panic](#panic) •
 [Defer](#defer) •
 [C interop](#c-interop) •
+[Generics](#generics) •
 [Embeds](#embeds) •
 [Packages](#packages)
 
@@ -925,6 +926,80 @@ func MyFunc(s string)
 ```
 
 The `so/c` package includes helpers for converting C pointers back to So string and slice types: `c.String(ptr)` and `c.Bytes(ptr, n)`. It also provides `c.CharPtr(ptr)` to cast a `*byte` (`uint8_t*`) to `char*` for C functions that expect `char*` (e.g. `strftime`).
+
+## Generics
+
+So supports generics only for extern declarations. Generic type parameters are translated to C macro arguments, prepended before the regular arguments.
+
+Generic extern functions:
+
+```go
+//so:extern
+func newObj[T any]() *T {
+    return nil
+}
+
+//so:extern
+func freeObj[T any](ptr *T) {
+}
+```
+
+Calling with explicit or inferred type arguments:
+
+```go
+v := newObj[int]()  // newObj(so_int)
+freeObj(v)          // freeObj(so_int, v) - type argument inferred
+```
+
+Generic extern types:
+
+```go
+//so:extern
+type Map[K comparable, V any] struct {
+    // ...
+}
+```
+
+Generic extern methods:
+
+```go
+//so:extern
+func (m *Map[K, V]) Len() int {
+    return m.len
+}
+```
+
+Method calls prepend the receiver's type arguments:
+
+```go
+// go
+m := newMap[string, int](10)
+l := m.Len()
+```
+
+```c
+// c
+main_Map m = newMap(so_String, so_int, 10);
+so_int l = main_Map_Len(so_String, so_int, &m);
+```
+
+On the C side, generic functions and methods should be manually implemented as macros that receive the type arguments:
+
+```c
+#define newObj(T) (alloca(sizeof(T)))
+#define freeObj(T, ptr) ((void)(ptr))
+
+#define newMap(K, V, size) ((main_Map){0})
+#define main_Map_Len(K, V, m) ((m)->len)
+
+typedef struct {
+    // ...
+} main_Map;
+```
+
+Constraints (`any`, `comparable`, etc.) are used only for Go type-checking and are not emitted in C.
+
+Non-extern generic functions and types are not supported.
 
 ## Embeds
 

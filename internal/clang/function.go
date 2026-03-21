@@ -296,11 +296,19 @@ func endsWithReturn(stmts []ast.Stmt) bool {
 // recvTypeName returns the Go type name from a method receiver field.
 // Handles both pointer receivers (*Rect) and value receivers (Rect).
 func recvTypeName(recv *ast.Field) string {
-	switch t := recv.Type.(type) {
-	case *ast.StarExpr:
-		return t.X.(*ast.Ident).Name
+	typ := recv.Type
+	// Unwrap pointer receiver.
+	if star, ok := typ.(*ast.StarExpr); ok {
+		typ = star.X
+	}
+	// Unwrap generic type parameters.
+	switch t := typ.(type) {
 	case *ast.Ident:
 		return t.Name
+	case *ast.IndexExpr:
+		return t.X.(*ast.Ident).Name
+	case *ast.IndexListExpr:
+		return t.X.(*ast.Ident).Name
 	}
 	panic(fmt.Sprintf("unsupported receiver type: %T", recv.Type))
 }
