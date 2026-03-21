@@ -367,7 +367,7 @@ func (g *Generator) emitTypeSpec(w io.Writer, spec *ast.TypeSpec) {
 	case *ast.FuncType:
 		g.emitFuncTypeSpec(w, spec)
 
-	case *ast.Ident, *ast.ArrayType, *ast.StarExpr:
+	case *ast.Ident, *ast.ArrayType, *ast.StarExpr, *ast.MapType:
 		typ := g.types.Defs[spec.Name].Type()
 		resolved := typ.Underlying()
 		// When the underlying type is a struct and the spec references
@@ -472,6 +472,8 @@ func (g *Generator) emitRangeStmt(stmt *ast.RangeStmt) {
 		g.emitArrayRange(stmt)
 	case *types.Slice:
 		g.emitSliceRange(stmt)
+	case *types.Map:
+		g.emitMapRange(stmt)
 	case *types.Basic:
 		if t.Kind() == types.String || t.Kind() == types.UntypedString {
 			g.emitStringRange(stmt)

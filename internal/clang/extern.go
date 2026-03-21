@@ -45,8 +45,10 @@ func (g *Generator) collectFileExterns(pkgName string, file *ast.File) {
 func (g *Generator) callExtern(call *ast.CallExpr) (externInfo, bool) {
 	switch fun := call.Fun.(type) {
 	case *ast.Ident:
+		// Local package call.
 		return g.getExtern("", fun.Name)
 	case *ast.SelectorExpr:
+		// Package-qualified call (e.g. stdio.Printf).
 		if ident, ok := fun.X.(*ast.Ident); ok {
 			if pkgName, ok := g.types.Uses[ident].(*types.PkgName); ok {
 				return g.getExtern(pkgName.Name(), fun.Sel.Name)

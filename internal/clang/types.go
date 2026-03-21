@@ -59,6 +59,9 @@ func (g *Generator) mapType(node ast.Node, typ types.Type) string {
 	case *types.Slice:
 		return "so_Slice"
 
+	case *types.Map:
+		return "so_Map*"
+
 	case *types.Interface:
 		// Special case: empty interface (any or interface{}) maps to void*.
 		// Named interfaces are caught by the *types.Named case below.
@@ -170,6 +173,11 @@ func (g *Generator) zeroValue(node ast.Node, typ types.Type) string {
 	// Slices.
 	if _, ok := typ.Underlying().(*types.Slice); ok {
 		return "{0}"
+	}
+
+	// Maps.
+	if _, ok := typ.Underlying().(*types.Map); ok {
+		return "NULL"
 	}
 
 	// Structs.

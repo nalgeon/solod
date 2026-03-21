@@ -48,6 +48,16 @@ func (g *Generator) emitBuiltin(call *ast.CallExpr, ident *ast.Ident, bi *types.
 		}
 	}
 
+	// len on maps emits m->len since maps are pointers.
+	if bi.Name() == "len" && len(call.Args) == 1 {
+		if _, ok := g.types.TypeOf(call.Args[0]).Underlying().(*types.Map); ok {
+			fmt.Fprintf(w, "(so_int)")
+			g.emitExpr(call.Args[0])
+			fmt.Fprintf(w, "->len")
+			return true
+		}
+	}
+
 	// Other builtins are emitted as regular calls
 	// with a so_ prefix (e.g. so_len(slice)).
 	fmt.Fprintf(w, "so_%s", ident.Name)
@@ -101,20 +111,35 @@ func (g *Generator) emitCopyCall(call *ast.CallExpr) {
 	fmt.Fprintf(w, ")")
 }
 
-// emitMakeCall emits a make() builtin call as so_make_slice(T, len, cap).
+// emitMakeCall emits a make() builtin call for slices or maps.
 func (g *Generator) emitMakeCall(call *ast.CallExpr) {
 	w := g.state.writer
-	sliceType := g.types.Types[call.Args[0]].Type.Underlying().(*types.Slice)
-	elemType := g.mapType(call, sliceType.Elem())
-	fmt.Fprintf(w, "so_make_slice(%s, ", elemType)
-	g.emitExpr(call.Args[1])
-	fmt.Fprintf(w, ", ")
-	if len(call.Args) >= 3 {
-		g.emitExpr(call.Args[2])
-	} else {
+	typ := g.types.Types[call.Args[0]].Type.Underlying()
+
+	switch t := typ.(type) {
+	case *types.Slice:
+		elemType := g.mapType(call, t.Elem())
+		fmt.Fprintf(w, "so_make_slice(%s, ", elemType)
 		g.emitExpr(call.Args[1])
+		fmt.Fprintf(w, ", ")
+		if len(call.Args) >= 3 {
+			g.emitExpr(call.Args[2])
+		} else {
+			g.emitExpr(call.Args[1])
+		}
+		fmt.Fprintf(w, ")")
+
+	case *types.Map:
+		g.validateMapValueType(call, t.Elem())
+		keyType := g.mapType(call, t.Key())
+		valType := g.mapType(call, t.Elem())
+		fmt.Fprintf(w, "so_make_map(%s, %s, ", keyType, valType)
+		g.emitExpr(call.Args[1])
+		fmt.Fprintf(w, ")")
+
+	default:
+		g.fail(call, "make() unsupported type: %s", typ)
 	}
-	fmt.Fprintf(w, ")")
 }
 
 // emitMinMaxCall emits a min() or max() builtin call.

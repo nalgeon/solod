@@ -66,9 +66,21 @@ typedef struct {
     (so_String){_s.ptr + _from, _to - _from};  \
 })
 
+// string_add concatenates two strings.
+// Allocates memory on the stack until the calling function returns.
+#define so_string_add(s1, s2) ({                               \
+    so_String _s1 = (s1);                                      \
+    so_String _s2 = (s2);                                      \
+    size_t _total = _s1.len + _s2.len;                         \
+    char* _buf = so_alloca(_total);                            \
+    if (_s1.len > 0) memcpy(_buf, _s1.ptr, _s1.len);           \
+    if (_s2.len > 0) memcpy(_buf + _s1.len, _s2.ptr, _s2.len); \
+    (so_String){_buf, _total};                                 \
+})
+
 // string_eq returns true if two strings are equal.
 static inline bool so_string_eq(so_String s1, so_String s2) {
-    return s1.len == s2.len && memcmp(s1.ptr, s2.ptr, s1.len) == 0;
+    return s1.len == s2.len && (s1.len == 0 || memcmp(s1.ptr, s2.ptr, s1.len) == 0);
 }
 
 // string_ne returns true if two strings are not equal.
@@ -79,7 +91,7 @@ static inline bool so_string_ne(so_String s1, so_String s2) {
 // string_lt returns true if s1 < s2 in lexicographical order.
 static inline bool so_string_lt(so_String s1, so_String s2) {
     size_t n = s1.len < s2.len ? s1.len : s2.len;
-    int cmp = memcmp(s1.ptr, s2.ptr, n);
+    int cmp = n > 0 ? memcmp(s1.ptr, s2.ptr, n) : 0;
     return cmp < 0 || (cmp == 0 && s1.len < s2.len);
 }
 
@@ -91,7 +103,7 @@ static inline bool so_string_lte(so_String s1, so_String s2) {
 // string_gt returns true if s1 > s2 in lexicographical order.
 static inline bool so_string_gt(so_String s1, so_String s2) {
     size_t n = s1.len < s2.len ? s1.len : s2.len;
-    int cmp = memcmp(s1.ptr, s2.ptr, n);
+    int cmp = n > 0 ? memcmp(s1.ptr, s2.ptr, n) : 0;
     return cmp > 0 || (cmp == 0 && s1.len > s2.len);
 }
 
@@ -274,6 +286,100 @@ static inline so_int so_copy_string(so_Slice dst, so_String src) {
 
 // cap returns the capacity of a slice.
 #define so_cap(s) ((so_int)(s).cap)
+
+// --- Map type ---
+
+// Map is a fixed-size hash-free map backed by parallel key/value arrays.
+typedef struct {
+    void* keys;
+    void* vals;
+    size_t len;
+    size_t cap;
+} so_Map;
+
+// key_eq compares two map keys for equality.
+// Uses so_string_eq for strings, memcmp for everything else.
+static inline bool so_key_eq_default(const void* a, const void* b, size_t n) {
+    return memcmp(a, b, n) == 0;
+}
+static inline bool so_key_eq_string(const void* a, const void* b, size_t n) {
+    (void)n;
+    return so_string_eq(*(const so_String*)a, *(const so_String*)b);
+}
+
+#define so_key_eq(a, b) ({                                    \
+    so_typeof(a) _ka = (a);                                   \
+    so_typeof(a) _kb = (b);                                   \
+    _Generic((_ka),                                           \
+        so_String: so_key_eq_string,                          \
+        default: so_key_eq_default)(&_ka, &_kb, sizeof(_ka)); \
+})
+
+// make_map creates a zero-initialized map on the stack.
+#define so_make_map(K, V, cap) ({            \
+    size_t _cap = (cap);                     \
+    size_t _ksz = sizeof(K) * _cap;          \
+    size_t _vsz = sizeof(V) * _cap;          \
+    void* _kp = so_alloca(_ksz);             \
+    void* _vp = so_alloca(_vsz);             \
+    if (_kp) memset(_kp, 0, _ksz);           \
+    if (_vp) memset(_vp, 0, _vsz);           \
+    so_Map* _mp = so_alloca(sizeof(so_Map)); \
+    *_mp = (so_Map){_kp, _vp, 0, _cap};      \
+    _mp;                                     \
+})
+
+// map_set inserts or updates a key-value pair in the map.
+// Panics if the map is full and the key is not found.
+#define so_map_set(K, V, m, key, val)                \
+    do {                                             \
+        K _k = (key);                                \
+        V _v = (val);                                \
+        so_Map* _m = (m);                            \
+        bool _found = false;                         \
+        for (size_t _i = 0; _i < _m->len; _i++) {    \
+            if (so_key_eq(((K*)_m->keys)[_i], _k)) { \
+                ((V*)_m->vals)[_i] = _v;             \
+                _found = true;                       \
+                break;                               \
+            }                                        \
+        }                                            \
+        if (!_found) {                               \
+            if (_m->len >= _m->cap)                  \
+                so_panic("map: out of capacity");    \
+            ((K*)_m->keys)[_m->len] = _k;            \
+            ((V*)_m->vals)[_m->len] = _v;            \
+            _m->len++;                               \
+        }                                            \
+    } while (0)
+
+// map_get returns the value for the given key, or zero if not found.
+#define so_map_get(K, V, m, key) ({              \
+    K _k = (key);                                \
+    const so_Map* _m = (m);                      \
+    V _v = {0};                                  \
+    for (size_t _i = 0; _i < _m->len; _i++) {    \
+        if (so_key_eq(((K*)_m->keys)[_i], _k)) { \
+            _v = ((V*)_m->vals)[_i];             \
+            break;                               \
+        }                                        \
+    }                                            \
+    _v;                                          \
+})
+
+// map_has returns true if the map contains the given key.
+#define so_map_has(K, m, key) ({                 \
+    K _k = (key);                                \
+    const so_Map* _m = (m);                      \
+    bool _found = false;                         \
+    for (size_t _i = 0; _i < _m->len; _i++) {    \
+        if (so_key_eq(((K*)_m->keys)[_i], _k)) { \
+            _found = true;                       \
+            break;                               \
+        }                                        \
+    }                                            \
+    _found;                                      \
+})
 
 // --- Min/Max ---
 

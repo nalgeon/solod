@@ -81,17 +81,20 @@ func (g *Generator) emitBinaryExpr(n *ast.BinaryExpr) {
 		}
 	}
 
-	// String addition: only literal concatenation is supported.
-	if n.Op == token.ADD || n.Op == token.ADD_ASSIGN {
-		if g.hasStringType(n.X) {
-			if n.Op == token.ADD && isStringLit(n.X) && isStringLit(n.Y) {
-				fmt.Fprintf(w, "so_str(")
-				g.emitStringLitConcat(n)
-				fmt.Fprintf(w, ")")
-				return
-			}
-			g.fail(n, "string addition is not supported")
+	// String addition.
+	if n.Op == token.ADD && g.hasStringType(n.X) {
+		if isStringLit(n.X) && isStringLit(n.Y) {
+			fmt.Fprintf(w, "so_str(")
+			g.emitStringLitConcat(n)
+			fmt.Fprintf(w, ")")
+			return
 		}
+		fmt.Fprintf(w, "so_string_add(")
+		g.emitExpr(n.X)
+		fmt.Fprintf(w, ", ")
+		g.emitExpr(n.Y)
+		fmt.Fprintf(w, ")")
+		return
 	}
 
 	// Interface nil comparisons: emit iface.self == NULL / != NULL.
@@ -108,6 +111,15 @@ func (g *Generator) emitBinaryExpr(n *ast.BinaryExpr) {
 		if _, ok := g.types.TypeOf(n.X).Underlying().(*types.Slice); ok && isNilType(g.types.TypeOf(n.Y)) {
 			g.emitExpr(n.X)
 			fmt.Fprintf(w, ".ptr %s NULL", n.Op.String())
+			return
+		}
+	}
+
+	// Map nil comparisons: emit m == NULL / != NULL.
+	if n.Op == token.EQL || n.Op == token.NEQ {
+		if _, ok := g.types.TypeOf(n.X).Underlying().(*types.Map); ok && isNilType(g.types.TypeOf(n.Y)) {
+			g.emitExpr(n.X)
+			fmt.Fprintf(w, " %s NULL", n.Op.String())
 			return
 		}
 	}
@@ -298,6 +310,9 @@ func (g *Generator) emitCompositeLit(n *ast.CompositeLit) {
 	case *types.Slice:
 		g.emitSliceLit(n)
 		return
+	case *types.Map:
+		g.emitMapLit(n)
+		return
 	}
 
 	// Regular composite literal.
@@ -362,6 +377,12 @@ func (g *Generator) emitStarExpr(n *ast.StarExpr) {
 // For arrays: a[i] directly. For slices/strings: so_at(T, s, i).
 func (g *Generator) emitIndexExpr(n *ast.IndexExpr) {
 	w := g.state.writer
+
+	// Maps use so_map_get.
+	if _, ok := g.types.TypeOf(n.X).Underlying().(*types.Map); ok {
+		g.emitMapIndexExpr(n)
+		return
+	}
 
 	// Arrays use direct C indexing.
 	if _, ok := g.types.TypeOf(n.X).Underlying().(*types.Array); ok {
@@ -462,6 +483,11 @@ func (g *Generator) emitExprAsType(node ast.Node, expr ast.Expr, targetType type
 	// Slice nil assignment: emit zero-initialized struct instead of NULL.
 	if _, ok := targetType.Underlying().(*types.Slice); ok && isNilType(g.types.TypeOf(expr)) {
 		fmt.Fprintf(g.state.writer, "(so_Slice){0}")
+		return
+	}
+	// Map nil assignment: emit NULL.
+	if _, ok := targetType.Underlying().(*types.Map); ok && isNilType(g.types.TypeOf(expr)) {
+		fmt.Fprintf(g.state.writer, "NULL")
 		return
 	}
 	g.emitExpr(expr)

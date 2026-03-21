@@ -19,7 +19,23 @@ func (g *Generator) emitAssignStmt(stmt *ast.AssignStmt) {
 	case token.ADD_ASSIGN, token.SUB_ASSIGN, token.MUL_ASSIGN, token.QUO_ASSIGN,
 		token.REM_ASSIGN, token.OR_ASSIGN, token.AND_ASSIGN, token.XOR_ASSIGN,
 		token.SHL_ASSIGN, token.SHR_ASSIGN:
+		if idx, ok := stmt.Lhs[0].(*ast.IndexExpr); ok {
+			if _, isMap := g.types.TypeOf(idx.X).Underlying().(*types.Map); isMap {
+				g.fail(stmt, "compound assignment on map index is not supported")
+			}
+		}
 		w := g.state.writer
+		// String += uses so_string_add.
+		if stmt.Tok == token.ADD_ASSIGN && g.hasStringType(stmt.Lhs[0]) {
+			fmt.Fprintf(w, "%s", g.indent())
+			g.emitExpr(stmt.Lhs[0])
+			fmt.Fprintf(w, " = so_string_add(")
+			g.emitExpr(stmt.Lhs[0])
+			fmt.Fprintf(w, ", ")
+			g.emitExpr(stmt.Rhs[0])
+			fmt.Fprintf(w, ");\n")
+			return
+		}
 		fmt.Fprintf(w, "%s", g.indent())
 		g.emitExpr(stmt.Lhs[0])
 		fmt.Fprintf(w, " %s ", stmt.Tok)
@@ -39,6 +55,15 @@ func (g *Generator) emitDefine(stmt *ast.AssignStmt) {
 		if ta, ok := stmt.Rhs[0].(*ast.TypeAssertExpr); ok {
 			g.emitTypeAssertion(w, stmt, ta)
 			return
+		}
+	}
+	// Map comma-ok: v, ok := m[key]
+	if len(stmt.Lhs) == 2 && len(stmt.Rhs) == 1 {
+		if idx, ok := stmt.Rhs[0].(*ast.IndexExpr); ok {
+			if _, isMap := g.types.TypeOf(idx.X).Underlying().(*types.Map); isMap {
+				g.emitMapCommaOk(stmt, idx, true)
+				return
+			}
 		}
 	}
 	// Multi-return destructuring: x, y := f()
@@ -127,6 +152,15 @@ func (g *Generator) emitAssign(stmt *ast.AssignStmt) {
 			return
 		}
 	}
+	// Map comma-ok: v, ok = m[key]
+	if len(stmt.Lhs) == 2 && len(stmt.Rhs) == 1 {
+		if idx, ok := stmt.Rhs[0].(*ast.IndexExpr); ok {
+			if _, isMap := g.types.TypeOf(idx.X).Underlying().(*types.Map); isMap {
+				g.emitMapCommaOk(stmt, idx, false)
+				return
+			}
+		}
+	}
 	// Multi-return destructuring: x, y = f()
 	if len(stmt.Lhs) > 1 && len(stmt.Rhs) == 1 {
 		if call, ok := stmt.Rhs[0].(*ast.CallExpr); ok {
@@ -148,6 +182,14 @@ func (g *Generator) emitAssign(stmt *ast.AssignStmt) {
 			}
 			fmt.Fprintf(w, ";\n")
 			continue
+		}
+
+		// Map index assignment uses so_map_set.
+		if idx, ok := lhs.(*ast.IndexExpr); ok {
+			if _, isMap := g.types.TypeOf(idx.X).Underlying().(*types.Map); isMap {
+				g.emitMapIndexAssign(stmt, idx, stmt.Rhs[i])
+				continue
+			}
 		}
 
 		// Array assignment uses memcpy.
@@ -172,7 +214,7 @@ func (g *Generator) emitAssign(stmt *ast.AssignStmt) {
 		fmt.Fprintf(w, "%s", g.indent())
 		g.emitExpr(lhs)
 		fmt.Fprintf(w, " = ")
-		g.emitExpr(stmt.Rhs[i])
+		g.emitExprAsType(stmt, stmt.Rhs[i], lhsType)
 		fmt.Fprintf(w, ";\n")
 	}
 }

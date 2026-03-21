@@ -22,6 +22,9 @@ func (g *Generator) returnType(node ast.Node, sig *types.Signature) string {
 		if _, ok := ret.Underlying().(*types.Array); ok {
 			g.fail(node, "returning arrays from functions is not supported")
 		}
+		if _, ok := ret.Underlying().(*types.Map); ok {
+			g.fail(node, "returning maps from functions is not supported")
+		}
 		if ptr, ok := ret.Underlying().(*types.Pointer); ok {
 			if _, ok := ptr.Elem().Underlying().(*types.Array); ok {
 				g.fail(node, "returning pointer-to-array from functions is not supported")

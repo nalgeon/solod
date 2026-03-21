@@ -7,6 +7,7 @@ Solod (So) is a strict subset of Go that transpiles to regular C. This document 
 [Strings](#strings) •
 [Arrays](#arrays) •
 [Slices](#slices) •
+[Maps](#maps) •
 [If/else](#ifelse) •
 [For](#for) •
 [Goto](#goto) •
@@ -182,7 +183,7 @@ var r rune = '世'
 s2 := string(r)  // "世" (UTF-8 encoded)
 ```
 
-String concatenation with `+` is supported for string literals (but not for variables).
+String concatenation with `+` and `+=` is supported for both literals and variables. Adding string variables allocates memory on the stack, so avoid using them for large strings or strings that should be on the heap. Instead, use the `so/strings` package.
 
 ## Arrays
 
@@ -294,6 +295,63 @@ s[1]++
 ```
 
 `clear` is not supported.
+
+## Maps
+
+Maps are fixed-size and stack-allocated, backed by parallel key/value arrays with linear search. They are pointer-based reference types, represented as `so_Map*` in C. No delete, no resize.
+
+Only use maps when you have a small, fixed number of key-value pairs. For anything else, use heap-allocated maps from the `so/maps` package (planned).
+
+Map literals:
+
+```go
+m1 := map[string]int{"a": 11, "b": 22}
+m2 := map[int]string{11: "a", 22: "b"}
+```
+
+Creating a map with `make`:
+
+```go
+m := make(map[string]int, 2)
+```
+
+The capacity argument is required and determines the fixed size of the map. `make()` allocates key and value arrays on the stack.
+
+Setting and getting values:
+
+```go
+m["a"] = 11
+v := m["a"]
+```
+
+Comma-ok pattern to check if a key exists:
+
+```go
+v, ok := m["a"]
+if !ok {
+    println("not found")
+}
+```
+
+If the key is not found, the value is the zero value for the element type and `ok` is `false`.
+
+Iterating over a map with `range`:
+
+```go
+for k, v := range m {
+    println(k, v)
+}
+```
+
+Supported key types: all integer types, `bool`, `float32`, `float64`, `string`, and pointers.
+
+Limitations:
+
+- Maps have a fixed capacity set at creation time. Setting a key when the map is full panics.
+- Compound assignment on map index (`m["a"] += 1`) is not supported.
+- Arrays as map value types are not supported.
+- Returning maps from functions is not supported (stack-allocated keys/vals become dangling).
+- `delete` is not supported.
 
 ## If/else
 
