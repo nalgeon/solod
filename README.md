@@ -16,7 +16,7 @@ So is for systems programming in C, but with Go's syntax, type safety, and tooli
 
 [Example](#example) •
 [Installation and usage](#installation-and-usage) •
-[Spec](doc/spec.md) •
+[Language tour](doc/spec.md) •
 [Stdlib](doc/stdlib.md) •
 [So by example](example/README.md) •
 [Testing](#testing) •
@@ -91,18 +91,6 @@ int main(void) {
 
 Check out more examples in [So by example](example/README.md) and learn about the supported language features in the [spec](doc/spec.md).
 
-## Language tour
-
-To learn about So's features and limitations, check out the brief [overview of the language](./doc/spec.md).
-
-## Standard library
-
-So provides a growing set of [high-level packages](./doc/stdlib.md) similar to Go's stdlib, as well as low-level packages that wrap the libc API.
-
-## So by example
-
-If you like learning by doing, try a [hands-on introduction](./example/README.md) to So with annotated example programs.
-
 ## Installation and usage
 
 Install the So command line tool:
@@ -154,6 +142,18 @@ so run .
 All commands work with Go modules, not individual files (`so run .`, not `so run main.go`).
 
 Keep in mind that So is new, so it's still a bit rough around the edges.
+
+## Language tour
+
+To learn about So's features and limitations, check out the brief [overview of the language](./doc/spec.md).
+
+## Standard library
+
+So provides a growing set of [high-level packages](./doc/stdlib.md) similar to Go's stdlib, as well as low-level packages that wrap the libc API.
+
+## So by example
+
+If you like learning by doing, try a [hands-on introduction](./example/README.md) to So with annotated example programs.
 
 ## Testing
 
