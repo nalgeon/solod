@@ -27,7 +27,7 @@ func TestReader(t *testing.T) {
 		{seek: io.SeekStart, off: 0, n: 20, want: "0123456789"},
 		{seek: io.SeekStart, off: 1, n: 1, want: "1"},
 		{seek: io.SeekCurrent, off: 1, wantpos: 3, n: 2, want: "34"},
-		{seek: io.SeekStart, off: -1, seekerr: ErrNegativeOffset.Error()},
+		{seek: io.SeekStart, off: -1, seekerr: io.ErrOffset.Error()},
 		{seek: io.SeekStart, off: 1 << 33, wantpos: 1 << 33, readerr: io.EOF},
 		{seek: io.SeekCurrent, off: 1, wantpos: 1<<33 + 1, readerr: io.EOF},
 		{seek: io.SeekStart, n: 5, want: "01234"},
@@ -84,7 +84,7 @@ func TestReaderAt(t *testing.T) {
 		{1, 9, "123456789", nil},
 		{11, 10, "", io.EOF},
 		{0, 0, "", nil},
-		{-1, 0, "", ErrNegativeOffset.Error()},
+		{-1, 0, "", io.ErrOffset.Error()},
 	}
 	for i, tt := range tests {
 		b := make([]byte, tt.n)

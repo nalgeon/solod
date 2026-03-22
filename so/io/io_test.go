@@ -5,12 +5,12 @@
 package io_test
 
 import (
-	"strings"
 	"testing"
 
 	"solod.dev/so/bytes"
 	"solod.dev/so/errors"
 	. "solod.dev/so/io"
+	"solod.dev/so/strings"
 )
 
 // A version of bytes.Buffer without ReadFrom and WriteTo
@@ -156,22 +156,26 @@ func TestCopyNEOF(t *testing.T) {
 
 	b := new(bytes.Buffer)
 
-	n, err := CopyN(&noReadFrom{b}, strings.NewReader("foo"), 3)
+	r := strings.NewReader("foo")
+	n, err := CopyN(&noReadFrom{b}, &r, 3)
 	if n != 3 || err != nil {
 		t.Errorf("CopyN(noReadFrom, foo, 3) = %d, %v; want 3, nil", n, err)
 	}
 
-	n, err = CopyN(&noReadFrom{b}, strings.NewReader("foo"), 4)
+	r = strings.NewReader("foo")
+	n, err = CopyN(&noReadFrom{b}, &r, 4)
 	if n != 3 || !errEqual(err, EOF) {
 		t.Errorf("CopyN(noReadFrom, foo, 4) = %d, %v; want 3, EOF", n, err)
 	}
 
-	n, err = CopyN(b, strings.NewReader("foo"), 3) // b has read from
+	r = strings.NewReader("foo")
+	n, err = CopyN(b, &r, 3) // b has read from
 	if n != 3 || err != nil {
 		t.Errorf("CopyN(bytes.Buffer, foo, 3) = %d, %v; want 3, nil", n, err)
 	}
 
-	n, err = CopyN(b, strings.NewReader("foo"), 4) // b has read from
+	r = strings.NewReader("foo")
+	n, err = CopyN(b, &r, 4) // b has read from
 	if n != 3 || !errEqual(err, EOF) {
 		t.Errorf("CopyN(bytes.Buffer, foo, 4) = %d, %v; want 3, EOF", n, err)
 	}

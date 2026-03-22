@@ -8,11 +8,16 @@ package bytes
 
 import (
 	"solod.dev/so"
+	"solod.dev/so/errors"
 	"solod.dev/so/io"
 	"solod.dev/so/mem"
 	"solod.dev/so/slices"
 	"solod.dev/so/unicode/utf8"
 )
+
+// ErrTooLarge is passed to panic if memory
+// cannot be allocated to store data in a buffer.
+var ErrTooLarge = errors.New("bytes.Buffer: too large")
 
 // MinRead is the minimum slice size passed to a [Buffer.Read] call by
 // [Buffer.ReadFrom]. As long as the [Buffer] has at least MinRead bytes beyond
@@ -223,7 +228,7 @@ func (b *Buffer) ReadFrom(r io.Reader) (int64, error) {
 		b.buf = b.buf[:i]
 		m, err := r.Read(b.buf[i:cap(b.buf)])
 		if m < 0 {
-			panic(ErrNegativeRead)
+			panic(io.ErrNegativeRead)
 		}
 
 		b.buf = b.buf[:i+m]
@@ -352,35 +357,27 @@ func (b *Buffer) ReadByte() (byte, error) {
 	return c, nil
 }
 
-// RuneSizeResult is the result of a [Buffer.ReadRune] operation:
-// the rune read, its size in bytes, and any error encountered.
-type RuneSizeResult struct {
-	Rune rune
-	Size int
-	Err  error
-}
-
 // ReadRune reads and returns the next UTF-8-encoded
 // Unicode code point from the buffer.
 // If no bytes are available, the error returned is io.EOF.
 // If the bytes are an erroneous UTF-8 encoding, it
 // consumes one byte and returns U+FFFD, 1.
-func (b *Buffer) ReadRune() RuneSizeResult {
+func (b *Buffer) ReadRune() io.RuneSizeResult {
 	if b.empty() {
 		// Buffer is empty, reset to recover space.
 		b.Reset()
-		return RuneSizeResult{0, 0, io.EOF}
+		return io.RuneSizeResult{Rune: 0, Size: 0, Err: io.EOF}
 	}
 	c := b.buf[b.off]
 	if c < utf8.RuneSelf {
 		b.off++
 		b.lastRead = opReadRune1
-		return RuneSizeResult{rune(c), 1, nil}
+		return io.RuneSizeResult{Rune: rune(c), Size: 1, Err: nil}
 	}
 	r, n := utf8.DecodeRune(b.buf[b.off:])
 	b.off += n
 	b.lastRead = ReadOp(n)
-	return RuneSizeResult{r, n, nil}
+	return io.RuneSizeResult{Rune: r, Size: n, Err: nil}
 }
 
 // ReadBytes reads until the first occurrence of delim in the input,

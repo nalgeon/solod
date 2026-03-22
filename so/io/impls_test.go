@@ -5,11 +5,11 @@
 package io_test
 
 import (
-	"strings"
 	"testing"
 
 	"solod.dev/so/bytes"
 	. "solod.dev/so/io"
+	"solod.dev/so/strings"
 )
 
 func TestSectionReader_ReadAt(t *testing.T) {
@@ -38,13 +38,13 @@ func TestSectionReader_ReadAt(t *testing.T) {
 	}
 	for i, tt := range tests {
 		r := strings.NewReader(tt.data)
-		s := NewSectionReader(r, int64(tt.off), int64(tt.n))
+		s := NewSectionReader(&r, int64(tt.off), int64(tt.n))
 		buf := make([]byte, tt.bufLen)
 		if n, err := s.ReadAt(buf, int64(tt.at)); n != len(tt.exp) || string(buf[:n]) != tt.exp || !errEqual(err, tt.err) {
 			t.Fatalf("%d: ReadAt(%d) = %q, %v; expected %q, %v", i, tt.at, buf[:n], err, tt.exp, tt.err)
 		}
-		if off := s.Outer(); off.R != r || off.Off != int64(tt.off) || off.N != int64(tt.n) {
-			t.Fatalf("%d: Outer() = %v, %d, %d; expected %v, %d, %d", i, off.R, off.Off, off.N, r, tt.off, tt.n)
+		if off := s.Outer(); off.R != &r || off.Off != int64(tt.off) || off.N != int64(tt.n) {
+			t.Fatalf("%d: Outer() = %v, %d, %d; expected %v, %d, %d", i, off.R, off.Off, off.N, &r, tt.off, tt.n)
 		}
 	}
 }
@@ -88,7 +88,7 @@ func TestSectionReader_Size(t *testing.T) {
 
 	for _, tt := range tests {
 		r := strings.NewReader(tt.data)
-		sr := NewSectionReader(r, 0, int64(len(tt.data)))
+		sr := NewSectionReader(&r, 0, int64(len(tt.data)))
 		if got := sr.Size(); got != tt.want {
 			t.Errorf("Size = %v; want %v", got, tt.want)
 		}
@@ -98,7 +98,7 @@ func TestSectionReader_Size(t *testing.T) {
 func TestSectionReader_Max(t *testing.T) {
 	r := strings.NewReader("abcdef")
 	const maxint64 = 1<<63 - 1
-	sr := NewSectionReader(r, 3, maxint64)
+	sr := NewSectionReader(&r, 3, maxint64)
 	n, err := sr.Read(make([]byte, 3))
 	if n != 3 || err != nil {
 		t.Errorf("Read = %v %v, want 3, nil", n, err)
@@ -107,7 +107,7 @@ func TestSectionReader_Max(t *testing.T) {
 	if n != 0 || !errEqual(err, EOF) {
 		t.Errorf("Read = %v, %v, want 0, EOF", n, err)
 	}
-	if off := sr.Outer(); off.R != r || off.Off != 3 || off.N != maxint64 {
-		t.Fatalf("Outer = %v, %d, %d; expected %v, %d, %d", off.R, off.Off, off.N, r, 3, int64(maxint64))
+	if off := sr.Outer(); off.R != &r || off.Off != 3 || off.N != maxint64 {
+		t.Fatalf("Outer = %v, %d, %d; expected %v, %d, %d", off.R, off.Off, off.N, &r, 3, int64(maxint64))
 	}
 }

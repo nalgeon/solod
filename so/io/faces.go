@@ -110,8 +110,7 @@ type ReadSeeker interface {
 	Seek(offset int64, whence int) (int64, error)
 }
 
-// ReadSeekCloser is the interface that groups the basic Read, Seek and Close
-// methods.
+// ReadSeekCloser is the interface that groups the basic Read, Seek and Close methods.
 type ReadSeekCloser interface {
 	Read(p []byte) (n int, err error)
 	Seek(offset int64, whence int) (int64, error)
@@ -136,8 +135,6 @@ type ReadWriteSeeker interface {
 // ReadFrom reads data from r until EOF or error.
 // The return value n is the number of bytes read.
 // Any error except EOF encountered during the read is also returned.
-//
-// The [Copy] function uses [ReaderFrom] if available.
 type ReaderFrom interface {
 	ReadFrom(r Reader) (n int64, err error)
 }
@@ -147,8 +144,6 @@ type ReaderFrom interface {
 // WriteTo writes data to w until there's no more data to write or
 // when an error occurs. The return value n is the number of bytes
 // written. Any error encountered during the write is also returned.
-//
-// The Copy function uses WriterTo if available.
 type WriterTo interface {
 	WriteTo(w Writer) (n int64, err error)
 }
@@ -209,7 +204,7 @@ type WriterAt interface {
 // byte was consumed, and the returned byte value is undefined.
 //
 // ReadByte provides an efficient interface for byte-at-time
-// processing. A [Reader] that does not implement  ByteReader
+// processing. A [Reader] that does not implement ByteReader
 // can be wrapped using bufio.NewReader to add this method.
 type ByteReader interface {
 	ReadByte() (byte, error)
@@ -233,6 +228,8 @@ type ByteWriter interface {
 	WriteByte(c byte) error
 }
 
+// RuneSizeResult is the result of a [RuneReader.ReadRune] operation:
+// the rune read, its size in bytes, and any error encountered.
 type RuneSizeResult struct {
 	Rune rune
 	Size int

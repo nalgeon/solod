@@ -37,30 +37,36 @@ const (
 // giving more detail.
 var EOF = errors.New("EOF")
 
-// ErrShortWrite means that a write accepted fewer bytes than requested
-// but failed to return an explicit error.
-var ErrShortWrite = errors.New("short write")
-
 // ErrInvalidWrite means that a write returned an impossible count.
-var ErrInvalidWrite = errors.New("invalid write result")
+var ErrInvalidWrite = errors.New("io: invalid write result")
 
-// ErrShortBuffer means that a read required a longer buffer than was provided.
-var ErrShortBuffer = errors.New("short buffer")
-
-// ErrUnexpectedEOF means that EOF was encountered in the
-// middle of reading a fixed-size block or data structure.
-var ErrUnexpectedEOF = errors.New("unexpected EOF")
+// ErrNegativeRead means that a read returned a negative count.
+var ErrNegativeRead = errors.New("io: Read returned negative count")
 
 // ErrNoProgress is returned by some clients of a [Reader] when
 // many calls to Read have failed to return any data or error,
 // usually the sign of a broken [Reader] implementation.
-var ErrNoProgress = errors.New("multiple Read calls return no data or error")
-
-// ErrWhence is returned by seek functions when the whence argument is invalid.
-var ErrWhence = errors.New("invalid whence")
+var ErrNoProgress = errors.New("io: multiple Read calls return no data or error")
 
 // ErrOffset is returned by seek functions when the offset argument is invalid.
-var ErrOffset = errors.New("invalid offset")
+var ErrOffset = errors.New("io: invalid offset")
+
+// ErrShortBuffer means that a read required a longer buffer than was provided.
+var ErrShortBuffer = errors.New("io: short buffer")
+
+// ErrShortWrite means that a write accepted fewer bytes than requested
+// but failed to return an explicit error.
+var ErrShortWrite = errors.New("io: short write")
+
+// ErrUnexpectedEOF means that EOF was encountered in the
+// middle of reading a fixed-size block or data structure.
+var ErrUnexpectedEOF = errors.New("io: unexpected EOF")
+
+// ErrUnread is returned by unread operations when they can't perform for some reason.
+var ErrUnread = errors.New("io: cannot unread previous read operation")
+
+// ErrWhence is returned by seek functions when the whence argument is invalid.
+var ErrWhence = errors.New("io: invalid whence")
 
 // Copy copies from src to dst until either EOF is reached
 // on src or an error occurs. It returns the number of bytes
@@ -122,6 +128,8 @@ func Copy(dst Writer, src Reader) (int64, error) {
 // It returns the number of bytes copied and the earliest
 // error encountered while copying.
 // On return, written == n if and only if err == nil.
+//
+// Allocates a buffer on the stack to hold data during the copy.
 func CopyN(dst Writer, src Reader, n int64) (int64, error) {
 	r := &LimitedReader{src, n}
 	written, err := Copy(dst, r)

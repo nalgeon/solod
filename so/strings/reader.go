@@ -5,22 +5,9 @@
 package strings
 
 import (
-	"solod.dev/so/errors"
 	"solod.dev/so/io"
 	"solod.dev/so/unicode/utf8"
 )
-
-var ErrInvalidWhence = errors.New("strings: invalid whence")
-var ErrNegativeOffset = errors.New("strings: negative offset")
-var ErrUnread = errors.New("strings: cannot unread previous read operation")
-
-// RuneSizeResult is the result of a [Reader.ReadRune] operation:
-// the rune read, its size in bytes, and any error encountered.
-type RuneSizeResult struct {
-	Rune rune
-	Size int
-	Err  error
-}
 
 // A Reader implements the [io.Reader], [io.ReaderAt], [io.ByteReader], [io.ByteScanner],
 // [io.RuneReader], [io.RuneScanner], [io.Seeker], and [io.WriterTo] interfaces by reading
@@ -62,7 +49,7 @@ func (r *Reader) Read(b []byte) (int, error) {
 func (r *Reader) ReadAt(b []byte, off int64) (int, error) {
 	// cannot modify state - see io.ReaderAt
 	if off < 0 {
-		return 0, ErrNegativeOffset
+		return 0, io.ErrOffset
 	}
 	if off >= int64(len(r.s)) {
 		return 0, io.EOF
@@ -88,7 +75,7 @@ func (r *Reader) ReadByte() (byte, error) {
 // UnreadByte implements the [io.ByteScanner] interface.
 func (r *Reader) UnreadByte() error {
 	if r.i <= 0 {
-		return ErrUnread
+		return io.ErrUnread
 	}
 	r.prevRune = -1
 	r.i--
@@ -96,28 +83,28 @@ func (r *Reader) UnreadByte() error {
 }
 
 // ReadRune implements the [io.RuneReader] interface.
-func (r *Reader) ReadRune() RuneSizeResult {
+func (r *Reader) ReadRune() io.RuneSizeResult {
 	if r.i >= int64(len(r.s)) {
 		r.prevRune = -1
-		return RuneSizeResult{0, 0, io.EOF}
+		return io.RuneSizeResult{Rune: 0, Size: 0, Err: io.EOF}
 	}
 	r.prevRune = int(r.i)
 	if c := r.s[r.i]; c < utf8.RuneSelf {
 		r.i++
-		return RuneSizeResult{rune(c), 1, nil}
+		return io.RuneSizeResult{Rune: rune(c), Size: 1, Err: nil}
 	}
 	ch, size := utf8.DecodeRuneInString(r.s[r.i:])
 	r.i += int64(size)
-	return RuneSizeResult{ch, size, nil}
+	return io.RuneSizeResult{Rune: ch, Size: size, Err: nil}
 }
 
 // UnreadRune implements the [io.RuneScanner] interface.
 func (r *Reader) UnreadRune() error {
 	if r.i <= 0 {
-		return ErrUnread
+		return io.ErrUnread
 	}
 	if r.prevRune < 0 {
-		return ErrUnread
+		return io.ErrUnread
 	}
 	r.i = int64(r.prevRune)
 	r.prevRune = -1
@@ -135,10 +122,10 @@ func (r *Reader) Seek(offset int64, whence int) (int64, error) {
 	} else if whence == io.SeekEnd {
 		abs = int64(len(r.s)) + offset
 	} else {
-		return 0, ErrInvalidWhence
+		return 0, io.ErrWhence
 	}
 	if abs < 0 {
-		return 0, ErrNegativeOffset
+		return 0, io.ErrOffset
 	}
 	r.i = abs
 	return abs, nil

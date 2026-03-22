@@ -12,17 +12,10 @@ package bytes
 
 import (
 	"solod.dev/so/bytealg"
-	"solod.dev/so/errors"
 	"solod.dev/so/mem"
 	"solod.dev/so/slices"
 	"solod.dev/so/unicode/utf8"
 )
-
-var ErrInvalidWhence = errors.New("bytes: invalid whence")
-var ErrNegativeOffset = errors.New("bytes: negative offset")
-var ErrNegativeRead = errors.New("bytes: Read returned negative count")
-var ErrTooLarge = errors.New("bytes: data too large")
-var ErrUnread = errors.New("bytes: cannot unread previous read operation")
 
 // Clone returns a copy of b[:len(b)].
 // The returned slice is allocated; the caller owns it.
