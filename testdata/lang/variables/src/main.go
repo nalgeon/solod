@@ -31,7 +31,6 @@ func main() {
 		var vNil any = nil
 		_ = vNil
 	}
-
 	{
 		// Definition with var and type inference.
 		var vInt = 42
@@ -58,7 +57,6 @@ func main() {
 		var vNil = any(nil)
 		_ = vNil
 	}
-
 	{
 		// Definition with short variable declaration.
 		vInt := 42
@@ -85,7 +83,6 @@ func main() {
 		vNil := any(nil)
 		_ = vNil
 	}
-
 	{
 		// Zero values.
 		var vInt int
@@ -109,7 +106,6 @@ func main() {
 		var vNil any
 		_ = vNil
 	}
-
 	{
 		// Multiple typed variable declaration.
 		var a, b, c int = 11, 22, 33
@@ -129,7 +125,6 @@ func main() {
 		_ = p1
 		_ = p2
 	}
-
 	{
 		// Multiple untyped variable declaration.
 		var vInt, vFloat, vBool = 42, 3.14, true
@@ -144,7 +139,6 @@ func main() {
 		_ = vSlice
 		_ = vStruct
 	}
-
 	{
 		// Multiple variable declaration with short variable declaration.
 		vInt, vFloat, vBool := 42, 3.14, true
@@ -159,7 +153,6 @@ func main() {
 		_ = vSlice
 		_ = vStruct
 	}
-
 	{
 		// Discarding values with blank identifier.
 		var v1, _ = 11, 12
@@ -177,7 +170,6 @@ func main() {
 		_ = v3
 		_ = v4
 	}
-
 	{
 		// Partial redeclaration with short variable declaration.
 		a, x := 11, 100
@@ -187,5 +179,15 @@ func main() {
 		_ = b
 		_ = c
 		_ = x
+	}
+	{
+		// Multiple assignment without overlap (no a,b = b,a).
+		a, b := 11, 22
+		a, b = 33, 44
+		x, y := 55, 66
+		a, b = x, y
+		if a != 55 || b != 66 {
+			panic("multiple assignment failed")
+		}
 	}
 }

@@ -492,11 +492,13 @@ func time_div(t Time, d Duration) Duration {
 		u1 := tmp >> 32
 		u0 := tmp << 32
 		tmp = (usec & 0xFFFFFFFF) * 1000000000
-		u0x, u0 := u0, u0+tmp
+		u0x := u0
+		u0 += tmp
 		if u0 < u0x {
 			u1++
 		}
-		u0x, u0 = u0, u0+uint64(nsec)
+		u0x = u0
+		u0 += uint64(nsec)
 		if u0 < u0x {
 			u1++
 		}
@@ -511,7 +513,8 @@ func time_div(t Time, d Duration) Duration {
 		for {
 			if u1 > d1 || (u1 == d1 && u0 >= d0) {
 				// subtract
-				u0x, u0 = u0, u0-d0
+				u0x = u0
+				u0 -= d0
 				if u0 > u0x {
 					u1--
 				}

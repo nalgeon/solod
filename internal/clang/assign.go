@@ -73,6 +73,17 @@ func (g *Generator) emitDefine(stmt *ast.AssignStmt) {
 			return
 		}
 	}
+	// Detect LHS/RHS variable overlap in multi-assignments.
+	// Eg. `a, b = x, y` is fine, but `a, b = b, a` is not.
+	if len(stmt.Lhs) > 1 && len(stmt.Rhs) > 1 {
+		lhsNames := collectIdents(stmt.Lhs...)
+		rhsNames := collectIdents(stmt.Rhs...)
+		for name := range rhsNames {
+			if lhsNames[name] {
+				g.fail(stmt, "multiple assignment with LHS/RHS variable overlap is not supported")
+			}
+		}
+	}
 	// Regular define: group consecutive variables by type.
 	i := 0
 	for i < len(stmt.Lhs) {
@@ -168,6 +179,16 @@ func (g *Generator) emitAssign(stmt *ast.AssignStmt) {
 			return
 		}
 	}
+	// Detect LHS/RHS variable overlap in multi-assignments.
+	if len(stmt.Lhs) > 1 && len(stmt.Rhs) > 1 {
+		lhsNames := collectIdents(stmt.Lhs...)
+		rhsNames := collectIdents(stmt.Rhs...)
+		for name := range rhsNames {
+			if lhsNames[name] {
+				g.fail(stmt, "multiple assignment with LHS/RHS variable overlap is not supported")
+			}
+		}
+	}
 	// Regular assignment.
 	for i, lhs := range stmt.Lhs {
 		// Blank identifier - emit a void expression.
@@ -217,4 +238,19 @@ func (g *Generator) emitAssign(stmt *ast.AssignStmt) {
 		g.emitExprAsType(stmt, stmt.Rhs[i], lhsType)
 		fmt.Fprintf(w, ";\n")
 	}
+}
+
+// collectIdents returns the set of identifier names in the given expressions.
+// The blank identifier is excluded.
+func collectIdents(exprs ...ast.Expr) map[string]bool {
+	names := map[string]bool{}
+	for _, expr := range exprs {
+		ast.Inspect(expr, func(n ast.Node) bool {
+			if ident, ok := n.(*ast.Ident); ok && ident.Name != "_" {
+				names[ident.Name] = true
+			}
+			return true
+		})
+	}
+	return names
 }

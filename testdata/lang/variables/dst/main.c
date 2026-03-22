@@ -191,4 +191,16 @@ int main(void) {
         (void)c;
         (void)x;
     }
+    {
+        // Multiple assignment without overlap (no a,b = b,a).
+        so_int a = 11, b = 22;
+        a = 33;
+        b = 44;
+        so_int x = 55, y = 66;
+        a = x;
+        b = y;
+        if (a != 55 || b != 66) {
+            so_panic("multiple assignment failed");
+        }
+    }
 }
