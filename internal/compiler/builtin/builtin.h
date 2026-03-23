@@ -1,6 +1,11 @@
 #pragma once
 
+#ifdef _WIN32
+#include <malloc.h>
+#else
 #include <alloca.h>
+#endif
+
 #include <inttypes.h>
 #include <stdalign.h>
 #include <stdbool.h>
