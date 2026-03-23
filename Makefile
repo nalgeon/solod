@@ -34,8 +34,14 @@ dist:
 	@echo "Created dist/solod.tar.gz"
 
 run-cases:
+	@make run-cases-by pattern="testdata/lang/*/ testdata/std/*/"
+
+run-cases-windows:
+	@make run-cases-by CFLAGS="-g -std=gnu11 -Wall -Wextra -Werror -Wno-shadow -lm" pattern="testdata/lang/*/"
+
+run-cases-by:
 	@failed=0; \
-	for dir in testdata/lang/*/ testdata/std/*/; do \
+	for dir in $(pattern); do \
 		name=$${dir#testdata/}; \
 		name=$${name%/}; \
 		if make run-case name=$$name > /tmp/so_test_out.txt 2>&1; then \

@@ -16,7 +16,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                os: [ubuntu-latest, macos-latest]
+                os: [ubuntu-latest, macos-latest, windows-latest]
 
         defaults:
             run:
@@ -41,7 +41,5 @@ jobs:
             - run: make run-cases
               if: runner.os != 'Windows'
 
-            - run: make run-cases
+            - run: make run-cases-windows
               if: runner.os == 'Windows'
-              env:
-                  CFLAGS: "-g -std=gnu11 -Wall -Wextra -Werror -Wno-shadow -lm"

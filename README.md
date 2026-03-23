@@ -174,7 +174,7 @@ So generates C11 code that relies on several GCC/Clang extensions:
 
 You can use GCC, Clang, or `zig cc` to compile the transpiled C code. MSVC is not supported.
 
-Supported operating systems: Linux, macOS, and Windows (partial support).
+Supported operating systems: Linux, macOS, and Windows (core language only).
 
 ## Design decisions
 
