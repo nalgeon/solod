@@ -6,7 +6,8 @@ package utf8_test
 
 import (
 	"fmt"
-	"unicode/utf8"
+
+	"solod.dev/so/unicode/utf8"
 )
 
 func ExampleDecodeLastRune() {

@@ -87,8 +87,7 @@ func IsDigit(r rune) bool {
 //
 //	'\t', '\n', '\v', '\f', '\r', ' ', U+0085 (NEL), U+00A0 (NBSP).
 //
-// Other definitions of spacing characters are set by category
-// Z and property [Pattern_White_Space].
+// Other spacing characters are defined by [White_Space].
 func IsSpace(r rune) bool {
 	// This property isn't the same as Z; special-case it.
 	if r <= MaxLatin1 {
