@@ -22,6 +22,48 @@ int main(void) {
         if (maps_Map_Get(so_String, so_int, &m, so_str("xyz")) != 33) {
             so_panic("want xyz = 33");
         }
+        if (maps_Map_Get(so_String, so_int, &m, so_str("missing")) != 0) {
+            so_panic("want missing = 0");
+        }
+        if (maps_Map_Len(so_String, so_int, &m) != 3) {
+            so_panic("want len = 3");
+        }
+        maps_Map_Free(so_String, so_int, &m);
+    }
+    {
+        // String values.
+        maps_Map m = maps_New(int32_t, so_String, (mem_Allocator){0}, 0);
+        maps_Map_Set(int32_t, so_String, &m, 11, so_str("abc"));
+        maps_Map_Set(int32_t, so_String, &m, 22, so_str("def"));
+        maps_Map_Set(int32_t, so_String, &m, 33, so_str("xyz"));
+        if (so_string_ne(maps_Map_Get(int32_t, so_String, &m, 11), so_str("abc"))) {
+            so_panic("want 11 = abc");
+        }
+        if (so_string_ne(maps_Map_Get(int32_t, so_String, &m, 22), so_str("def"))) {
+            so_panic("want 22 = def");
+        }
+        if (so_string_ne(maps_Map_Get(int32_t, so_String, &m, 33), so_str("xyz"))) {
+            so_panic("want 33 = xyz");
+        }
+        if (so_string_ne(maps_Map_Get(int32_t, so_String, &m, 44), so_str(""))) {
+            so_panic("want 44 = empty string");
+        }
+        maps_Map_Free(int32_t, so_String, &m);
+    }
+    {
+        // Has.
+        maps_Map m = maps_New(so_String, so_int, (mem_Allocator){0}, 0);
+        maps_Map_Set(so_String, so_int, &m, so_str("abc"), 11);
+        maps_Map_Set(so_String, so_int, &m, so_str("def"), 22);
+        if (!maps_Map_Has(so_String, so_int, &m, so_str("abc"))) {
+            so_panic("want has(abc)");
+        }
+        if (!maps_Map_Has(so_String, so_int, &m, so_str("def"))) {
+            so_panic("want has(def)");
+        }
+        if (maps_Map_Has(so_String, so_int, &m, so_str("missing"))) {
+            so_panic("want has(missing) == false");
+        }
         maps_Map_Free(so_String, so_int, &m);
     }
     {
@@ -31,6 +73,8 @@ int main(void) {
         maps_Map_Set(so_String, so_int, &m, so_str("def"), 22);
         maps_Map_Set(so_String, so_int, &m, so_str("xyz"), 33);
         maps_Map_Delete(so_String, so_int, &m, so_str("def"));
+        // no-op
+        maps_Map_Delete(so_String, so_int, &m, so_str("missing"));
         if (maps_Map_Get(so_String, so_int, &m, so_str("def")) != 0) {
             so_panic("want def = 0 after delete");
         }
@@ -39,6 +83,9 @@ int main(void) {
         }
         if (maps_Map_Get(so_String, so_int, &m, so_str("xyz")) != 33) {
             so_panic("want xyz = 33 after delete");
+        }
+        if (maps_Map_Len(so_String, so_int, &m) != 2) {
+            so_panic("want len = 2 after delete");
         }
         maps_Map_Free(so_String, so_int, &m);
     }
@@ -49,6 +96,9 @@ int main(void) {
         maps_Map_Set(so_String, so_int, &m, so_str("key"), 200);
         if (maps_Map_Get(so_String, so_int, &m, so_str("key")) != 200) {
             so_panic("want key = 200 after overwrite");
+        }
+        if (maps_Map_Len(so_String, so_int, &m) != 1) {
+            so_panic("want len = 1 after overwrite");
         }
         maps_Map_Free(so_String, so_int, &m);
     }
@@ -70,6 +120,9 @@ int main(void) {
             if (maps_Map_Get(so_int, so_int, &m, i) != i * 10) {
                 so_panic("wrong value after grow");
             }
+        }
+        if (maps_Map_Len(so_int, so_int, &m) != 100) {
+            so_panic("want len = 100 after grow");
         }
         maps_Map_Free(so_int, so_int, &m);
     }

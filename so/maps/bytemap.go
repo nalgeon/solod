@@ -17,6 +17,7 @@ package maps
 
 import (
 	"solod.dev/so/bytes"
+	"solod.dev/so/errors"
 	"solod.dev/so/mem"
 )
 
@@ -26,6 +27,14 @@ const (
 	hashBitSize = 64 - dibBitSize           // 0xFFFFFFFFFFFF
 	maxDIB      = ^uint64(0) >> hashBitSize // max 65,535
 )
+
+// ErrKeySize means the key byte slice passed to ByteMap.Get, ByteMap.Set
+// or ByteMap.Delete does not match the map's key size.
+var ErrKeySize = errors.New("maps: wrong key size")
+
+// ErrValueSize means the value byte slice passed to ByteMap.Get
+// does not match the map's value size.
+var ErrValueSize = errors.New("maps: wrong value size")
 
 // KeyHashFn is a function that hashes a key byte slice to an integer.
 type KeyHashFn func(key []byte) int
@@ -93,7 +102,15 @@ func NewByteMap(a mem.Allocator, minCap, ksize, vsize int) ByteMap {
 
 // Get retrieves the value for the given key and copies it
 // into outVal. Returns true if the key was found.
+// outVal size must match the map's value size, or be zero length to skip copying.
+// When outVal is zero length, Get effectively functions as Has.
 func (m *ByteMap) Get(key, outVal []byte) bool {
+	if len(key) != m.ksize {
+		panic(ErrKeySize)
+	}
+	if len(outVal) != 0 && len(outVal) != m.vsize {
+		panic(ErrValueSize)
+	}
 	if len(m.hdib) == 0 {
 		return false
 	}
@@ -105,7 +122,9 @@ func (m *ByteMap) Get(key, outVal []byte) bool {
 			return false
 		}
 		if m.hdib[i].hash() == h && m.equalFn(key, m.keyAt(i)) {
-			copy(outVal, m.valAt(i))
+			if len(outVal) != 0 {
+				copy(outVal, m.valAt(i))
+			}
 			return true
 		}
 		i = (i + 1) & m.mask
@@ -116,6 +135,12 @@ func (m *ByteMap) Get(key, outVal []byte) bool {
 // Set sets the value for the given key,
 // overwriting any existing value.
 func (m *ByteMap) Set(key, value []byte) {
+	if len(key) != m.ksize {
+		panic(ErrKeySize)
+	}
+	if len(value) != m.vsize {
+		panic(ErrValueSize)
+	}
 	if m.len >= m.growAt {
 		m.resize(len(m.hdib) * 2)
 	}
@@ -126,6 +151,9 @@ func (m *ByteMap) Set(key, value []byte) {
 // If the key is not in the map, does nothing.
 // Returns true if the key was found and deleted.
 func (m *ByteMap) Delete(key []byte) bool {
+	if len(key) != m.ksize {
+		panic(ErrKeySize)
+	}
 	if len(m.hdib) == 0 {
 		return false
 	}

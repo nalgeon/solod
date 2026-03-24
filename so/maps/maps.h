@@ -34,6 +34,14 @@ typedef maps_ByteMap maps_Map;
     _m;                                                               \
 })
 
+// Has returns true if the given key is in the map.
+#define maps_Map_Has(K, V, m, key) ({           \
+    K _k = (key);                               \
+    so_Slice _ks = {&_k, sizeof(K), sizeof(K)}; \
+    so_Slice _vs = {0};                         \
+    maps_ByteMap_Get((m), _ks, _vs);            \
+})
+
 // Get returns the value for the given key,
 // or the zero value if the key is not in the map.
 #define maps_Map_Get(K, V, m, key) ({           \

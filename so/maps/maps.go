@@ -26,6 +26,13 @@ func New[K comparable, V any](a mem.Allocator, size int) Map[K, V] {
 	return Map[K, V]{}
 }
 
+// Has returns true if the given key is in the map.
+//
+//so:extern
+func (m *Map[K, V]) Has(key K) bool {
+	return false
+}
+
 // Get returns the value for the given key,
 // or the zero value if the key is not in the map.
 //
