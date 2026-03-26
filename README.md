@@ -18,6 +18,7 @@ So is for systems programming in C, but with Go's syntax, type safety, and tooli
 [Installation and usage](#installation-and-usage) •
 [Language tour](doc/spec.md) •
 [Stdlib](doc/stdlib.md) •
+[Playground](https://codapi.org/so/) •
 [So by example](example/README.md) •
 [Testing](#testing) •
 [Compatibility](#compatibility) •
@@ -150,6 +151,10 @@ To learn about So's features and limitations, check out the brief [overview of t
 ## Standard library
 
 So provides a growing set of [high-level packages](./doc/stdlib.md) similar to Go's stdlib, as well as low-level packages that wrap the libc API.
+
+## Playground
+
+[Try So online](https://codapi.org/so/) without installing anything. You can run the code or view the translated C output.
 
 ## So by example
 
