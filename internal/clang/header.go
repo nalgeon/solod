@@ -33,10 +33,7 @@ func (g *Generator) emitImports(w io.Writer) {
 // emitImportSpec emits a #include directive for an import.
 func (g *Generator) emitImportSpec(w io.Writer, spec *ast.ImportSpec) {
 	path := strings.Trim(spec.Path.Value, `"`)
-	if path == "embed" || path == "unsafe" {
-		// embed is only a marker import for embedding files,
-		// and unsafe is implemented in builtin.h,
-		// so neither requires a #include directive.
+	if isIgnoredPackage(path) {
 		return
 	}
 	// Strip the imported package's own module prefix.
@@ -152,4 +149,14 @@ func (g *Generator) emitHeaderGenDecl(w io.Writer, decl *ast.GenDecl) {
 			}
 		}
 	}
+}
+
+// isIgnoredPackage returns true if the import path is for
+// a package that should not be emitted as a #include directive.
+func isIgnoredPackage(path string) bool {
+	// embed is only a marker import for embedding files,
+	// unsafe is implemented in builtin.h,
+	// so they neither requires a #include directive.
+	// Other ignored packages are only used for extern functions in tests.
+	return path == "embed" || path == "unsafe" || path == "math"
 }

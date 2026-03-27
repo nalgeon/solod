@@ -141,6 +141,23 @@ func (g *Generator) emitBinaryExpr(n *ast.BinaryExpr) {
 		}
 	}
 
+	// Shift expressions: parenthesize because Go's << >> have multiplicative
+	// precedence, but C's << >> are below additive (+/-).
+	// Cast integer literal operands to the result type so that e.g. 1 << 63
+	// uses a 64-bit left operand instead of C's 32-bit int.
+	if n.Op == token.SHL || n.Op == token.SHR {
+		fmt.Fprintf(w, "(")
+		if lit, ok := n.X.(*ast.BasicLit); ok && lit.Kind == token.INT {
+			cType := g.mapType(n, g.types.TypeOf(n))
+			fmt.Fprintf(w, "(%s)", cType)
+		}
+		g.emitExpr(n.X)
+		fmt.Fprintf(w, " %s ", n.Op.String())
+		g.emitExpr(n.Y)
+		fmt.Fprintf(w, ")")
+		return
+	}
+
 	// Go's &^ (AND NOT) has no C equivalent — emit & ~ instead.
 	if n.Op == token.AND_NOT {
 		g.emitExpr(n.X)
