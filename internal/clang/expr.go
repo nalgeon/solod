@@ -24,7 +24,7 @@ func (g *Generator) emitExpr(expr ast.Expr) {
 	case *ast.IndexExpr:
 		g.emitIndexExpr(e)
 	case *ast.ParenExpr:
-		g.emitParenExpr(e)
+		g.emitParenExpr(e.X)
 	case *ast.SelectorExpr:
 		g.emitSelectorExpr(e)
 	case *ast.SliceExpr:
@@ -160,9 +160,25 @@ func (g *Generator) emitBinaryExpr(n *ast.BinaryExpr) {
 
 	// Go's &^ (AND NOT) has no C equivalent — emit & ~ instead.
 	if n.Op == token.AND_NOT {
+		fmt.Fprintf(w, "(")
 		g.emitExpr(n.X)
 		fmt.Fprintf(w, " & ~")
 		g.emitExpr(n.Y)
+		fmt.Fprintf(w, ")")
+		return
+	}
+
+	// Bitwise operators: parenthesize because Go's & has multiplicative
+	// precedence (same as * and <<), but C's & is below additive (+/-).
+	// Similarly, Go's | and ^ have additive precedence, but in C they
+	// are below & and +. Without parentheses, expressions like
+	// a & b + c would mean (a & b) + c in Go but a & (b + c) in C.
+	if n.Op == token.AND || n.Op == token.OR || n.Op == token.XOR {
+		fmt.Fprintf(w, "(")
+		g.emitExpr(n.X)
+		fmt.Fprintf(w, " %s ", n.Op.String())
+		g.emitExpr(n.Y)
+		fmt.Fprintf(w, ")")
 		return
 	}
 
@@ -247,9 +263,8 @@ func (g *Generator) emitCallExpr(n *ast.CallExpr) {
 		}
 		// Regular type conversion (e.g. int(3.14)).
 		cType := g.mapType(n, tv.Type)
-		fmt.Fprintf(w, "(%s)(", cType)
-		g.emitExpr(n.Args[0])
-		fmt.Fprintf(w, ")")
+		fmt.Fprintf(w, "(%s)", cType)
+		g.emitParenExpr(n.Args[0])
 		return
 	}
 
@@ -362,9 +377,13 @@ func (g *Generator) emitIdent(n *ast.Ident) {
 }
 
 // emitParenExpr emits a parenthesized expression.
-func (g *Generator) emitParenExpr(n *ast.ParenExpr) {
+func (g *Generator) emitParenExpr(expr ast.Expr) {
+	if isSelfParenthesized(expr) {
+		g.emitExpr(expr)
+		return
+	}
 	fmt.Fprintf(g.state.writer, "(")
-	g.emitExpr(n.X)
+	g.emitExpr(expr)
 	fmt.Fprintf(g.state.writer, ")")
 }
 
@@ -552,6 +571,19 @@ func (g *Generator) isArrayParam(ident *ast.Ident) bool {
 		if param == obj {
 			return true
 		}
+	}
+	return false
+}
+
+// isSelfParenthesized reports whether expr emits its own parentheses.
+func isSelfParenthesized(expr ast.Expr) bool {
+	bin, ok := expr.(*ast.BinaryExpr)
+	if !ok {
+		return false
+	}
+	switch bin.Op {
+	case token.SHL, token.SHR, token.AND, token.OR, token.XOR, token.AND_NOT:
+		return true
 	}
 	return false
 }

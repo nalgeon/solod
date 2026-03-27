@@ -10,11 +10,7 @@
 // [math/bits]: https://github.com/golang/go/blob/go1.26.1/src/math/bits/bits.go
 package bits
 
-import (
-	"solod.dev/so"
-)
-
-const uintSize = 32 << ((^uint(0)) >> 63) // 32 or 64
+const uintSize = 32 << (^uint(0) >> 63) // 32 or 64
 
 // UintSize is the size of a uint in bits.
 const UintSize = uintSize
@@ -113,11 +109,6 @@ const m2 = 0x0f0f0f0f0f0f0f0f // 00001111 ...
 const m3 = 0x00ff00ff00ff00ff // etc.
 const m4 = 0x0000ffff0000ffff
 
-const m0_32 uint32 = 0x55555555 // 01010101 ...
-const m1_32 uint32 = 0x33333333 // 00110011 ...
-const m2_32 uint32 = 0x0f0f0f0f // 00001111 ...
-const m3_32 uint32 = 0x00ff00ff // etc.
-
 // OnesCount returns the number of one bits ("population count") in x.
 func OnesCount(x uint) int {
 	if UintSize == 32 {
@@ -162,14 +153,14 @@ func OnesCount64(x uint64) int {
 	// Per "Hacker's Delight", the first line can be simplified
 	// more, but it saves at best one instruction, so we leave
 	// it alone for clarity.
-	const m = so.MaxUint64
-	x = (x >> 1 & (m0 & m)) + (x & (m0 & m))
-	x = (x >> 2 & (m1 & m)) + (x & (m1 & m))
-	x = ((x >> 4) + x) & (m2 & m)
+	const m = -1 // all bits set; 1<<64 - 1 would overflow in C
+	x = x>>1&(m0&m) + x&(m0&m)
+	x = x>>2&(m1&m) + x&(m1&m)
+	x = (x>>4 + x) & (m2 & m)
 	x += x >> 8
 	x += x >> 16
 	x += x >> 32
-	return int(x) & ((1 << 7) - 1)
+	return int(x) & (1<<7 - 1)
 }
 
 // --- RotateLeft ---
@@ -247,19 +238,19 @@ func Reverse16(x uint16) uint16 {
 
 // Reverse32 returns the value of x with its bits in reversed order.
 func Reverse32(x uint32) uint32 {
-	const m = so.MaxUint32
-	x = (x >> 1 & (m0_32 & m)) | (x & (m0_32 & m) << 1)
-	x = (x >> 2 & (m1_32 & m)) | (x & (m1_32 & m) << 2)
-	x = (x >> 4 & (m2_32 & m)) | (x & (m2_32 & m) << 4)
+	const m = 1<<32 - 1
+	x = x>>1&(m0&m) | x&(m0&m)<<1
+	x = x>>2&(m1&m) | x&(m1&m)<<2
+	x = x>>4&(m2&m) | x&(m2&m)<<4
 	return ReverseBytes32(x)
 }
 
 // Reverse64 returns the value of x with its bits in reversed order.
 func Reverse64(x uint64) uint64 {
-	const m = so.MaxUint64
-	x = (x >> 1 & (m0 & m)) | (x & (m0 & m) << 1)
-	x = (x >> 2 & (m1 & m)) | (x & (m1 & m) << 2)
-	x = (x >> 4 & (m2 & m)) | (x & (m2 & m) << 4)
+	const m = -1 // all bits set; 1<<64 - 1 would overflow in C
+	x = x>>1&(m0&m) | x&(m0&m)<<1
+	x = x>>2&(m1&m) | x&(m1&m)<<2
+	x = x>>4&(m2&m) | x&(m2&m)<<4
 	return ReverseBytes64(x)
 }
 
@@ -286,8 +277,8 @@ func ReverseBytes16(x uint16) uint16 {
 //
 // This function's execution time does not depend on the inputs.
 func ReverseBytes32(x uint32) uint32 {
-	const m = so.MaxUint32
-	x = (x >> 8 & (m3_32 & m)) | (x & (m3_32 & m) << 8)
+	const m = 1<<32 - 1
+	x = x>>8&(m3&m) | x&(m3&m)<<8
 	return x>>16 | x<<16
 }
 
@@ -295,9 +286,9 @@ func ReverseBytes32(x uint32) uint32 {
 //
 // This function's execution time does not depend on the inputs.
 func ReverseBytes64(x uint64) uint64 {
-	const m = so.MaxUint64
-	x = (x >> 8 & (m3 & m)) | (x & (m3 & m) << 8)
-	x = (x >> 16 & (m4 & m)) | (x & (m4 & m) << 16)
+	const m = -1 // all bits set; 1<<64 - 1 would overflow in C
+	x = x>>8&(m3&m) | x&(m3&m)<<8
+	x = x>>16&(m4&m) | x&(m4&m)<<16
 	return x>>32 | x<<32
 }
 
@@ -343,8 +334,7 @@ func Len32(x uint32) int {
 // Len64 returns the minimum number of bits required to represent x; the result is 0 for x == 0.
 func Len64(x uint64) int {
 	var n int
-	const two32 = uint64(so.MaxUint32) + 1
-	if x >= two32 {
+	if x >= 1<<32 {
 		x >>= 32
 		n = 32
 	}
@@ -477,17 +467,17 @@ func Mul32(x, y uint32) (uint32, uint32) {
 //
 // This function's execution time does not depend on the inputs.
 func Mul64(x, y uint64) (uint64, uint64) {
-	const mask32 = uint64(so.MaxUint32)
+	const mask32 = 1<<32 - 1
 	x0 := x & mask32
 	x1 := x >> 32
 	y0 := y & mask32
 	y1 := y >> 32
 	w0 := x0 * y0
-	t := x1*y0 + (w0 >> 32)
+	t := x1*y0 + w0>>32
 	w1 := t & mask32
 	w2 := t >> 32
 	w1 += x0 * y1
-	hi := x1*y1 + w2 + (w1 >> 32)
+	hi := x1*y1 + w2 + w1>>32
 	lo := x * y
 	return hi, lo
 }
@@ -540,9 +530,10 @@ func Div64(hi, lo, y uint64) (uint64, uint64) {
 	s := uint(LeadingZeros64(y))
 	y <<= s
 
-	const two32 = uint64(so.MaxUint32) + 1
-	const mask32 = two32 - 1
-
+	const (
+		two32  = 1 << 32
+		mask32 = two32 - 1
+	)
 	yn1 := y >> 32
 	yn0 := y & mask32
 	un32 := hi<<s | lo>>(64-s)
