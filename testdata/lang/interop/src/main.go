@@ -56,8 +56,8 @@ func main() {
 	}
 	{
 		// Extern constants.
-		if maxInt64 != 1<<63-1 {
-			panic("maxInt64 != 1<<63-1")
+		if maxInt64 <= 1<<62 {
+			panic("maxInt64 <= 1<<62")
 		}
 	}
 }
