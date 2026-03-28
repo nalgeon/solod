@@ -13,6 +13,7 @@ High-level:
 [mem](#somem) •
 [os](#soos) •
 [slices](#soslices) •
+[strconv](#sostrconv) •
 [strings](#sostrings) •
 [time](#sotime) •
 [unicode](#sounicode) •
@@ -154,6 +155,15 @@ Operations on slices:
 - `Extend` appends another slice to a heap slice, growing if needed.
 - `Clone` creates a shallow copy of the slice.
 - `Equal` reports whether two slices are equal.
+
+## [so/strconv](https://pkg.go.dev/solod.dev/so/strconv)
+
+Conversions between numbers and strings. Offers an API similar to Go's `strconv` package, but with fewer features.
+
+- `ParseBool` and `FormatBool` convert bool ↔ string.
+- `Atoi`, `Itoa`, `ParseInt` and `FormatInt` convert signed integer ↔ string.
+- `ParseUint` and `FormatUint` convert unsigned integer ↔ string.
+- `ParseFloat` and `FormatFloat` convert float ↔ string.
 
 ## [so/strings](https://pkg.go.dev/solod.dev/so/strings)
 
