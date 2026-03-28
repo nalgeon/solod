@@ -83,4 +83,12 @@ int main(void) {
             so_panic("want *p == 1");
         }
     }
+    {
+        // Pointer.
+        so_int x = 42;
+        void* p = (void*)(&x);
+        if (*(so_int*)(p) != 42) {
+            so_panic("want *(int*)p == 42");
+        }
+    }
 }

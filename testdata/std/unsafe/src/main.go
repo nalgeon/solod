@@ -82,4 +82,12 @@ func main() {
 			panic("want *p == 1")
 		}
 	}
+	{
+		// Pointer.
+		var x int = 42
+		p := unsafe.Pointer(&x)
+		if *(*int)(p) != 42 {
+			panic("want *(int*)p == 42")
+		}
+	}
 }

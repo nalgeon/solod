@@ -152,6 +152,8 @@ func (g *Generator) mapType(node ast.Node, typ types.Type) string {
 		return "uintptr_t"
 	case types.String, types.UntypedString:
 		return "so_String"
+	case types.UnsafePointer:
+		return "void*"
 	default:
 		g.fail(node, "unsupported type: %s", typ)
 		panic("unreachable")
