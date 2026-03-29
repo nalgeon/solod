@@ -5,12 +5,14 @@ import (
 	"go/ast"
 	"go/token"
 	"io"
+	"slices"
 	"strings"
 )
 
-// emitImports emits #include directives for imports.
+// emitImports emits deduplicated, sorted #include directives for imports.
 func (g *Generator) emitImports(w io.Writer) {
-	var specs []*ast.ImportSpec
+	seen := make(map[string]bool)
+	var paths []string
 	for _, file := range g.pkg.Syntax {
 		for _, decl := range file.Decls {
 			gd, ok := decl.(*ast.GenDecl)
@@ -18,34 +20,19 @@ func (g *Generator) emitImports(w io.Writer) {
 				continue
 			}
 			for _, spec := range gd.Specs {
-				specs = append(specs, spec.(*ast.ImportSpec))
+				cPath := g.resolveIncludePath(spec.(*ast.ImportSpec))
+				if cPath == "" || seen[cPath] {
+					continue
+				}
+				seen[cPath] = true
+				paths = append(paths, cPath)
 			}
 		}
 	}
-	if len(specs) == 0 {
-		return
+	slices.Sort(paths)
+	for _, p := range paths {
+		fmt.Fprintf(w, "#include \"%s\"\n", p)
 	}
-	for _, spec := range specs {
-		g.emitImportSpec(w, spec)
-	}
-}
-
-// emitImportSpec emits a #include directive for an import.
-func (g *Generator) emitImportSpec(w io.Writer, spec *ast.ImportSpec) {
-	path := strings.Trim(spec.Path.Value, `"`)
-	if isIgnoredPackage(path) {
-		return
-	}
-	// Strip the imported package's own module prefix.
-	if imp, ok := g.pkg.Imports[path]; ok && imp.Module != nil {
-		path = strings.TrimPrefix(path, imp.Module.Path+"/")
-	}
-	// Add the package.h file (e.g. package -> package/package.h).
-	parts := strings.Split(path, "/")
-	parts = append(parts, parts[len(parts)-1]+".h")
-	cPath := strings.Join(parts, "/")
-	// Emit the #include directive (e.g. #include "package/package.h").
-	fmt.Fprintf(w, "#include \"%s\"\n", cPath)
 }
 
 // emitHeaderDecls writes declarations for exported package-level symbols.
@@ -149,6 +136,23 @@ func (g *Generator) emitHeaderGenDecl(w io.Writer, decl *ast.GenDecl) {
 			}
 		}
 	}
+}
+
+// resolveIncludePath returns the C include path for an import spec,
+// or an empty string if the import should be ignored.
+func (g *Generator) resolveIncludePath(spec *ast.ImportSpec) string {
+	path := strings.Trim(spec.Path.Value, `"`)
+	if isIgnoredPackage(path) {
+		return ""
+	}
+	// Strip the imported package's own module prefix.
+	if imp, ok := g.pkg.Imports[path]; ok && imp.Module != nil {
+		path = strings.TrimPrefix(path, imp.Module.Path+"/")
+	}
+	// Add the package.h file (e.g. package -> package/package.h).
+	parts := strings.Split(path, "/")
+	parts = append(parts, parts[len(parts)-1]+".h")
+	return strings.Join(parts, "/")
 }
 
 // isIgnoredPackage returns true if the import path is for
