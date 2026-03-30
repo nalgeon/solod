@@ -15,6 +15,11 @@ func New(text string) error {
 	return &errorString{text}
 }
 
+// ErrUnsupported indicates that a requested operation cannot be performed,
+// because it is unsupported. For example, a call to [os.Link] when using a
+// file system that does not support hard links.
+var ErrUnsupported = New("unsupported operation")
+
 // errorString is a trivial implementation of error.
 //
 //so:extern
