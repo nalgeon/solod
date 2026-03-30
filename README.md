@@ -22,8 +22,8 @@ So is for systems programming in C, but with Go's syntax, type safety, and tooli
 [So by example](example/README.md) •
 [Testing](#testing) •
 [Compatibility](#compatibility) •
-[Design decisions](#design-decisions) •
-[FAQ](#frequently-asked-questions) •
+[Design principles](doc/design.md) •
+[FAQ](doc/faq.md) •
 [Roadmap](#roadmap) •
 [Contributing](#contributing)
 
@@ -181,63 +181,13 @@ You can use GCC, Clang, or `zig cc` to compile the transpiled C code. MSVC is no
 
 Supported operating systems: Linux, macOS, and Windows (core language only).
 
-## Design decisions
+## Design principles
 
-So is highly opinionated.
-
-**Simplicity is key**. Fewer features are always better. Every new feature is strongly discouraged by default and should be added only if there are very convincing real-world use cases to support it. This applies to the standard library too — So tries to export as little of Go's stdlib API as possible while still remaining highly useful for real-world use cases.
-
-**No heap allocations** are allowed in language built-ins (like maps, slices, new, or append). Heap allocations are allowed in the standard library, but they must clearly state when an allocation happens and who owns the allocated data.
-
-**Fast and easy C interop**. Even though So uses Go syntax, it's basically C with its own standard library. Calling C from So, and So from C, should always be simple to write and run efficiently. The So standard library (translated to C) should be easy to add to any C project.
-
-**Readability**. There are several languages that claim they can transpile to readable C code. Unfortunately, the C code they generate is usually unreadable or barely readable at best. So isn't perfect in this area either (though it's arguably better than others), but it aims to produce C code that's as readable as possible.
-
-**Go compatibility**. So code is syntactically valid Go code, with no exceptions. Semantics may differ.
-
-Non-goals:
-
-**Raw performance**. You can definitely write C code by hand that runs faster than code produced by So. Also, some features in So, like interfaces, are currently implemented in a way that's not very efficient, mainly to keep things simple.
-
-**Hiding C entirely**. So is a cleaner way to write C, not a replacement for it. You should know C to use So effectively.
-
-**Go feature parity**. Less is more. Iterators aren't coming, and neither are generic methods.
+So is [highly opinionated](doc/design.md). Simplicity is key. Heap allocations are explicit. Strictly Go syntax.
 
 ## Frequently asked questions
 
-_Why not Rust/Zig/Odin/other language?_
-
-Because I like C and Go.
-
-_Why not TinyGo?_
-
-TinyGo is lightweight, but it still has a garbage collector, a runtime, and aims to support all Go features. What I'm after is something even simpler, with no runtime at all, source-level C interop, and eventually, Go's standard library ported to plain C so it can be used in regular C projects.
-
-_How does So handle memory?_
-
-Everything is stack-allocated by default. There's no garbage collector or reference counting. The standard library provides explicit heap allocation in the `so/mem` package when you need it.
-
-_Is it safe?_
-
-So itself has few safeguards other than the default Go type checking. It will panic on out-of-bounds array access, but it won't stop you from returning a dangling pointer or forgetting to free allocated memory.
-
-Most memory-related problems can be caught with AddressSanitizer in modern compilers, so I recommend enabling it during development by adding `-fsanitize=address` to your `CFLAGS`.
-
-_Can I use So code from C (and vice versa)?_
-
-Yes. So compiles to plain C, therefore calling So from C is just calling C from C. Calling C from So is equally straightforward — see the language tour for details.
-
-_Can I compile existing Go packages with So?_
-
-Not really. Go uses automatic memory management, while So uses manual memory management. So also supports far fewer features than Go. Neither Go's standard library nor third-party packages will work with So without changes.
-
-_How stable is this?_
-
-Not for production at the moment.
-
-_Where's the standard library?_
-
-There is a growing set of high-level packages (`so/bytes`, `so/mem`, `so/slices`, ...). There are also low-level packages that wrap the libc API (`so/c/stdlib`, `so/c/stdio`, `so/c/cstring`, ...). Check out the standard library overview for more details.
+I have heard these several times, so it's [worth answering](doc/faq.md).
 
 ## Roadmap
 
