@@ -49,10 +49,7 @@ func (b *Builder) Free() {
 // bytes of capacity beyond len(b.buf).
 func (b *Builder) grow(n int) {
 	newCap := 2*cap(b.buf) + n
-	buf := mem.AllocSlice[byte](b.a, len(b.buf), newCap)
-	copy(buf, b.buf)
-	mem.FreeSlice(b.a, b.buf)
-	b.buf = buf
+	b.buf = mem.ReallocSlice(b.a, b.buf, len(b.buf), newCap)
 }
 
 // Grow grows b's capacity, if necessary, to guarantee space for
