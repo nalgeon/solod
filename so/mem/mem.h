@@ -2,11 +2,11 @@
 
 // Forwards declarations.
 struct mem_Allocator;
-so_Result mem_tryAllocSlice(
+so_R_slice_err mem_tryAllocSlice(
     const struct mem_Allocator* a,
     size_t elemSize, size_t align,
     so_int len, so_int cap);
-so_Result mem_tryReallocSlice(
+so_R_slice_err mem_tryReallocSlice(
     const struct mem_Allocator* a, so_Slice s,
     so_int newLen, so_int newCap,
     size_t elemSize, size_t align);
@@ -15,11 +15,11 @@ so_Result mem_tryReallocSlice(
 // Returns a pointer to the allocated memory or panics on failure.
 // Whether new memory is zeroed depends on the allocator.
 // If the allocator is nil, uses the system allocator.
-#define mem_Alloc(T, a) ({                     \
-    so_Result _mem_res = mem_TryAlloc(T, (a)); \
-    if (_mem_res.err != NULL)                  \
-        so_panic(_mem_res.err->msg);           \
-    _mem_res.val.as_ptr;                       \
+#define mem_Alloc(T, a) ({                        \
+    so_R_ptr_err _mem_res = mem_TryAlloc(T, (a)); \
+    if (_mem_res.err != NULL)                     \
+        so_panic(_mem_res.err->msg);              \
+    _mem_res.val;                                 \
 })
 
 // TryAlloc is like [Alloc] but returns an error
@@ -43,11 +43,11 @@ so_Result mem_tryReallocSlice(
 // Returns a slice of the allocated memory or panics on failure.
 // Whether new memory is zeroed depends on the allocator.
 // If the allocator is nil, uses the system allocator.
-#define mem_AllocSlice(T, a, len, cap) ({                     \
-    so_Result _res = mem_TryAllocSlice(T, (a), (len), (cap)); \
-    if (_res.err != NULL)                                     \
-        so_panic(_res.err->msg);                              \
-    _res.val.as_slice;                                        \
+#define mem_AllocSlice(T, a, len, cap) ({                          \
+    so_R_slice_err _res = mem_TryAllocSlice(T, (a), (len), (cap)); \
+    if (_res.err != NULL)                                          \
+        so_panic(_res.err->msg);                                   \
+    _res.val;                                                      \
 })
 
 // TryAllocSlice is like [AllocSlice] but returns an error
@@ -63,11 +63,11 @@ so_Result mem_tryReallocSlice(
 // Returns the reallocated slice or panics on failure.
 // Whether new memory is zeroed depends on the allocator.
 // If the allocator is nil, uses the system allocator.
-#define mem_ReallocSlice(T, a, s, newLen, newCap) ({                       \
-    so_Result _res = mem_TryReallocSlice(T, (a), (s), (newLen), (newCap)); \
-    if (_res.err != NULL)                                                  \
-        so_panic(_res.err->msg);                                           \
-    _res.val.as_slice;                                                     \
+#define mem_ReallocSlice(T, a, s, newLen, newCap) ({                            \
+    so_R_slice_err _res = mem_TryReallocSlice(T, (a), (s), (newLen), (newCap)); \
+    if (_res.err != NULL)                                                       \
+        so_panic(_res.err->msg);                                                \
+    _res.val;                                                                   \
 })
 
 // TryReallocSlice is like [ReallocSlice] but returns an error

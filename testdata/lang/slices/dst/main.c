@@ -1,8 +1,8 @@
 #include "main.h"
 
 // -- Forward declarations --
-static so_Result lenInt64(so_Slice buf);
-static so_Result lenInt64Impl(so_Slice buf);
+static so_R_i64_err lenInt64(so_Slice buf);
+static so_R_i64_err lenInt64Impl(so_Slice buf);
 static so_int sumSlice(so_Slice s);
 static void modifySlice(so_Slice s);
 static so_int sumVariadic(so_Slice nums);
@@ -11,14 +11,14 @@ static so_int main_SliceHolder_get(main_SliceHolder h, so_int i);
 
 // -- Implementation --
 
-static so_Result lenInt64(so_Slice buf) {
-    so_Result _res1 = lenInt64Impl(buf);
-    int64_t n = _res1.val.as_i64;
-    return (so_Result){.val.as_i64 = n, .err = NULL};
+static so_R_i64_err lenInt64(so_Slice buf) {
+    so_R_i64_err _res1 = lenInt64Impl(buf);
+    int64_t n = _res1.val;
+    return (so_R_i64_err){.val = n, .err = NULL};
 }
 
-static so_Result lenInt64Impl(so_Slice buf) {
-    return (so_Result){.val.as_i64 = (int64_t)(so_len(buf)), .err = NULL};
+static so_R_i64_err lenInt64Impl(so_Slice buf) {
+    return (so_R_i64_err){.val = (int64_t)(so_len(buf)), .err = NULL};
 }
 
 static so_int sumSlice(so_Slice s) {
@@ -288,13 +288,13 @@ int main(void) {
     {
         // Pass and return slices.
         so_byte buf[4] = {0};
-        so_Result _res1 = lenInt64(so_array_slice(so_byte, buf, 0, 4, 4));
-        int64_t n = _res1.val.as_i64;
+        so_R_i64_err _res1 = lenInt64(so_array_slice(so_byte, buf, 0, 4, 4));
+        int64_t n = _res1.val;
         if (n != 4) {
             so_panic("want 4");
         }
-        so_Result _res2 = lenInt64((so_Slice){(so_byte[3]){1, 2, 3}, 3, 3});
-        n = _res2.val.as_i64;
+        so_R_i64_err _res2 = lenInt64((so_Slice){(so_byte[3]){1, 2, 3}, 3, 3});
+        n = _res2.val;
         if (n != 3) {
             so_panic("want 3");
         }

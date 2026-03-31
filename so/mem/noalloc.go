@@ -15,11 +15,15 @@ var NoAlloc Allocator = &NoAllocator{}
 type NoAllocator struct{}
 
 func (*NoAllocator) Alloc(size int, align int) (any, error) {
+	_, _ = size, align
 	return nil, ErrNoAlloc
 }
 
 func (*NoAllocator) Realloc(ptr any, oldSize int, newSize int, align int) (any, error) {
+	_, _, _, _ = ptr, oldSize, newSize, align
 	return nil, ErrNoAlloc
 }
 
-func (*NoAllocator) Free(ptr any, size int, align int) {}
+func (*NoAllocator) Free(ptr any, size int, align int) {
+	_, _, _ = ptr, size, align
+}

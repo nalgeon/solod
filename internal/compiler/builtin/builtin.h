@@ -443,32 +443,46 @@ typedef struct so_Error_* so_Error;
         exit(1);                                          \
     } while (0)
 
-// --- Result type ---
+// --- Result types ---
 
-// Value is a union of all possible return value types
-// in case of multiple return values.
-typedef union {
-    bool as_bool;
-    so_byte as_byte;
-    so_rune as_rune;
-    so_int as_int;
-    int32_t as_i32;
-    int64_t as_i64;
-    so_uint as_uint;
-    uint32_t as_u32;
-    uint64_t as_u64;
-    double as_double;
-    so_String as_string;
-    so_Slice as_slice;
-    void* as_ptr;
-} so_Value;
+// Result types for (T, error):
+typedef struct { bool val; so_Error err; } so_R_bool_err;
+typedef struct { double val; so_Error err; } so_R_f64_err;
+typedef struct { float val; so_Error err; } so_R_f32_err;
+typedef struct { int32_t val; so_Error err; } so_R_i32_err;
+typedef struct { int64_t val; so_Error err; } so_R_i64_err;
+typedef struct { so_byte val; so_Error err; } so_R_byte_err;
+typedef struct { so_int val; so_Error err; } so_R_int_err;
+typedef struct { so_rune val; so_Error err; } so_R_rune_err;
+typedef struct { so_Slice val; so_Error err; } so_R_slice_err;
+typedef struct { so_String val; so_Error err; } so_R_str_err;
+typedef struct { so_uint val; so_Error err; } so_R_uint_err;
+typedef struct { uint32_t val; so_Error err; } so_R_u32_err;
+typedef struct { uint64_t val; so_Error err; } so_R_u64_err;
+typedef struct { void* val; so_Error err; } so_R_ptr_err;
 
-// so_Result is the return type for functions that return (T, error) or (T, T).
-typedef struct {
-    so_Value val;
-    so_Value val2;
-    so_Error err;
-} so_Result;
+// Result types for (T, T):
+typedef struct { bool val; bool val2; } so_R_bool_bool;
+typedef struct { bool val; so_int val2; } so_R_bool_int;
+typedef struct { double val; bool val2; } so_R_f64_bool;
+typedef struct { double val; double val2; } so_R_f64_f64;
+typedef struct { double val; so_int val2; } so_R_f64_int;
+typedef struct { float val; bool val2; } so_R_f32_bool;
+typedef struct { int64_t val; int32_t val2; } so_R_i64_i32;
+typedef struct { so_int val; bool val2; } so_R_int_bool;
+typedef struct { so_int val; so_int val2; } so_R_int_int;
+typedef struct { so_int val; uint64_t val2; } so_R_int_u64;
+typedef struct { so_rune val; bool val2; } so_R_rune_bool;
+typedef struct { so_rune val; so_int val2; } so_R_rune_int;
+typedef struct { so_String val; bool val2; } so_R_str_bool;
+typedef struct { so_String val; so_String val2; } so_R_str_str;
+typedef struct { so_uint val; so_uint val2; } so_R_uint_uint;
+typedef struct { uint32_t val; bool val2; } so_R_u32_bool;
+typedef struct { uint32_t val; so_int val2; } so_R_u32_int;
+typedef struct { uint32_t val; uint32_t val2; } so_R_u32_u32;
+typedef struct { uint64_t val; bool val2; } so_R_u64_bool;
+typedef struct { uint64_t val; so_int val2; } so_R_u64_int;
+typedef struct { uint64_t val; uint64_t val2; } so_R_u64_u64;
 
 // --- Printing ---
 
@@ -485,6 +499,9 @@ int so_println(const char* format, ...);
 #define unsafe_Alignof(x) alignof(so_typeof(x))
 #define unsafe_Sizeof(x) sizeof(x)
 
+static inline void* unsafe_Add(void* ptr, size_t offset) {
+    return (char*)ptr + offset;
+}
 static inline so_String unsafe_String(void* ptr, size_t len) {
     return (so_String){(const char*)ptr, len};
 }
@@ -496,7 +513,4 @@ static inline so_Slice unsafe_Slice(void* ptr, size_t len) {
 }
 static inline void* unsafe_SliceData(so_Slice s) {
     return s.ptr;
-}
-static inline void* unsafe_Add(void* ptr, size_t offset) {
-    return (char*)ptr + offset;
 }

@@ -6,9 +6,9 @@ int main(void) {
     {
         // DecodeLastRune.
         so_Slice b = so_string_bytes(so_str("Hello, 世界"));
-        so_Result _res1 = utf8_DecodeLastRune(b);
-        so_rune r = _res1.val.as_rune;
-        so_int size = _res1.val2.as_int;
+        so_R_rune_int _res1 = utf8_DecodeLastRune(b);
+        so_rune r = _res1.val;
+        so_int size = _res1.val2;
         if (r != U'界' || size != 3) {
             so_panic("DecodeLastRune failed");
         }
@@ -16,9 +16,9 @@ int main(void) {
     {
         // DecodeLastRuneInString.
         so_String str = so_str("Hello, 世界");
-        so_Result _res2 = utf8_DecodeLastRuneInString(str);
-        so_rune r = _res2.val.as_rune;
-        so_int size = _res2.val2.as_int;
+        so_R_rune_int _res2 = utf8_DecodeLastRuneInString(str);
+        so_rune r = _res2.val;
+        so_int size = _res2.val2;
         if (r != U'界' || size != 3) {
             so_panic("DecodeLastRuneInString failed");
         }
@@ -26,9 +26,9 @@ int main(void) {
     {
         // DecodeRune.
         so_Slice b = so_string_bytes(so_str("Hello, 世界"));
-        so_Result _res3 = utf8_DecodeRune(b);
-        so_rune r = _res3.val.as_rune;
-        so_int size = _res3.val2.as_int;
+        so_R_rune_int _res3 = utf8_DecodeRune(b);
+        so_rune r = _res3.val;
+        so_int size = _res3.val2;
         if (r != U'H' || size != 1) {
             so_panic("DecodeRune failed");
         }
@@ -36,9 +36,9 @@ int main(void) {
     {
         // DecodeRuneInString.
         so_String str = so_str("Hello, 世界");
-        so_Result _res4 = utf8_DecodeRuneInString(str);
-        so_rune r = _res4.val.as_rune;
-        so_int size = _res4.val2.as_int;
+        so_R_rune_int _res4 = utf8_DecodeRuneInString(str);
+        so_rune r = _res4.val;
+        so_int size = _res4.val2;
         if (r != U'H' || size != 1) {
             so_panic("DecodeRuneInString failed");
         }

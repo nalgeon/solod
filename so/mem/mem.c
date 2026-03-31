@@ -1,27 +1,27 @@
 //go:build ignore
 #include "mem.h"
 
-so_Result mem_tryAllocSlice(const struct mem_Allocator* a, size_t elemSize, size_t align, so_int len, so_int cap) {
+so_R_slice_err mem_tryAllocSlice(const struct mem_Allocator* a, size_t elemSize, size_t align, so_int len, so_int cap) {
     if (len < 0) so_panic("mem: negative length");
     if (cap <= 0) so_panic("mem: invalid capacity");
     if (len > cap) so_panic("mem: length exceeds capacity");
     if (INT64_MAX / (so_int)elemSize < cap) so_panic("mem: capacity overflow");
     if (!a->self) a = &mem_System;
 
-    so_Result res = a->Alloc(a->self, elemSize * cap, align);
-    if (res.err != NULL) return (so_Result){.err = res.err};
-    so_Slice s = {.ptr = res.val.as_ptr, .len = len, .cap = cap};
-    return (so_Result){.val.as_slice = s};
+    so_R_ptr_err res = a->Alloc(a->self, elemSize * cap, align);
+    if (res.err != NULL) return (so_R_slice_err){.err = res.err};
+    so_Slice s = {.ptr = res.val, .len = len, .cap = cap};
+    return (so_R_slice_err){.val = s};
 }
 
-so_Result mem_tryReallocSlice(const struct mem_Allocator* a, so_Slice s, so_int newLen, so_int newCap, size_t elemSize, size_t align) {
+so_R_slice_err mem_tryReallocSlice(const struct mem_Allocator* a, so_Slice s, so_int newLen, so_int newCap, size_t elemSize, size_t align) {
     if (newLen < 0) so_panic("mem: negative length");
     if (newCap <= 0) so_panic("mem: invalid capacity");
     if (newLen > newCap) so_panic("mem: length exceeds capacity");
     if (INT64_MAX / (so_int)elemSize < newCap) so_panic("mem: capacity overflow");
     if (!a->self) a = &mem_System;
 
-    so_Result res;
+    so_R_ptr_err res;
     if (s.cap == 0) {
         res = a->Alloc(a->self, elemSize * newCap, align);
     } else {
@@ -30,7 +30,7 @@ so_Result mem_tryReallocSlice(const struct mem_Allocator* a, so_Slice s, so_int 
                          elemSize * newCap, align);
     }
 
-    if (res.err != NULL) return (so_Result){.err = res.err};
-    so_Slice ns = {.ptr = res.val.as_ptr, .len = newLen, .cap = newCap};
-    return (so_Result){.val.as_slice = ns};
+    if (res.err != NULL) return (so_R_slice_err){.err = res.err};
+    so_Slice ns = {.ptr = res.val, .len = newLen, .cap = newCap};
+    return (so_R_slice_err){.val = ns};
 }

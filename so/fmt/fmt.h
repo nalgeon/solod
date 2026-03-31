@@ -32,11 +32,11 @@ typedef struct {
 #define fmt_Print(...) fmt_print(false, __VA_ARGS__, NULL)
 // Println is like Print but adds a newline at the end.
 #define fmt_Println(...) fmt_print(true, __VA_ARGS__, NULL)
-so_Result fmt_print(int newline, ...);
+so_R_int_err fmt_print(int newline, ...);
 
 // Printf formats according to a format specifier and writes to standard output.
 // It returns the number of bytes written and any write error encountered.
-so_Result fmt_Printf(const char* format, ...);
+so_R_int_err fmt_Printf(const char* format, ...);
 
 // Sprintf formats according to a format specifier and returns the resulting string.
 // If the output size exceeds buf length, it silently truncates the output.
@@ -45,19 +45,19 @@ so_String fmt_Sprintf(fmt_Buffer buf, const char* format, ...);
 // Fprintf formats according to a format specifier and writes to w.
 // It returns the number of bytes written and any write error encountered.
 // Returns [ErrSize] if the output size exceeds BufSize.
-so_Result fmt_Fprintf(io_Writer w, const char* format, ...);
+so_R_int_err fmt_Fprintf(io_Writer w, const char* format, ...);
 
 // Scanf scans text read from standard input, storing successive
 // space-separated values into successive arguments as determined by the format.
 // It returns the number of items successfully scanned.
-so_Result fmt_Scanf(const char* format, ...);
+so_R_int_err fmt_Scanf(const char* format, ...);
 
 // Sscanf scans the argument string, storing successive space-separated
 // values into successive arguments as determined by the format.
 // It returns the number of items successfully scanned.
-so_Result fmt_Sscanf(const char* str, const char* format, ...);
+so_R_int_err fmt_Sscanf(const char* str, const char* format, ...);
 
 // Fscanf scans text read from r, storing successive space-separated
 // values into successive arguments as determined by the format.
 // It returns the number of items successfully scanned.
-so_Result fmt_Fscanf(io_Reader r, const char* format, ...);
+so_R_int_err fmt_Fscanf(io_Reader r, const char* format, ...);

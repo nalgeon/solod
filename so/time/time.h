@@ -8,12 +8,10 @@
 char* strptime(const char*, const char*, struct tm*);
 
 // wall returns the current wall clock time.
-static inline so_Result time_wall() {
+static inline so_R_i64_i32 time_wall() {
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
-    so_Value sec = {.as_i64 = ts.tv_sec};
-    so_Value nsec = {.as_i32 = (int32_t)ts.tv_nsec};
-    return (so_Result){.val = sec, .val2 = nsec, .err = NULL};
+    return (so_R_i64_i32){.val = ts.tv_sec, .val2 = (int32_t)ts.tv_nsec};
 }
 
 // mono returns the current monotonic time in nanoseconds.

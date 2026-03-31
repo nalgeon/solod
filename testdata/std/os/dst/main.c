@@ -20,8 +20,8 @@ static void basicTest(void) {
         if (err != NULL) {
             so_panic("WriteFile failed");
         }
-        so_Result _res1 = os_ReadFile((mem_Allocator){0}, name);
-        so_Slice b = _res1.val.as_slice;
+        so_R_slice_err _res1 = os_ReadFile((mem_Allocator){0}, name);
+        so_Slice b = _res1.val;
         err = _res1.err;
         if (err != NULL) {
             os_Remove(name);
@@ -45,8 +45,8 @@ static void basicTest(void) {
             so_panic("Create failed");
         }
         // Write.
-        so_Result _res3 = os_File_Write(&f, so_string_bytes(so_str("abcdef")));
-        so_int n = _res3.val.as_int;
+        so_R_int_err _res3 = os_File_Write(&f, so_string_bytes(so_str("abcdef")));
+        so_int n = _res3.val;
         err = _res3.err;
         if (err != NULL) {
             os_Remove(name);
@@ -82,8 +82,8 @@ static void basicTest(void) {
         }
         // Read.
         so_Slice buf = so_make_slice(so_byte, 10, 10);
-        so_Result _res5 = os_File_Read(&f, buf);
-        so_int n = _res5.val.as_int;
+        so_R_int_err _res5 = os_File_Read(&f, buf);
+        so_int n = _res5.val;
         err = _res5.err;
         if (err != NULL) {
             os_Remove(name);
@@ -114,8 +114,8 @@ static void basicTest(void) {
         if (err != NULL) {
             so_panic("Create failed");
         }
-        so_Result _res7 = os_File_WriteString(&f, so_str("hello"));
-        so_int n = _res7.val.as_int;
+        so_R_int_err _res7 = os_File_WriteString(&f, so_str("hello"));
+        so_int n = _res7.val;
         err = _res7.err;
         if (err != NULL) {
             os_Remove(name);
@@ -126,8 +126,8 @@ static void basicTest(void) {
             so_panic("WriteString: wrong count");
         }
         os_File_Close(&f);
-        so_Result _res8 = os_ReadFile((mem_Allocator){0}, name);
-        so_Slice b = _res8.val.as_slice;
+        so_R_slice_err _res8 = os_ReadFile((mem_Allocator){0}, name);
+        so_Slice b = _res8.val;
         err = _res8.err;
         if (err != NULL) {
             os_Remove(name);
@@ -143,8 +143,8 @@ static void basicTest(void) {
     }
     {
         // Stdout, Stderr.
-        so_Result _res9 = os_File_WriteString(&os_Stdout, so_str("hello"));
-        so_int n = _res9.val.as_int;
+        so_R_int_err _res9 = os_File_WriteString(&os_Stdout, so_str("hello"));
+        so_int n = _res9.val;
         so_Error err = _res9.err;
         if (err != NULL) {
             so_panic("Stdout failed");
@@ -152,8 +152,8 @@ static void basicTest(void) {
         if (n != 5) {
             so_panic("Stdout: wrong count");
         }
-        so_Result _res10 = os_File_WriteString(&os_Stderr, so_str("goodbye"));
-        n = _res10.val.as_int;
+        so_R_int_err _res10 = os_File_WriteString(&os_Stderr, so_str("goodbye"));
+        n = _res10.val;
         err = _res10.err;
         if (err != NULL) {
             so_panic("Stderr failed");
@@ -182,9 +182,9 @@ static void envTest(void) {
     {
         // LookupEnv - present.
         os_Setenv(so_str("SO_TEST_LOOKUP"), so_str("found"));
-        so_Result _res1 = os_LookupEnv(so_str("SO_TEST_LOOKUP"));
-        so_String val = _res1.val.as_string;
-        bool ok = _res1.val2.as_bool;
+        so_R_str_bool _res1 = os_LookupEnv(so_str("SO_TEST_LOOKUP"));
+        so_String val = _res1.val;
+        bool ok = _res1.val2;
         if (!ok) {
             so_panic("LookupEnv: should be present");
         }
@@ -194,8 +194,8 @@ static void envTest(void) {
     }
     {
         // LookupEnv - absent.
-        so_Result _res2 = os_LookupEnv(so_str("SO_TEST_NONEXISTENT_VAR_XYZ"));
-        bool ok = _res2.val2.as_bool;
+        so_R_str_bool _res2 = os_LookupEnv(so_str("SO_TEST_NONEXISTENT_VAR_XYZ"));
+        bool ok = _res2.val2;
         if (ok) {
             so_panic("LookupEnv: should not be present");
         }
@@ -235,8 +235,8 @@ static void fileTest(void) {
         }
         os_File_Write(&f, so_string_bytes(so_str("openfile")));
         os_File_Close(&f);
-        so_Result _res2 = os_ReadFile((mem_Allocator){0}, name);
-        so_Slice b = _res2.val.as_slice;
+        so_R_slice_err _res2 = os_ReadFile((mem_Allocator){0}, name);
+        so_Slice b = _res2.val;
         err = _res2.err;
         if (err != NULL) {
             os_Remove(name);
@@ -262,8 +262,8 @@ static void fileTest(void) {
             so_panic("OpenFile rdonly failed");
         }
         so_Slice buf = so_make_slice(so_byte, 16, 16);
-        so_Result _res4 = os_File_Read(&f, buf);
-        so_int n = _res4.val.as_int;
+        so_R_int_err _res4 = os_File_Read(&f, buf);
+        so_int n = _res4.val;
         err = _res4.err;
         if (err != NULL) {
             os_Remove(name);
@@ -303,8 +303,8 @@ static void fileTest(void) {
             os_Remove(target);
             so_panic("Link failed");
         }
-        so_Result _res6 = os_ReadFile((mem_Allocator){0}, hard);
-        so_Slice b = _res6.val.as_slice;
+        so_R_slice_err _res6 = os_ReadFile((mem_Allocator){0}, hard);
+        so_Slice b = _res6.val;
         err = _res6.err;
         if (err != NULL) {
             os_Remove(hard);
@@ -332,8 +332,8 @@ static void fileTest(void) {
             so_panic("Symlink failed");
         }
         so_byte rlBuf[4096] = {0};
-        so_Result _res7 = os_Readlink(so_array_slice(so_byte, rlBuf, 0, 4096, 4096), link);
-        so_String dest = _res7.val.as_string;
+        so_R_str_err _res7 = os_Readlink(so_array_slice(so_byte, rlBuf, 0, 4096, 4096), link);
+        so_String dest = _res7.val;
         err = _res7.err;
         if (err != NULL) {
             os_Remove(link);
@@ -357,8 +357,8 @@ static void fileTest(void) {
         }
         // Get current dir.
         so_byte wdBuf[4096] = {0};
-        so_Result _res8 = os_Getwd(so_array_slice(so_byte, wdBuf, 0, 4096, 4096));
-        so_String origWd = _res8.val.as_string;
+        so_R_str_err _res8 = os_Getwd(so_array_slice(so_byte, wdBuf, 0, 4096, 4096));
+        so_String origWd = _res8.val;
         err = _res8.err;
         if (err != NULL) {
             os_Remove(dir);
@@ -372,8 +372,8 @@ static void fileTest(void) {
         }
         // Verify we moved.
         so_byte wdBuf2[4096] = {0};
-        so_Result _res9 = os_Getwd(so_array_slice(so_byte, wdBuf2, 0, 4096, 4096));
-        so_String newWd = _res9.val.as_string;
+        so_R_str_err _res9 = os_Getwd(so_array_slice(so_byte, wdBuf2, 0, 4096, 4096));
+        so_String newWd = _res9.val;
         err = _res9.err;
         if (err != NULL) {
             os_Remove(dir);
@@ -396,8 +396,8 @@ static void fileTest(void) {
             os_Remove(name);
             so_panic("Truncate failed");
         }
-        so_Result _res10 = os_ReadFile((mem_Allocator){0}, name);
-        so_Slice b = _res10.val.as_slice;
+        so_R_slice_err _res10 = os_ReadFile((mem_Allocator){0}, name);
+        so_Slice b = _res10.val;
         err = _res10.err;
         if (err != NULL) {
             os_Remove(name);
@@ -424,8 +424,8 @@ static void fileTest(void) {
         }
         os_File_Write(&f, so_string_bytes(so_str(" world")));
         os_File_Close(&f);
-        so_Result _res12 = os_ReadFile((mem_Allocator){0}, name);
-        so_Slice b = _res12.val.as_slice;
+        so_R_slice_err _res12 = os_ReadFile((mem_Allocator){0}, name);
+        so_Slice b = _res12.val;
         err = _res12.err;
         if (err != NULL) {
             os_Remove(name);
@@ -506,8 +506,8 @@ static void fileTest(void) {
         if (err != NULL) {
             so_panic("Rename failed");
         }
-        so_Result _res15 = os_ReadFile((mem_Allocator){0}, newName);
-        so_Slice b = _res15.val.as_slice;
+        so_R_slice_err _res15 = os_ReadFile((mem_Allocator){0}, newName);
+        so_Slice b = _res15.val;
         err = _res15.err;
         if (err != NULL) {
             os_Remove(newName);
@@ -610,8 +610,8 @@ static void procTest(void) {
     {
         // Getwd.
         so_byte wdBuf[4096] = {0};
-        so_Result _res1 = os_Getwd(so_array_slice(so_byte, wdBuf, 0, 4096, 4096));
-        so_String wd = _res1.val.as_string;
+        so_R_str_err _res1 = os_Getwd(so_array_slice(so_byte, wdBuf, 0, 4096, 4096));
+        so_String wd = _res1.val;
         so_Error err = _res1.err;
         if (err != NULL) {
             so_panic("Getwd failed");
@@ -627,8 +627,8 @@ static void procTest(void) {
     {
         // Hostname.
         so_byte hostBuf[255] = {0};
-        so_Result _res2 = os_Hostname(so_array_slice(so_byte, hostBuf, 0, 255, 255));
-        so_String name = _res2.val.as_string;
+        so_R_str_err _res2 = os_Hostname(so_array_slice(so_byte, hostBuf, 0, 255, 255));
+        so_String name = _res2.val;
         so_Error err = _res2.err;
         if (err != NULL) {
             so_panic("Hostname failed");
@@ -652,8 +652,8 @@ static void seekTest(void) {
             so_panic("Create failed");
         }
         os_File_Write(&f, so_string_bytes(so_str("abcdef")));
-        so_Result _res2 = os_File_Seek(&f, 0, io_SeekStart);
-        int64_t pos = _res2.val.as_i64;
+        so_R_i64_err _res2 = os_File_Seek(&f, 0, io_SeekStart);
+        int64_t pos = _res2.val;
         err = _res2.err;
         if (err != NULL) {
             os_Remove(name);
@@ -664,8 +664,8 @@ static void seekTest(void) {
             so_panic("Seek: wrong position");
         }
         so_Slice buf = so_make_slice(so_byte, 6, 6);
-        so_Result _res3 = os_File_Read(&f, buf);
-        so_int n = _res3.val.as_int;
+        so_R_int_err _res3 = os_File_Read(&f, buf);
+        so_int n = _res3.val;
         err = _res3.err;
         if (err != NULL) {
             os_Remove(name);
@@ -693,8 +693,8 @@ static void seekTest(void) {
             so_panic("Open failed");
         }
         so_Slice buf = so_make_slice(so_byte, 5, 5);
-        so_Result _res5 = os_File_ReadAt(&f, buf, 6);
-        so_int n = _res5.val.as_int;
+        so_R_int_err _res5 = os_File_ReadAt(&f, buf, 6);
+        so_int n = _res5.val;
         err = _res5.err;
         if (err != NULL) {
             os_Remove(name);
@@ -721,15 +721,15 @@ static void seekTest(void) {
             so_panic("Create failed");
         }
         os_File_Write(&f, so_string_bytes(so_str("hello world")));
-        so_Result _res7 = os_File_WriteAt(&f, so_string_bytes(so_str("WORLD")), 6);
+        so_R_int_err _res7 = os_File_WriteAt(&f, so_string_bytes(so_str("WORLD")), 6);
         err = _res7.err;
         if (err != NULL) {
             os_Remove(name);
             so_panic("WriteAt failed");
         }
         os_File_Close(&f);
-        so_Result _res8 = os_ReadFile((mem_Allocator){0}, name);
-        so_Slice b = _res8.val.as_slice;
+        so_R_slice_err _res8 = os_ReadFile((mem_Allocator){0}, name);
+        so_Slice b = _res8.val;
         err = _res8.err;
         if (err != NULL) {
             os_Remove(name);
@@ -951,8 +951,8 @@ static void tempTest(void) {
         os_File_Write(&f, so_string_bytes(so_str("temp data")));
         os_File_Close(&f);
         // Verify the file exists.
-        so_Result _res2 = os_ReadFile((mem_Allocator){0}, name);
-        so_Slice b = _res2.val.as_slice;
+        so_R_slice_err _res2 = os_ReadFile((mem_Allocator){0}, name);
+        so_Slice b = _res2.val;
         err = _res2.err;
         if (err != NULL) {
             so_panic("ReadFile temp failed");
@@ -984,8 +984,8 @@ static void tempTest(void) {
     }
     {
         // MkdirTemp.
-        so_Result _res4 = os_MkdirTemp(buf, so_str(""), so_str("sotest"));
-        so_String dir = _res4.val.as_string;
+        so_R_str_err _res4 = os_MkdirTemp(buf, so_str(""), so_str("sotest"));
+        so_String dir = _res4.val;
         so_Error err = _res4.err;
         if (err != NULL) {
             so_panic("MkdirTemp failed");

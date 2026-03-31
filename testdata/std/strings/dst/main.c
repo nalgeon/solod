@@ -37,9 +37,9 @@ int main(void) {
     }
     {
         // Cut.
-        so_Result _res1 = strings_Cut(so_str("hello world"), so_str(" "));
-        so_String before = _res1.val.as_string;
-        so_String after = _res1.val2.as_string;
+        so_R_str_str _res1 = strings_Cut(so_str("hello world"), so_str(" "));
+        so_String before = _res1.val;
+        so_String after = _res1.val2;
         if (so_string_ne(before, so_str("hello")) || so_string_ne(after, so_str("world"))) {
             so_panic("Cut failed");
         }
@@ -48,17 +48,17 @@ int main(void) {
         // CutPrefix and CutSuffix.
         so_String src = so_str("hello world");
         {
-            so_Result _res2 = strings_CutPrefix(src, so_str("hello"));
-            so_String s = _res2.val.as_string;
-            bool ok = _res2.val2.as_bool;
+            so_R_str_bool _res2 = strings_CutPrefix(src, so_str("hello"));
+            so_String s = _res2.val;
+            bool ok = _res2.val2;
             if (!ok || so_string_ne(s, so_str(" world"))) {
                 so_panic("CutPrefix failed");
             }
         }
         {
-            so_Result _res3 = strings_CutSuffix(src, so_str("world"));
-            so_String s = _res3.val.as_string;
-            bool ok = _res3.val2.as_bool;
+            so_R_str_bool _res3 = strings_CutSuffix(src, so_str("world"));
+            so_String s = _res3.val;
+            bool ok = _res3.val2;
             if (!ok || so_string_ne(s, so_str("hello "))) {
                 so_panic("CutSuffix failed");
             }
@@ -154,8 +154,8 @@ int main(void) {
         // Reader.
         strings_Reader r = strings_NewReader(so_str("hello world"));
         so_Slice buf = so_make_slice(so_byte, 5, 5);
-        so_Result _res4 = strings_Reader_Read(&r, buf);
-        so_int n = _res4.val.as_int;
+        so_R_int_err _res4 = strings_Reader_Read(&r, buf);
+        so_int n = _res4.val;
         so_Error err = _res4.err;
         if (err != NULL || n != 5 || so_string_ne(so_bytes_string(buf), so_str("hello"))) {
             so_panic("Reader failed");

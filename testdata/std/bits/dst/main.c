@@ -7,9 +7,9 @@ int main(void) {
         // Add32.
         uint32_t n1 = (uint32_t)(0b0101);
         uint32_t n2 = (uint32_t)(0b0011);
-        so_Result _res1 = bits_Add32(n1, n2, 0);
-        uint32_t d = _res1.val.as_u32;
-        uint32_t carry = _res1.val2.as_u32;
+        so_R_u32_u32 _res1 = bits_Add32(n1, n2, 0);
+        uint32_t d = _res1.val;
+        uint32_t carry = _res1.val2;
         if (d != 0b1000 || carry != 0) {
             so_panic("Add32 failed");
         }
@@ -18,9 +18,9 @@ int main(void) {
         // Sub32.
         uint32_t n1 = (uint32_t)(0b0101);
         uint32_t n2 = (uint32_t)(0b0011);
-        so_Result _res2 = bits_Sub32(n1, n2, 0);
-        uint32_t d = _res2.val.as_u32;
-        uint32_t borrow = _res2.val2.as_u32;
+        so_R_u32_u32 _res2 = bits_Sub32(n1, n2, 0);
+        uint32_t d = _res2.val;
+        uint32_t borrow = _res2.val2;
         if (d != 0b0010 || borrow != 0) {
             so_panic("Sub32 failed");
         }
@@ -29,9 +29,9 @@ int main(void) {
         // Mul32.
         uint32_t n1 = (uint32_t)(0b0101);
         uint32_t n2 = (uint32_t)(0b0011);
-        so_Result _res3 = bits_Mul32(n1, n2);
-        uint32_t dh = _res3.val.as_u32;
-        uint32_t dl = _res3.val2.as_u32;
+        so_R_u32_u32 _res3 = bits_Mul32(n1, n2);
+        uint32_t dh = _res3.val;
+        uint32_t dl = _res3.val2;
         if (dh != 0 || dl != 0b1111) {
             so_panic("Mul32 failed");
         }

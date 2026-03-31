@@ -14,27 +14,27 @@ int main(void) {
     }
     {
         // Cut.
-        so_Result _res1 = stringslite_Cut(so_str("hello world"), so_str(" "));
-        so_String before = _res1.val.as_string;
-        so_String after = _res1.val2.as_string;
+        so_R_str_str _res1 = stringslite_Cut(so_str("hello world"), so_str(" "));
+        so_String before = _res1.val;
+        so_String after = _res1.val2;
         if (so_string_ne(before, so_str("hello")) || so_string_ne(after, so_str("world"))) {
             so_panic("Cut failed");
         }
     }
     {
         // CutPrefix.
-        so_Result _res2 = stringslite_CutPrefix(so_str("hello world"), so_str("hello "));
-        so_String after = _res2.val.as_string;
-        bool found = _res2.val2.as_bool;
+        so_R_str_bool _res2 = stringslite_CutPrefix(so_str("hello world"), so_str("hello "));
+        so_String after = _res2.val;
+        bool found = _res2.val2;
         if (so_string_ne(after, so_str("world")) || !found) {
             so_panic("CutPrefix failed");
         }
     }
     {
         // CutSuffix.
-        so_Result _res3 = stringslite_CutSuffix(so_str("hello world"), so_str(" world"));
-        so_String before = _res3.val.as_string;
-        bool found = _res3.val2.as_bool;
+        so_R_str_bool _res3 = stringslite_CutSuffix(so_str("hello world"), so_str(" world"));
+        so_String before = _res3.val;
+        bool found = _res3.val2;
         if (so_string_ne(before, so_str("hello")) || !found) {
             so_panic("CutSuffix failed");
         }

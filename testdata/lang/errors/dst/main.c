@@ -5,7 +5,7 @@ so_Error main_ErrOutOfTea = errors_New("no more tea available");
 
 // -- Forward declarations --
 static so_Error makeTea(so_int arg);
-static so_Result work(so_int n);
+static so_R_int_err work(so_int n);
 
 // -- Implementation --
 
@@ -16,11 +16,11 @@ static so_Error makeTea(so_int arg) {
     return NULL;
 }
 
-static so_Result work(so_int n) {
+static so_R_int_err work(so_int n) {
     if (n == 42) {
-        return (so_Result){.val.as_int = 0, .err = main_ErrOutOfTea};
+        return (so_R_int_err){.val = 0, .err = main_ErrOutOfTea};
     }
-    return (so_Result){.val.as_int = n, .err = NULL};
+    return (so_R_int_err){.val = n, .err = NULL};
 }
 
 int main(void) {
@@ -51,8 +51,8 @@ int main(void) {
     }
     {
         // Multiple returns with error.
-        so_Result _res1 = work(11);
-        so_int r1 = _res1.val.as_int;
+        so_R_int_err _res1 = work(11);
+        so_int r1 = _res1.val;
         so_Error err = _res1.err;
         if (r1 != 11) {
             so_panic("unexpected result");
@@ -61,8 +61,8 @@ int main(void) {
             so_panic("unexpected error");
         }
         (void)r1;
-        so_Result _res2 = work(42);
-        so_int r2 = _res2.val.as_int;
+        so_R_int_err _res2 = work(42);
+        so_int r2 = _res2.val;
         err = _res2.err;
         if (r2 != 0) {
             so_panic("unexpected result");

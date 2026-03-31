@@ -7,15 +7,12 @@ import (
 )
 
 // returnType returns the C return type for a function signature.
-// For multi-return (T, error) or (T, T), validates the pattern and returns "so_Result".
+// For multi-return (T, error) or (T, T), returns the per-signature result type.
 // For single return, maps the Go type to C. For no return, returns "void".
 func (g *Generator) returnType(node ast.Node, sig *types.Signature) string {
 	if sig.Results().Len() > 1 {
 		info := g.multiReturnFields(node, sig)
-		if info.resultType != "" {
-			return info.resultType
-		}
-		return "so_Result"
+		return info.typeName()
 	}
 	if sig.Results().Len() == 1 {
 		ret := sig.Results().At(0).Type()
@@ -38,10 +35,10 @@ func (g *Generator) returnType(node ast.Node, sig *types.Signature) string {
 // emitMultiReturnDefine emits a multi-return define: x, y := f()
 // Produces:
 //
-//	so_Result _res1 = f();
-//	so_int x = _res1.val.as_int;
+//	so_R_int_err _res1 = f();
+//	so_int x = _res1.val;
 //	so_Error y = _res1.err;           // (T, error)
-//	so_int y = _res1.val2.as_int;     // (T, T)
+//	so_int y = _res1.val2;            // (T, T)
 func (g *Generator) emitMultiReturnDefine(stmt *ast.AssignStmt, call *ast.CallExpr) {
 	w := g.state.writer
 	sig := g.callSig(call)
@@ -75,10 +72,10 @@ func (g *Generator) emitMultiReturnDefine(stmt *ast.AssignStmt, call *ast.CallEx
 // emitMultiReturnAssign emits a multi-return assign: x, y = f()
 // Produces:
 //
-//	so_Result _res1 = f();
-//	x = _res1.val.as_int;
+//	so_R_int_err _res1 = f();
+//	x = _res1.val;
 //	y = _res1.err;                    // (T, error)
-//	y = _res1.val2.as_int;            // (T, T)
+//	y = _res1.val2;                   // (T, T)
 func (g *Generator) emitMultiReturnAssign(stmt *ast.AssignStmt, call *ast.CallExpr) {
 	w := g.state.writer
 	sig := g.callSig(call)
@@ -125,12 +122,12 @@ func (g *Generator) multiReturnFields(node ast.Node, sig *types.Signature) multi
 		}
 	}
 
-	f1 := resultFieldName(g, node, first)
+	s1 := resultTypeSuffix(g, node, first)
 	if isErrorType(second) {
-		return multiReturn{field1: f1, hasError: true}
+		return multiReturn{suffix1: s1, hasError: true}
 	}
-	f2 := resultFieldName(g, node, second)
-	return multiReturn{field1: f1, field2: f2}
+	s2 := resultTypeSuffix(g, node, second)
+	return multiReturn{suffix1: s1, suffix2: s2}
 }
 
 // findResultType looks up the {TypeName}Result type in the package scope.
@@ -143,53 +140,55 @@ func (g *Generator) findResultType(node ast.Node, named *types.Named) string {
 	return g.mapType(node, obj.Type())
 }
 
-// resultFieldName maps a Go type to the corresponding so_Result union field name.
-func resultFieldName(g *Generator, node ast.Node, typ types.Type) string {
+// resultTypeSuffix maps a Go type to the corresponding result type suffix.
+func resultTypeSuffix(g *Generator, node ast.Node, typ types.Type) string {
 	typ = types.Unalias(typ)
 	switch t := typ.(type) {
 	case *types.Array:
 		g.fail(node, "arrays in multi-return are not supported")
 	case *types.Slice:
-		return "as_slice"
+		return "slice"
 	case *types.Pointer:
-		return "as_ptr"
+		return "ptr"
 	case *types.Interface:
 		if t.Empty() {
-			return "as_ptr"
+			return "ptr"
 		}
 	}
 	basic, ok := typ.Underlying().(*types.Basic)
 	if !ok {
-		g.fail(node, "unsupported result type for so_Result: %s", typ)
+		g.fail(node, "unsupported multi-return type: %s", typ)
 	}
 	switch basic.Kind() {
 	case types.Bool, types.UntypedBool:
-		return "as_bool"
-	case types.Float32, types.Float64, types.UntypedFloat:
-		return "as_double"
+		return "bool"
+	case types.Float32:
+		return "f32"
+	case types.Float64, types.UntypedFloat:
+		return "f64"
 	case types.Int, types.UntypedInt:
-		return "as_int"
+		return "int"
 	case types.Int32:
 		if basic.Name() == "rune" {
-			return "as_rune"
+			return "rune"
 		}
-		return "as_i32"
+		return "i32"
 	case types.Int64:
-		return "as_i64"
+		return "i64"
 	case types.Uint:
-		return "as_uint"
+		return "uint"
 	case types.Uint32:
-		return "as_u32"
+		return "u32"
 	case types.Uint64:
-		return "as_u64"
+		return "u64"
 	case types.UntypedRune:
-		return "as_rune"
+		return "rune"
 	case types.String, types.UntypedString:
-		return "as_string"
+		return "str"
 	case types.Uint8:
-		return "as_byte"
+		return "byte"
 	default:
-		g.fail(node, "unsupported result type for so_Result: %s", typ)
+		g.fail(node, "unsupported multi-return type: %s", typ)
 		panic("unreachable")
 	}
 }
@@ -210,38 +209,38 @@ func (g *Generator) callSig(call *ast.CallExpr) *types.Signature {
 
 // multiReturn describes a two-value return: (T, error) or (T, T).
 type multiReturn struct {
-	field1     string // union field for first value (e.g. "as_int")
-	field2     string // union field for second value (e.g. "as_int"), empty if hasError
+	suffix1    string // type suffix for first value (e.g. "int", "str")
+	suffix2    string // type suffix for second value (e.g. "int", "bool"), empty if hasError
 	hasError   bool   // true when second return is error
 	resultType string // C type name when using custom result struct (e.g. "main_FileResult")
 }
 
-// typeName returns the C type name for this multi-return - either the custom
-// result type or "so_Result".
+// typeName returns the C type name for this multi-return.
 func (mr multiReturn) typeName() string {
 	if mr.resultType != "" {
 		return mr.resultType
 	}
-	return "so_Result"
+	if mr.hasError {
+		return "so_R_" + mr.suffix1 + "_err"
+	}
+	return "so_R_" + mr.suffix1 + "_" + mr.suffix2
 }
 
 // accessor returns the C accessor for position i of a multi-return.
-// Position 0 -> tmp.val.<field1>  (or tmp.val for custom result types)
-// Position 1 -> tmp.err (if hasError) or tmp.val2.<field2>
+// Position 0 -> tmp.val
+// Position 1 -> tmp.err (T, error) or tmp.val2 (T, T)
 func (mr multiReturn) accessor(tmp string, i int) string {
 	if mr.resultType != "" {
-		// Custom result type: access fields directly (e.g. tmp.val and tmp.err).
 		if i == 0 {
-			return fmt.Sprintf("%s.val", tmp)
+			return tmp + ".val"
 		}
-		return fmt.Sprintf("%s.err", tmp)
+		return tmp + ".err"
 	}
-	// Standard so_Result union: access via field1 and field2.
 	if i == 0 {
-		return fmt.Sprintf("%s.val.%s", tmp, mr.field1)
+		return tmp + ".val"
 	}
 	if mr.hasError {
-		return fmt.Sprintf("%s.err", tmp)
+		return tmp + ".err"
 	}
-	return fmt.Sprintf("%s.val2.%s", tmp, mr.field2)
+	return tmp + ".val2"
 }

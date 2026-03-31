@@ -195,18 +195,18 @@ int main(void) {
     }
     {
         // Modf.
-        so_Result _res1 = math_Modf(3.14);
-        double i = _res1.val.as_double;
-        double f = _res1.val2.as_double;
+        so_R_f64_f64 _res1 = math_Modf(3.14);
+        double i = _res1.val;
+        double f = _res1.val2;
         if (i != 3) {
             so_panic("Modf(3.14) int != 3");
         }
         if (math_Abs(f - 0.14) > 1e-10) {
             so_panic("Modf(3.14) frac != ~0.14");
         }
-        so_Result _res2 = math_Modf(-2.71);
-        double i2 = _res2.val.as_double;
-        double f2 = _res2.val2.as_double;
+        so_R_f64_f64 _res2 = math_Modf(-2.71);
+        double i2 = _res2.val;
+        double f2 = _res2.val2;
         if (i2 != -2) {
             so_panic("Modf(-2.71) int != -2");
         }

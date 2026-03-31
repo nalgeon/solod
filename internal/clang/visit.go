@@ -529,12 +529,12 @@ func (g *Generator) emitReturnStmt(stmt *ast.ReturnStmt) {
 		}
 
 		// (T, error) or (T, T) where T is a supported type.
-		fmt.Fprintf(w, "%sreturn (so_Result){.val.%s = ", g.indent(), info.field1)
+		fmt.Fprintf(w, "%sreturn (%s){.val = ", g.indent(), info.typeName())
 		g.emitExpr(stmt.Results[0])
 		if info.hasError {
 			fmt.Fprintf(w, ", .err = ")
 		} else {
-			fmt.Fprintf(w, ", .val2.%s = ", info.field2)
+			fmt.Fprintf(w, ", .val2 = ")
 		}
 		g.emitExpr(stmt.Results[1])
 		fmt.Fprintf(w, "};\n")

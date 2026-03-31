@@ -46,8 +46,8 @@ int main(void) {
     }
     {
         // Atoi.
-        so_Result _res1 = strconv_Atoi(so_str("10"));
-        so_int s = _res1.val.as_int;
+        so_R_int_err _res1 = strconv_Atoi(so_str("10"));
+        so_int s = _res1.val;
         so_Error err = _res1.err;
         if (err != NULL) {
             so_panic("Atoi error");
@@ -109,8 +109,8 @@ int main(void) {
     }
     {
         // ParseBool.
-        so_Result _res2 = strconv_ParseBool(so_str("true"));
-        bool s = _res2.val.as_bool;
+        so_R_bool_err _res2 = strconv_ParseBool(so_str("true"));
+        bool s = _res2.val;
         so_Error err = _res2.err;
         if (err != NULL) {
             so_panic("ParseBool error");
@@ -121,8 +121,8 @@ int main(void) {
     }
     {
         // ParseFloat.
-        so_Result _res3 = strconv_ParseFloat(so_str("3.1415926535"), 32);
-        double s = _res3.val.as_double;
+        so_R_f64_err _res3 = strconv_ParseFloat(so_str("3.1415926535"), 32);
+        double s = _res3.val;
         so_Error err = _res3.err;
         if (err != NULL) {
             so_panic("ParseFloat 32 error");
@@ -131,8 +131,8 @@ int main(void) {
         if (so_string_ne(r, so_str("3.1415927E+00"))) {
             so_panic("ParseFloat 32 value");
         }
-        so_Result _res4 = strconv_ParseFloat(so_str("3.1415926535"), 64);
-        s = _res4.val.as_double;
+        so_R_f64_err _res4 = strconv_ParseFloat(so_str("3.1415926535"), 64);
+        s = _res4.val;
         err = _res4.err;
         if (err != NULL) {
             so_panic("ParseFloat 64 error");
@@ -141,8 +141,8 @@ int main(void) {
             so_panic("ParseFloat 64 value");
         }
         // NaN.
-        so_Result _res5 = strconv_ParseFloat(so_str("NaN"), 32);
-        s = _res5.val.as_double;
+        so_R_f64_err _res5 = strconv_ParseFloat(so_str("NaN"), 32);
+        s = _res5.val;
         err = _res5.err;
         if (err != NULL) {
             so_panic("ParseFloat NaN error");
@@ -151,8 +151,8 @@ int main(void) {
             so_panic("ParseFloat NaN value");
         }
         // Case insensitive.
-        so_Result _res6 = strconv_ParseFloat(so_str("nan"), 32);
-        s = _res6.val.as_double;
+        so_R_f64_err _res6 = strconv_ParseFloat(so_str("nan"), 32);
+        s = _res6.val;
         err = _res6.err;
         if (err != NULL) {
             so_panic("ParseFloat nan error");
@@ -161,8 +161,8 @@ int main(void) {
             so_panic("ParseFloat nan value");
         }
         // inf.
-        so_Result _res7 = strconv_ParseFloat(so_str("inf"), 32);
-        s = _res7.val.as_double;
+        so_R_f64_err _res7 = strconv_ParseFloat(so_str("inf"), 32);
+        s = _res7.val;
         err = _res7.err;
         if (err != NULL) {
             so_panic("ParseFloat inf error");
@@ -172,8 +172,8 @@ int main(void) {
             so_panic("ParseFloat inf value");
         }
         // +Inf.
-        so_Result _res8 = strconv_ParseFloat(so_str("+Inf"), 32);
-        s = _res8.val.as_double;
+        so_R_f64_err _res8 = strconv_ParseFloat(so_str("+Inf"), 32);
+        s = _res8.val;
         err = _res8.err;
         if (err != NULL) {
             so_panic("ParseFloat +Inf error");
@@ -183,8 +183,8 @@ int main(void) {
             so_panic("ParseFloat +Inf value");
         }
         // -Inf.
-        so_Result _res9 = strconv_ParseFloat(so_str("-Inf"), 32);
-        s = _res9.val.as_double;
+        so_R_f64_err _res9 = strconv_ParseFloat(so_str("-Inf"), 32);
+        s = _res9.val;
         err = _res9.err;
         if (err != NULL) {
             so_panic("ParseFloat -Inf error");
@@ -194,8 +194,8 @@ int main(void) {
             so_panic("ParseFloat -Inf value");
         }
         // -0.
-        so_Result _res10 = strconv_ParseFloat(so_str("-0"), 32);
-        s = _res10.val.as_double;
+        so_R_f64_err _res10 = strconv_ParseFloat(so_str("-0"), 32);
+        s = _res10.val;
         err = _res10.err;
         if (err != NULL) {
             so_panic("ParseFloat -0 error");
@@ -205,8 +205,8 @@ int main(void) {
             so_panic("ParseFloat -0 value");
         }
         // +0.
-        so_Result _res11 = strconv_ParseFloat(so_str("+0"), 32);
-        s = _res11.val.as_double;
+        so_R_f64_err _res11 = strconv_ParseFloat(so_str("+0"), 32);
+        s = _res11.val;
         err = _res11.err;
         if (err != NULL) {
             so_panic("ParseFloat +0 error");
@@ -217,8 +217,8 @@ int main(void) {
     }
     {
         // ParseInt.
-        so_Result _res12 = strconv_ParseInt(so_str("-354634382"), 10, 32);
-        int64_t s = _res12.val.as_i64;
+        so_R_i64_err _res12 = strconv_ParseInt(so_str("-354634382"), 10, 32);
+        int64_t s = _res12.val;
         so_Error err = _res12.err;
         if (err != NULL) {
             so_panic("ParseInt 32 error");
@@ -226,8 +226,8 @@ int main(void) {
         if (s != -354634382) {
             so_panic("ParseInt 32 value");
         }
-        so_Result _res13 = strconv_ParseInt(so_str("-3546343826724305832"), 10, 64);
-        s = _res13.val.as_i64;
+        so_R_i64_err _res13 = strconv_ParseInt(so_str("-3546343826724305832"), 10, 64);
+        s = _res13.val;
         err = _res13.err;
         if (err != NULL) {
             so_panic("ParseInt 64 error");
@@ -238,8 +238,8 @@ int main(void) {
     }
     {
         // ParseUint.
-        so_Result _res14 = strconv_ParseUint(so_str("42"), 10, 32);
-        uint64_t s = _res14.val.as_u64;
+        so_R_u64_err _res14 = strconv_ParseUint(so_str("42"), 10, 32);
+        uint64_t s = _res14.val;
         so_Error err = _res14.err;
         if (err != NULL) {
             so_panic("ParseUint 32 error");
@@ -247,8 +247,8 @@ int main(void) {
         if (s != 42) {
             so_panic("ParseUint 32 value");
         }
-        so_Result _res15 = strconv_ParseUint(so_str("42"), 10, 64);
-        s = _res15.val.as_u64;
+        so_R_u64_err _res15 = strconv_ParseUint(so_str("42"), 10, 64);
+        s = _res15.val;
         err = _res15.err;
         if (err != NULL) {
             so_panic("ParseUint 64 error");

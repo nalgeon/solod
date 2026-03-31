@@ -220,8 +220,8 @@ int main(void) {
             so_panic("Buffer Grow failed");
         }
         so_Slice rdbuf = so_make_slice(so_byte, 5, 5);
-        so_Result _res1 = bytes_Buffer_Read(&buf, rdbuf);
-        so_int n = _res1.val.as_int;
+        so_R_int_err _res1 = bytes_Buffer_Read(&buf, rdbuf);
+        so_int n = _res1.val;
         so_Error err = _res1.err;
         if (n != 5 || so_string_ne(so_bytes_string(rdbuf), so_str("hello")) || err != NULL) {
             so_panic("Buffer Read failed");
@@ -238,8 +238,8 @@ int main(void) {
         if (bytes_Reader_Len(&r) != so_len(s)) {
             so_panic("Reader Len failed");
         }
-        so_Result _res2 = io_ReadAll((mem_Allocator){0}, (io_Reader){.self = &r, .Read = bytes_Reader_Read});
-        so_Slice b = _res2.val.as_slice;
+        so_R_slice_err _res2 = io_ReadAll((mem_Allocator){0}, (io_Reader){.self = &r, .Read = bytes_Reader_Read});
+        so_Slice b = _res2.val;
         so_Error err = _res2.err;
         if (err != NULL) {
             so_panic(err->msg);
