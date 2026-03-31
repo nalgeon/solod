@@ -11,6 +11,9 @@
 // [internal/bytealg]: https://github.com/golang/go/blob/go1.26.1/src/internal/bytealg/bytealg.go
 package bytealg
 
+//so:embed bytealg.h
+var bytealg_h string
+
 // PrimeRK is the prime base used in Rabin-Karp algorithm.
 const PrimeRK = 16777619
 

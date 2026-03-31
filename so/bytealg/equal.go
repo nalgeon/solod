@@ -16,6 +16,3 @@ package bytealg
 func Equal(a, b []byte) bool {
 	return string(a) == string(b)
 }
-
-//so:extern
-func memcmp(a any, b any, n uintptr) int { _, _, _ = a, b, n; return 0 }

@@ -4,6 +4,7 @@
 
 package bytealg
 
+//so:extern nodecay
 func Compare(a, b []byte) int {
 	l := len(a)
 	if len(b) < l {

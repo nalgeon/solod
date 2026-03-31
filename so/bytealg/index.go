@@ -4,6 +4,7 @@
 
 package bytealg
 
+//so:extern nodecay
 func IndexByte(b []byte, c byte) int {
 	for i, x := range b {
 		if x == c {
@@ -14,12 +15,7 @@ func IndexByte(b []byte, c byte) int {
 }
 
 func IndexByteString(s string, c byte) int {
-	for i := 0; i < len(s); i++ {
-		if s[i] == c {
-			return i
-		}
-	}
-	return -1
+	return IndexByte([]byte(s), c)
 }
 
 func LastIndexByte(s []byte, c byte) int {
@@ -32,10 +28,5 @@ func LastIndexByte(s []byte, c byte) int {
 }
 
 func LastIndexByteString(s string, c byte) int {
-	for i := len(s) - 1; i >= 0; i-- {
-		if s[i] == c {
-			return i
-		}
-	}
-	return -1
+	return LastIndexByte([]byte(s), c)
 }
