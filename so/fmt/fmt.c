@@ -45,18 +45,15 @@ so_R_int_err fmt_Printf(const char* format, ...) {
 so_String fmt_Sprintf(fmt_Buffer buf, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    int n = vsnprintf(buf.Ptr, buf.Len, format, args);
+    int n = vsnprintf((char*)buf.Ptr, (size_t)buf.Len, format, args);
     va_end(args);
 
     if (n < 0) {
-        return (so_String){.ptr = buf.Ptr, .len = 0};
+        n = 0;  // treat encoding errors as empty output
+    } else if (n >= buf.Len) {
+        n = buf.Len - 1;  // truncate output to fit buffer
     }
-
-    size_t size = (size_t)n;
-    if (size >= buf.Len) {
-        return (so_String){.ptr = buf.Ptr, .len = buf.Len - 1};
-    }
-    return (so_String){.ptr = buf.Ptr, .len = size};
+    return (so_String){.ptr = (char*)buf.Ptr, .len = (size_t)n};
 }
 
 so_R_int_err fmt_Fprintf(io_Writer w, const char* format, ...) {

@@ -2,7 +2,6 @@
 package mem
 
 import (
-	_ "embed"
 	"unsafe"
 
 	"solod.dev/so/errors"
@@ -10,9 +9,6 @@ import (
 
 //so:embed mem.h
 var mem_h string
-
-//so:embed mem.c
-var mem_c string
 
 // ErrOutOfMemory is returned when a memory allocation
 // fails due to insufficient memory.

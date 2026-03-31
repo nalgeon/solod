@@ -1,7 +1,6 @@
 package os
 
 //so:include <fcntl.h>
-//so:include <stdlib.h>
 //so:include <sys/stat.h>
 //so:include <unistd.h>
 

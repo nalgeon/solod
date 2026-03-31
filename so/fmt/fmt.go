@@ -23,7 +23,6 @@ to C's printf and scanf. The format 'verbs' are the same as in C
 package fmt
 
 import (
-	_ "embed"
 	"fmt" // for testing
 
 	"solod.dev/so/c"
@@ -51,8 +50,6 @@ var (
 
 // Buffer is a fixed-size stack-allocated buffer
 // for formatted output and scanning.
-//
-//so:extern
 type Buffer struct {
 	Ptr *byte
 	Len int

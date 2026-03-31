@@ -1,9 +1,6 @@
 //go:build ignore
 #include "so/builtin/builtin.h"
-
 #include <fcntl.h>
-#include <stdbool.h>
-#include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
 

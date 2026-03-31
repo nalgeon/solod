@@ -1,10 +1,5 @@
 #include "so/builtin/builtin.h"
 
-// Forward declarations for ByteMap-related types and functions.
-typedef struct maps_ByteMap maps_ByteMap;
-so_int maps_HashBytes(so_Slice key);
-bool maps_EqualBytes(so_Slice a, so_Slice b);
-
 // hashString hashes a string key by its content rather than pointer.
 static inline so_int maps_hashString(so_Slice key) {
     so_String* s = (so_String*)key.ptr;

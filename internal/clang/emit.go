@@ -100,8 +100,8 @@ func (g *Generator) emitHeader(w io.Writer) {
 	fmt.Fprintf(w, "#pragma once\n")
 	fmt.Fprintf(w, "#include \"so/builtin/builtin.h\"\n")
 	g.emitImports(w)
-	g.emitEmbeds(w, g.embeds.header)
 	g.emitHeaderDecls(w)
+	g.emitEmbeds(w, g.embeds.header)
 }
 
 // emitImpl creates the .c implementation file by walking the AST.

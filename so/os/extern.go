@@ -1,7 +1,6 @@
 package os
 
 //so:include <errno.h>
-//so:include <stdio.h>
 
 //so:embed os.h
 var os_h string
