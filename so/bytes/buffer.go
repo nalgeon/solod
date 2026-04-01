@@ -32,6 +32,9 @@ const maxInt = int(math.MaxInt64)
 
 // A Buffer is a variable-sized buffer of bytes with [Buffer.Read] and [Buffer.Write] methods.
 // The zero value for Buffer is an empty buffer ready to use (with default allocator).
+// A Buffer grows as needed when writing data, using the provided allocator.
+// The caller is responsible for freeing the buffer's resources
+// with [Buffer.Free] when done using it.
 type Buffer struct {
 	a   mem.Allocator // memory allocator; nil falls back to default one.
 	buf []byte        // contents are the bytes buf[off : len(buf)]
@@ -384,29 +387,38 @@ func (b *Buffer) ReadString(delim byte) (string, error) {
 	return String(b.a, slice), err
 }
 
-// NewBuffer creates and initializes a new [Buffer] using a copy of buf as its
-// initial contents. It is intended to prepare a buffer to read existing data.
+// NewBuffer creates and initializes a new [Buffer] using buf as its
+// initial contents. The new Buffer takes ownership of buf, and the
+// caller should not use buf after this call. NewBuffer is intended to
+// prepare a Buffer to read existing data. It can also be used to set
+// the initial size of the internal buffer for writing. To do that,
+// buf should have the desired capacity but a length of zero.
+//
+// If buf was allocated with an allocator, the same allocator must be
+// passed to NewBuffer so that [Buffer.Free] can release it correctly.
+// Do not call [Buffer.Free] if buf was not heap-allocated.
+//
+// Do not provide a stack-allocated buf if you intend to write to the buffer,
+// as the buffer may need to grow and reallocate, which would cause free()
+// on a stack pointer. Only use heap-allocated slices in this case.
 //
 // If the allocator is nil, uses the system allocator.
-// The caller is responsible for freeing the buffer's resources
-// with [Buffer.Free] when done using it.
 func NewBuffer(a mem.Allocator, buf []byte) Buffer {
-	if buf == nil {
-		return Buffer{a: a}
-	}
-	b := mem.AllocSlice[byte](a, len(buf), cap(buf))
-	copy(b, buf)
-	return Buffer{a: a, buf: b}
+	return Buffer{a: a, buf: buf}
 }
 
 // NewBufferString creates and initializes a new [Buffer] using string s as its
 // initial contents. It is intended to prepare a buffer to read an existing string.
 //
+// If s was allocated with an allocator, the same allocator must be
+// passed to NewBuffer so that [Buffer.Free] can release it correctly.
+// Do not call [Buffer.Free] if s was not heap-allocated.
+//
+// Do not provide a stack-allocated s if you intend to write to the buffer,
+// as the buffer may need to grow and reallocate, which would cause free()
+// on a stack pointer. Only use heap-allocated strings in this case.
+//
 // If the allocator is nil, uses the system allocator.
-// The caller is responsible for freeing the buffer's resources
-// with [Buffer.Free] when done using it.
 func NewBufferString(a mem.Allocator, s string) Buffer {
-	buf := mem.AllocSlice[byte](a, len(s), len(s))
-	copy(buf, s)
-	return Buffer{a: a, buf: buf}
+	return Buffer{a: a, buf: []byte(s)}
 }

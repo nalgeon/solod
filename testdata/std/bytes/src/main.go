@@ -219,9 +219,25 @@ func main() {
 		mem.FreeSlice(nil, uppered)
 	}
 	{
-		// Buffer.
-		buf := bytes.NewBuffer(nil, []byte("hello"))
-		buf.Write([]byte(" world"))
+		// Buffer (stack-allocated).
+		buf := bytes.NewBuffer(nil, []byte("hello world"))
+		if buf.String() != "hello world" {
+			panic("Buffer Write failed")
+		}
+		rdbuf := make([]byte, 5)
+		n, err := buf.Read(rdbuf)
+		if n != 5 || string(rdbuf) != "hello" || err != nil {
+			panic("Buffer Read failed")
+		}
+		if buf.String() != " world" {
+			panic("Buffer Read did not advance the buffer")
+		}
+	}
+	{
+		// Buffer (heap-allocated).
+		buf := bytes.NewBuffer(nil, nil)
+		buf.WriteString("hello")
+		buf.WriteString(" world")
 		if buf.String() != "hello world" {
 			panic("Buffer Write failed")
 		}

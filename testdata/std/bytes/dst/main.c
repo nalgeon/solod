@@ -218,9 +218,27 @@ int main(void) {
         mem_FreeSlice(so_byte, (mem_Allocator){0}, uppered);
     }
     {
-        // Buffer.
-        bytes_Buffer buf = bytes_NewBuffer((mem_Allocator){0}, so_string_bytes(so_str("hello")));
-        bytes_Buffer_Write(&buf, so_string_bytes(so_str(" world")));
+        // Buffer (stack-allocated).
+        bytes_Buffer buf = bytes_NewBuffer((mem_Allocator){0}, so_string_bytes(so_str("hello world")));
+        if (so_string_ne(bytes_Buffer_String(&buf), so_str("hello world"))) {
+            so_panic("Buffer Write failed");
+        }
+        so_Slice rdbuf = so_make_slice(so_byte, 5, 5);
+        so_R_int_err _res1 = bytes_Buffer_Read(&buf, rdbuf);
+        so_int n = _res1.val;
+        so_Error err = _res1.err;
+        if (n != 5 || so_string_ne(so_bytes_string(rdbuf), so_str("hello")) || err != NULL) {
+            so_panic("Buffer Read failed");
+        }
+        if (so_string_ne(bytes_Buffer_String(&buf), so_str(" world"))) {
+            so_panic("Buffer Read did not advance the buffer");
+        }
+    }
+    {
+        // Buffer (heap-allocated).
+        bytes_Buffer buf = bytes_NewBuffer((mem_Allocator){0}, (so_Slice){0});
+        bytes_Buffer_WriteString(&buf, so_str("hello"));
+        bytes_Buffer_WriteString(&buf, so_str(" world"));
         if (so_string_ne(bytes_Buffer_String(&buf), so_str("hello world"))) {
             so_panic("Buffer Write failed");
         }
@@ -229,9 +247,9 @@ int main(void) {
             so_panic("Buffer Grow failed");
         }
         so_Slice rdbuf = so_make_slice(so_byte, 5, 5);
-        so_R_int_err _res1 = bytes_Buffer_Read(&buf, rdbuf);
-        so_int n = _res1.val;
-        so_Error err = _res1.err;
+        so_R_int_err _res2 = bytes_Buffer_Read(&buf, rdbuf);
+        so_int n = _res2.val;
+        so_Error err = _res2.err;
         if (n != 5 || so_string_ne(so_bytes_string(rdbuf), so_str("hello")) || err != NULL) {
             so_panic("Buffer Read failed");
         }
@@ -247,9 +265,9 @@ int main(void) {
         if (bytes_Reader_Len(&r) != so_len(s)) {
             so_panic("Reader Len failed");
         }
-        so_R_slice_err _res2 = io_ReadAll((mem_Allocator){0}, (io_Reader){.self = &r, .Read = bytes_Reader_Read});
-        so_Slice b = _res2.val;
-        so_Error err = _res2.err;
+        so_R_slice_err _res3 = io_ReadAll((mem_Allocator){0}, (io_Reader){.self = &r, .Read = bytes_Reader_Read});
+        so_Slice b = _res3.val;
+        so_Error err = _res3.err;
         if (err != NULL) {
             so_panic(err->msg);
         }
