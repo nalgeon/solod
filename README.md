@@ -21,6 +21,7 @@ So is for systems programming in C, but with Go's syntax, type safety, and tooli
 [Playground](https://codapi.org/so/) •
 [So by example](example/README.md) •
 [Testing](#testing) •
+[Benchmarks](bench/README.md) •
 [Compatibility](#compatibility) •
 [Design principles](doc/design.md) •
 [FAQ](doc/faq.md) •
@@ -165,6 +166,10 @@ If you like learning by doing, try a [hands-on introduction](./example/README.md
 So doesn't have its own testing framework. Since So code is valid Go code, you can just use `go test` like you normally would. Plus, your tests can use all Go features because they're never transpiled.
 
 The transpilation logic is covered by the So compiler's own tests.
+
+## Benchmarks
+
+So truly shines when it comes to C interop, but it's also [quite fast](bench/README.md) on regular Go code — typically on par with or faster than Go.
 
 ## Compatibility
 

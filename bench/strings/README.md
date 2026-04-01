@@ -30,6 +30,22 @@ Benchmark_Trim-8            2519773     501.0 ns/op        0 B/op    0 allocs/op
 Benchmark_TrimSuffix-8    313593835       3.800 ns/op      0 B/op    0 allocs/op
 ```
 
+So (mimalloc):
+
+```text
+Benchmark_Clone            27935466      41.84 ns/op    1024 B/op    1 allocs/op
+Benchmark_Compare         473186119      35.76 ns/op       0 B/op    0 allocs/op
+Benchmark_Fields            1319384     907.7 ns/op      272 B/op    1 allocs/op
+Benchmark_Index            33552540      35.21 ns/op       0 B/op    0 allocs/op
+Benchmark_IndexByte        36868624      32.81 ns/op       0 B/op    0 allocs/op
+Benchmark_Repeat           18445929      64.11 ns/op    1024 B/op    1 allocs/op
+Benchmark_ReplaceAll        5952439     200.2 ns/op      256 B/op    1 allocs/op
+Benchmark_Split              852272    1399 ns/op        272 B/op    1 allocs/op
+Benchmark_ToUpper            738597    1602 ns/op        372 B/op    1 allocs/op
+Benchmark_Trim              3214159     373.0 ns/op        0 B/op    0 allocs/op
+Benchmark_TrimSuffix      572874397       2.126 ns/op      0 B/op    0 allocs/op
+```
+
 So (arena):
 
 ```text
