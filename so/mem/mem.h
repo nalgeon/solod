@@ -73,11 +73,14 @@ so_R_slice_err mem_tryReallocSlice(mem_Allocator a, so_Slice s, so_int newLen, s
 
 // FreeSlice frees a slice previously allocated with [AllocSlice] or [TryAllocSlice].
 // If the allocator is nil, uses the system allocator.
-#define mem_FreeSlice(T, a, s) ({                                        \
-    mem_Allocator _a = (a);                                              \
-    so_Slice _s = (s);                                                   \
-    if (!_a.self) _a = mem_System;                                       \
-    _a.Free(_a.self, _s.ptr, sizeof(T) * _s.cap, alignof(so_typeof(T))); \
+// Calling FreeSlice on an empty or nil slice is a no-op.
+#define mem_FreeSlice(T, a, s) ({                                            \
+    so_Slice _s = (s);                                                       \
+    if (_s.cap > 0) {                                                        \
+        mem_Allocator _a = (a);                                              \
+        if (!_a.self) _a = mem_System;                                       \
+        _a.Free(_a.self, _s.ptr, sizeof(T) * _s.cap, alignof(so_typeof(T))); \
+    }                                                                        \
 })
 
 // Clear zeroes size bytes starting at ptr + offset.

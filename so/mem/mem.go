@@ -83,6 +83,7 @@ func TryReallocSlice[T any](a Allocator, slice []T, newLen int, newCap int) ([]T
 
 // FreeSlice frees a slice previously allocated with [AllocSlice] or [TryAllocSlice].
 // If the allocator is nil, uses the system allocator.
+// Calling FreeSlice on an empty or nil slice is a no-op.
 //
 //so:extern
 func FreeSlice[T any](a Allocator, slice []T) {}
