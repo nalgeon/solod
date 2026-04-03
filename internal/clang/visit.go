@@ -506,42 +506,44 @@ func (g *Generator) emitRangeStmt(stmt *ast.RangeStmt) {
 
 // emitReturnStmt emits a return statement, preceded by any deferred generic calls.
 func (g *Generator) emitReturnStmt(stmt *ast.ReturnStmt) {
+	w := g.state.writer
 	if g.state.inMacro {
 		// In macro mode: "return X" becomes just "X;", void return is a no-op.
 		if len(stmt.Results) > 0 {
-			w := g.state.writer
 			fmt.Fprintf(w, "%s", g.indent())
-			retType := g.state.funcSig.Results().At(0).Type()
-			g.emitExprAsType(stmt, stmt.Results[0], retType)
+			g.emitReturnExpr(stmt)
 			fmt.Fprintf(w, ";\n")
 		}
 		return
 	}
 
 	g.emitDeferredCalls()
-	w := g.state.writer
 
 	if len(stmt.Results) == 0 {
-		// No return values.
 		fmt.Fprintf(w, "%sreturn;\n", g.indent())
 		return
 	}
 
+	fmt.Fprintf(w, "%sreturn ", g.indent())
+	g.emitReturnExpr(stmt)
+	fmt.Fprintf(w, ";\n")
+}
+
+// emitReturnExpr emits the return value expression (without "return" keyword or ";").
+// Handles single-return and multi-return compound literals.
+func (g *Generator) emitReturnExpr(stmt *ast.ReturnStmt) {
+	w := g.state.writer
 	if len(stmt.Results) > 1 {
-		// Multiple return values are wrapped in a result struct.
 		info := g.multiReturnFields(stmt, g.state.funcSig)
 		if info.resultType != "" {
-			// (T, error) where T is a custom struct type.
-			fmt.Fprintf(w, "%sreturn (%s){.val = ", g.indent(), info.resultType)
+			fmt.Fprintf(w, "(%s){.val = ", info.resultType)
 			g.emitExpr(stmt.Results[0])
 			fmt.Fprintf(w, ", .err = ")
 			g.emitExpr(stmt.Results[1])
-			fmt.Fprintf(w, "};\n")
+			fmt.Fprintf(w, "}")
 			return
 		}
-
-		// (T, error) or (T, T) where T is a supported type.
-		fmt.Fprintf(w, "%sreturn (%s){.val = ", g.indent(), info.typeName())
+		fmt.Fprintf(w, "(%s){.val = ", info.typeName())
 		g.emitExpr(stmt.Results[0])
 		if info.hasError {
 			fmt.Fprintf(w, ", .err = ")
@@ -549,15 +551,11 @@ func (g *Generator) emitReturnStmt(stmt *ast.ReturnStmt) {
 			fmt.Fprintf(w, ", .val2 = ")
 		}
 		g.emitExpr(stmt.Results[1])
-		fmt.Fprintf(w, "};\n")
+		fmt.Fprintf(w, "}")
 		return
 	}
-
-	// Single return value.
-	fmt.Fprintf(w, "%sreturn ", g.indent())
 	retType := g.state.funcSig.Results().At(0).Type()
 	g.emitExprAsType(stmt, stmt.Results[0], retType)
-	fmt.Fprintf(w, ";\n")
 }
 
 // emitComments looks up comments for the given nodes from the CommentMap,

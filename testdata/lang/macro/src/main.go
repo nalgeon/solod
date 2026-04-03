@@ -14,6 +14,14 @@ func setPtr[T any](ptr *T, val T) {
 }
 
 //so:inline
+func increment[T int](n T) T {
+	_n := n
+	_n = _n + 1
+	_n = _n + 1
+	return _n
+}
+
+//so:inline
 func a[T int](n T) T {
 	var some int = 11
 	_ = some
@@ -37,6 +45,11 @@ func c[T int](n T) T {
 	return x
 }
 
+//so:inline
+func work[T any](v *T) (*T, error) {
+	return v, nil
+}
+
 //so:extern
 type Box[T any] struct {
 	val T
@@ -48,35 +61,60 @@ func (b *Box[T]) set(val T) {
 }
 
 func main() {
+	println("lang/macro - start")
 	{
-		// Function with return.
+		print("lang/macro: Function with return")
 		x := identity(42)
 		if x != int(42) {
-			panic("Function with return failed")
+			panic("x != 42")
 		}
+		println(" - ok")
 	}
 	{
-		// Function w/o return.
+		print("lang/macro: Function w/o return")
 		var y int
 		setPtr(&y, 42)
 		if y != 42 {
-			panic("Function w/o return failed")
+			panic("y != 42")
 		}
+		println(" - ok")
 	}
 	{
-		// Nested calls with variable shadowing.
+		print("lang/macro: Pass an expression as an argument")
+		x := increment(1 + 1)
+		if x != 4 {
+			panic("x != 4")
+		}
+		println(" - ok")
+	}
+	{
+		print("lang/macro: Nested calls with variable shadowing")
 		z := a(42)
 		if z != 45 {
-			panic("Nested calls failed")
+			panic("z != 45")
 		}
+		println(" - ok")
 	}
 	{
-		// Generic method.
+		print("lang/macro: Generic method")
 		var b Box[int]
 		b.set(42)
 		if b.val != 42 {
-			panic("Generic method failed")
+			panic("b.val != 42")
 		}
+		println(" - ok")
 	}
-	println("lang/macro ok")
+	{
+		print("lang/macro: Multi-return")
+		var v int = 42
+		res, err := work(&v)
+		if err != nil {
+			panic("err != nil")
+		}
+		if *res != 42 {
+			panic("res != 42")
+		}
+		println(" - ok")
+	}
+	println("lang/macro - ok")
 }

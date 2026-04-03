@@ -11,6 +11,13 @@
     *(ptr_) = (val_); \
 } while (0)
 
+#define increment(T, n_) ({ \
+    T _n = (n_); \
+    _n = _n + 1; \
+    _n = _n + 1; \
+    _n; \
+})
+
 #define a(T, n_) ({ \
     so_int some = 11; \
     (void)some; \
@@ -30,6 +37,10 @@
     (void)some; \
     T x = (n_) + 1; \
     x; \
+})
+
+#define work(T, v_) ({ \
+    (so_R_ptr_err){.val = (v_), .err = NULL}; \
 })
 
 #define main_Box_set(T, b_, val_) do { \
