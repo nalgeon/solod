@@ -154,7 +154,7 @@ typedef struct {
 
 // Nil sentinel: address used as the pointer for nil/empty slices.
 // Non-NULL to satisfy static analyzers; never dereferenced.
-extern so_byte so_Nil;
+extern so_byte so_Nil[];
 
 // make_slice creates a zero-initialized slice on the stack.
 // Allocates memory on the stack until the calling function returns.
