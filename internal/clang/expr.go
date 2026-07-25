@@ -470,8 +470,8 @@ func (g *Generator) emitSelectorExpr(w io.Writer, n *ast.SelectorExpr) {
 		// Cast to match the function pointer type.
 		declSig := selection.Obj().Type().(*types.Signature)
 		if _, isPtrRecv := declSig.Recv().Type().(*types.Pointer); isPtrRecv {
-			cTypeName := g.mapTypeName(n, g.types.TypeOf(n))
-			fmt.Fprintf(w, "(%s)%s", cTypeName, cName)
+			ct := g.mapTypeDecl(n, g.types.TypeOf(n))
+			fmt.Fprintf(w, "(%s)%s", ct.Cast(), cName)
 		} else {
 			fmt.Fprint(w, cName)
 		}
@@ -575,7 +575,7 @@ func (g *Generator) emitUnaryExpr(w io.Writer, n *ast.UnaryExpr) {
 			if _, ok := g.types.TypeOf(n.X).Underlying().(*types.Array); ok {
 				if g.isArrayParam(ident) {
 					ct := g.mapTypeDecl(n, g.types.TypeOf(n))
-					fmt.Fprintf(w, "(%s)", ct.Decl(""))
+					fmt.Fprintf(w, "(%s)", ct.Cast())
 					g.emitExpr(w, n.X)
 					return
 				}

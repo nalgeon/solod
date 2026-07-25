@@ -31,6 +31,10 @@ func (c circle) perim() int {
 	return 2 * 3 * c.radius
 }
 
+func (c *circle) scale(x int) {
+	c.radius *= x
+}
+
 type circleValFunc func(c circle) int
 type circlePtrFunc func(c *circle) int
 
@@ -126,6 +130,12 @@ func main() {
 		perim := perimFn(c)
 		if perim != 42 {
 			panic("unexpected perimeter")
+		}
+		// No named func type matches this signature.
+		scaleFn := (*circle).scale
+		scaleFn(&c, 2)
+		if c.radius != 14 {
+			panic("unexpected radius")
 		}
 	}
 }

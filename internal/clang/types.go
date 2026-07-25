@@ -32,6 +32,14 @@ func (t CType) Decl(name string) string {
 	return t.Base + " " + name + t.Dims
 }
 
+// Cast formats a C type token for a cast expression:
+//   - regular type: so_int
+//   - array pointer: so_int (*)[3]
+//   - func pointer: bool (*)(double)
+func (t CType) Cast() string {
+	return strings.TrimSpace(t.Decl(""))
+}
+
 // IsArray reports whether this is an array type.
 func (t CType) IsArray() bool {
 	return t.Dims != "" && !t.PtrToArray

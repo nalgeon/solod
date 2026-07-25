@@ -17,6 +17,7 @@ static so_int main_Rect_perim(void* self, so_int n);
 static main_Rect main_Rect_resize(main_Rect r, so_int x);
 static so_int circle_area(void* self);
 static so_int circle_perim(circle c);
+static void circle_scale(void* self, so_int x);
 
 // -- Implementation --
 
@@ -43,6 +44,11 @@ static so_int circle_area(void* self) {
 
 static so_int circle_perim(circle c) {
     return 2 * 3 * c.radius;
+}
+
+static void circle_scale(void* self, so_int x) {
+    circle* c = self;
+    c->radius *= x;
 }
 
 so_String main_HttpStatus_String(main_HttpStatus s) {
@@ -125,7 +131,7 @@ int main(void) {
     {
         // Method expression.
         circle c = (circle){.radius = 7};
-        so_int (*areaFn)(circle*) = (circlePtrFunc)circle_area;
+        so_int (*areaFn)(circle*) = (so_int (*)(circle*))circle_area;
         so_int area = areaFn(&c);
         if (area != 147) {
             so_panic("unexpected area");
@@ -134,6 +140,12 @@ int main(void) {
         so_int perim = perimFn(c);
         if (perim != 42) {
             so_panic("unexpected perimeter");
+        }
+        // No named func type matches this signature.
+        void (*scaleFn)(circle*, so_int) = (void (*)(circle*, so_int))circle_scale;
+        scaleFn(&c, 2);
+        if (c.radius != 14) {
+            so_panic("unexpected radius");
         }
     }
     return 0;
