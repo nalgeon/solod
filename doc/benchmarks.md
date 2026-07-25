@@ -152,14 +152,14 @@ So's JSON API is token-level, with no reflection. Decoding is a fair comparison
 against Go's `Decoder.Token` stream: So is ~13x faster and allocates once per
 document (the scratch buffer for an escaped string) rather than boxing every
 token. Encoding is not like-for-like: Go has no token-level encoder, so its
-`Encoder` marshals a whole value by reflection, and that cached fast path stays
-ahead of So's individual token calls on a small document.
+`Encoder` marshals a whole value by reflection, while So makes an individual
+call per token.
 
 | Benchmark      |     Go |    So | Winner        |
 | -------------- | -----: | ----: | ------------- |
 | Decode         | 6836ns | 528ns | **So** - 13x  |
 | Decode Unicode |  461ns |  47ns | **So** - 9.8x |
-| Encode         |  345ns | 435ns | Go - 1.3x     |
+| Encode         |  345ns | 322ns | **So** - 1.1x |
 
 Benchmarks:
 

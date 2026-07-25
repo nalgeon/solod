@@ -53,7 +53,7 @@ func (e *Encoder) BeginObject() {
 		return
 	}
 	e.sep()
-	e.write("{")
+	e.writeByte('{')
 	e.push(true)
 }
 
@@ -67,7 +67,7 @@ func (e *Encoder) EndObject() {
 		return
 	}
 	e.pop()
-	e.write("}")
+	e.writeByte('}')
 }
 
 // BeginArray writes '['.
@@ -76,7 +76,7 @@ func (e *Encoder) BeginArray() {
 		return
 	}
 	e.sep()
-	e.write("[")
+	e.writeByte('[')
 	e.push(false)
 }
 
@@ -90,7 +90,7 @@ func (e *Encoder) EndArray() {
 		return
 	}
 	e.pop()
-	e.write("]")
+	e.writeByte(']')
 }
 
 // Str writes a quoted, escaped string. It is also used for object keys.
@@ -106,13 +106,13 @@ func (e *Encoder) Str(s string) {
 		return
 	}
 	e.sep()
-	e.write("\"")
+	e.writeByte('"')
 	if esc {
 		e.writeEscaped(s)
 	} else {
 		e.write(s) // nothing to escape, so it goes out as one copy
 	}
-	e.write("\"")
+	e.writeByte('"')
 }
 
 // Int writes an integer.
@@ -193,9 +193,9 @@ func (e *Encoder) sep() {
 	// In an object, odd token indexes are values (preceded by ':'); everything
 	// else, including all array elements, is comma-separated.
 	if e.isObj[e.depth-1] && n%2 == 1 {
-		e.write(":")
+		e.writeByte(':')
 	} else {
-		e.write(",")
+		e.writeByte(',')
 	}
 }
 
@@ -307,6 +307,15 @@ func (e *Encoder) writeRange(s string, start, end int) {
 // write appends s to the output buffer, draining it whenever it fills. A token
 // longer than the buffer (a long string) is written across several drains.
 func (e *Encoder) write(s string) {
+	if e.err != nil {
+		return
+	}
+	// Fast path: the fragment already fits in the buffer, which is common for
+	// short structural pieces and keys that the encoder emits.
+	if e.outN+len(s) <= outSize {
+		e.outN += copy(e.outBuf[e.outN:], s)
+		return
+	}
 	for e.err == nil && len(s) > 0 {
 		if e.outN == outSize {
 			e.drain()
@@ -316,6 +325,23 @@ func (e *Encoder) write(s string) {
 		e.outN += n
 		s = s[n:]
 	}
+}
+
+// writeByte adds a single byte, flushing first if the buffer is full.
+// It skips the copy loop and memmove for one-byte structural tokens
+// (braces, brackets, quotes, separators).
+func (e *Encoder) writeByte(c byte) {
+	if e.err != nil {
+		return
+	}
+	if e.outN == outSize {
+		e.drain()
+		if e.err != nil {
+			return
+		}
+	}
+	e.outBuf[e.outN] = c
+	e.outN++
 }
 
 // drain hands the pending bytes to the writer.
