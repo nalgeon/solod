@@ -2,13 +2,10 @@ package main
 
 import (
 	"solod.dev/so/encoding/json"
-	"solod.dev/so/errors"
 	"solod.dev/so/mem"
 	"solod.dev/so/strings"
 	"solod.dev/so/testing"
 )
-
-var errSkip = errors.New("skip")
 
 type money struct {
 	currency string
@@ -26,7 +23,7 @@ func (p *person) decodeJSON(alloc mem.Allocator, dec *json.Decoder) error {
 		// Not an object: consume the whole value so the caller stays in sync,
 		// then report that nothing was decoded.
 		dec.Skip()
-		return errSkip
+		return json.ErrKind
 	}
 	for dec.Next() && dec.Kind() == json.KindString {
 		switch dec.Str() {
@@ -56,7 +53,7 @@ func (p *person) decodeJSON(alloc mem.Allocator, dec *json.Decoder) error {
 func (m *money) decodeJSON(alloc mem.Allocator, dec *json.Decoder) error {
 	if dec.Kind() != json.KindObjBeg {
 		dec.Skip()
-		return errSkip
+		return json.ErrKind
 	}
 	for dec.Next() && dec.Kind() == json.KindString {
 		switch dec.Str() {
@@ -95,7 +92,7 @@ func TestDecodeCollection(t *testing.T) {
 	for dec.Next() && dec.Kind() != json.KindArrEnd {
 		var p person
 		err := p.decodeJSON(&arena, &dec)
-		if err == errSkip {
+		if err == json.ErrKind {
 			continue // not an object; skipped, keep going
 		}
 		if err != nil {

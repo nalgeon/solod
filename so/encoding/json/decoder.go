@@ -69,7 +69,8 @@ const (
 // escapes costs a single buffer, sized to its longest escaped string.
 //
 // As with [NewReader], a token returned by [Decoder.Str] is only guaranteed to
-// be valid until the next call to [Decoder.Next].
+// be valid until the next call to [Decoder.Next]: an escaped string is
+// unescaped into the scratch buffer, which the next escaped string reuses.
 //
 // Call [Decoder.Free] when done using it to release its resources.
 func NewDecoder(alloc mem.Allocator, doc []byte) Decoder {

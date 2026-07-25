@@ -13,6 +13,38 @@
 //
 // Both the Decoder and Encoder reject invalid JSON syntax and non-UTF-8 strings.
 //
+// # Decoding into your own types
+//
+// [Decoder.Str] returns a view into the decoder's buffer, valid only until the
+// next [Decoder.Next]. A type that keeps a string must copy it, and that
+// requires an allocator. The convention is a pair of methods:
+//
+//	func (p *Person) DecodeJSON(alloc mem.Allocator, dec *json.Decoder) error
+//	func (p *Person) Free(alloc mem.Allocator)
+//
+// DecodeJSON starts on the token that opens the value (the { of an object) and
+// stops on the token that closes it (the matching }). That rule is what lets a
+// nested value decode itself: the parent advances to the field's opening token
+// and hands the decoder over.
+//
+// Decode into a zero value. Otherwise, if a document has duplicate keys and you
+// assign a field twice, the first value will leak.
+//
+// Free releases what the value owns and zeroes it, so calling it twice is
+// harmless. It does not free the value itself, which is usually a local. Free
+// with the allocator that decoded, and free even after a failed decode, which
+// may have allocated some fields already.
+//
+// Once a type has a Free, give every type it contains one too, even an empty
+// one. Without it, a nested type that later gains an owned field silently stops
+// being freed.
+//
+// Decoding many values is simpler with a [mem.Arena]: pass it as the allocator,
+// skip the Free calls, and release the whole arena buffer at the end.
+//
+// The [Encoder] and [Decoder] examples show a pair of types that follow the
+// convention.
+//
 // # Limitations
 //
 // A document holds a single root value, and a Decoder reads exactly one
