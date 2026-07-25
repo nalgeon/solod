@@ -20,6 +20,8 @@ func main() {
 		{Name: "TestReallocSlice_Empty", F: TestReallocSlice_Empty},
 		{Name: "TestFreeNil", F: TestFreeNil},
 		{Name: "TestFreeString", F: TestFreeString},
+		{Name: "TestFreeStringStats", F: TestFreeStringStats},
+		{Name: "TestFreeStringArena", F: TestFreeStringArena},
 		{Name: "TestArena", F: TestArena},
 		{Name: "TestArray", F: TestArray},
 		{Name: "TestTrackerAlloc", F: TestTrackerAlloc},

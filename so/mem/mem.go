@@ -177,11 +177,17 @@ func FreeSlice[T any](a Allocator, slice []T) {
 
 // FreeString frees a heap-allocated string.
 // If the allocator is nil, uses the system allocator.
+// Calling FreeString on an empty string is a no-op.
 func FreeString(a Allocator, s string) {
 	if len(s) == 0 {
 		return
 	}
-	Free(a, unsafe.StringData(s))
+
+	_a := a
+	if _a == nil {
+		_a = System
+	}
+	_a.Free(unsafe.StringData(s), len(s), c.Alignof[byte]())
 }
 
 // Clear zeroes size bytes starting at ptr.

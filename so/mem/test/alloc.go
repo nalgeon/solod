@@ -162,3 +162,47 @@ func TestFreeString(t *testing.T) {
 	s2 := ""
 	mem.FreeString(mem.System, s2)
 }
+
+func TestFreeStringStats(t *testing.T) {
+	// FreeString must report the string length to the allocator,
+	// matching the byte count AllocSlice reported.
+	tr := mem.Tracker{Allocator: mem.System}
+	b := mem.AllocSlice[byte](&tr, 3, 3)
+	b[0] = 'h'
+	b[1] = 'i'
+	b[2] = '!'
+	s := string(b)
+
+	stats := tr.Stats()
+	if stats.Alloc != 3 {
+		t.Error("Stats.Alloc != 3")
+	}
+
+	mem.FreeString(&tr, s)
+	stats = tr.Stats()
+	if stats.Alloc != 0 {
+		t.Error("Stats.Alloc != 0 after free")
+	}
+	if stats.TotalAlloc != 3 {
+		t.Error("Stats.TotalAlloc != 3")
+	}
+	if stats.Mallocs != 1 || stats.Frees != 1 {
+		t.Error("unexpected Mallocs/Frees")
+	}
+}
+
+func TestFreeStringArena(t *testing.T) {
+	// An arena reclaims the last allocation only if the freed size
+	// matches the allocated one.
+	buf := make([]byte, 8)
+	a := mem.NewArena(buf)
+	b := mem.AllocSlice[byte](&a, 5, 5)
+	s := string(b)
+	mem.FreeString(&a, s)
+
+	// The whole buffer is available again.
+	_, err := mem.TryAllocSlice[byte](&a, 8, 8)
+	if err != nil {
+		t.Error("string space not reclaimed")
+	}
+}
