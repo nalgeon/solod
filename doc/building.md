@@ -30,6 +30,18 @@ so run -panic=trace .
 
 Trace mode adds `-rdynamic -fno-omit-frame-pointer` to the C build so frames can be unwound and named. The trace shows C symbols (`package_Func`), which map directly onto So functions; combine it with `-track-source` to relate the panic site back to So source. The default fits glibc and macOS. Use `-panic=exit` or `-panic=abort` on musl, where the trace comes out empty, and on freestanding, which always traps.
 
+## Assertions
+
+Assertions check preconditions like slice bounds and index-out-of-range, plus the `c.Assert` calls the program makes itself. They are on by default. The `-assert` flag removes them for `build`, `run`, `test`, and `bench`:
+
+```sh
+so build -assert=off .
+```
+
+A removed assertion doesn't evaluate its condition at all, so conditions must be free of side effects. Only turn assertions off when you're sure the program is correct.
+
+`NDEBUG` doesn't affect assertions, so a C project that defines it can't remove them by accident.
+
 ## Source locations
 
 By default, panic messages report the C file and line number. Use the `-track-source` flag to print the original So source locations instead:

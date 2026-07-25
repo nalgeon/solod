@@ -15,6 +15,7 @@ import (
 
 // Options holds the options for the compiler pipeline.
 type Options struct {
+	Assert      string // assertions: "on" (default) or "off"
 	PanicMode   string // panic termination mode: "trace" (default), "exit", or "abort"
 	Sanitize    string // comma-separated sanitizers to enable; empty disables
 	TrackSource bool   // track source locations for panics

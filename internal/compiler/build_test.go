@@ -23,6 +23,24 @@ func TestSanitizeFlags(t *testing.T) {
 	}
 }
 
+func TestAssertMode(t *testing.T) {
+	tests := []struct {
+		mode    string
+		want    []string
+		wantErr bool
+	}{
+		{"", nil, false},
+		{"on", nil, false},
+		{"off", []string{"-DSO_NO_ASSERT"}, false},
+		{"none", nil, true},
+	}
+	for _, test := range tests {
+		got, err := assertMode(test.mode)
+		be.Equal(t, err != nil, test.wantErr)
+		be.Equal(t, got, test.want)
+	}
+}
+
 func TestSplitList(t *testing.T) {
 	tests := []struct {
 		s    string

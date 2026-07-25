@@ -70,6 +70,7 @@ Run 'so <command> -h' for details.
 }
 
 const (
+	assertUsage      = "assertions: on (default) or off"
 	panicModeUsage   = "panic termination mode: trace (default), exit, or abort"
 	sanitizeUsage    = "comma-separated list of C sanitizers"
 	trackSourceUsage = "track source locations for panics"
@@ -103,6 +104,7 @@ func translate(args []string) error {
 func build(args []string) error {
 	flags := flag.NewFlagSet("build", flag.ContinueOnError)
 	outFile := flags.String("o", "", "output file (default: basename of package directory)")
+	assert := flags.String("assert", "on", assertUsage)
 	panicMode := flags.String("panic", "trace", panicModeUsage)
 	sanitize := sanitizeFlag(flags, "sanitize", sanitizeUsage)
 	trackSource := flags.Bool("track-source", false, trackSourceUsage)
@@ -125,6 +127,7 @@ func build(args []string) error {
 	}
 
 	opts := compiler.Options{
+		Assert:      *assert,
 		PanicMode:   *panicMode,
 		Sanitize:    sanitize.list,
 		TrackSource: *trackSource,
@@ -135,6 +138,7 @@ func build(args []string) error {
 func test(args []string) error {
 	flags := flag.NewFlagSet("test", flag.ContinueOnError)
 	run := flags.String("run", "", "run only tests whose names start with this prefix")
+	assert := flags.String("assert", "on", assertUsage)
 	panicMode := flags.String("panic", "trace", panicModeUsage)
 	sanitize := sanitizeFlag(flags, "sanitize", sanitizeUsage)
 	trackSource := flags.Bool("track-source", false, trackSourceUsage)
@@ -154,6 +158,7 @@ func test(args []string) error {
 	}
 
 	opts := compiler.Options{
+		Assert:      *assert,
 		PanicMode:   *panicMode,
 		Sanitize:    sanitize.list,
 		TrackSource: *trackSource,
@@ -164,6 +169,7 @@ func test(args []string) error {
 func bench(args []string) error {
 	flags := flag.NewFlagSet("bench", flag.ContinueOnError)
 	run := flags.String("run", "", "run only benchmarks whose names start with this prefix")
+	assert := flags.String("assert", "on", assertUsage)
 	panicMode := flags.String("panic", "trace", panicModeUsage)
 	sanitize := sanitizeFlag(flags, "sanitize", sanitizeUsage)
 	trackSource := flags.Bool("track-source", false, trackSourceUsage)
@@ -183,6 +189,7 @@ func bench(args []string) error {
 	}
 
 	opts := compiler.Options{
+		Assert:      *assert,
 		PanicMode:   *panicMode,
 		Sanitize:    sanitize.list,
 		TrackSource: *trackSource,
@@ -192,6 +199,7 @@ func bench(args []string) error {
 
 func run(args []string) error {
 	flags := flag.NewFlagSet("run", flag.ContinueOnError)
+	assert := flags.String("assert", "on", assertUsage)
 	panicMode := flags.String("panic", "trace", panicModeUsage)
 	sanitize := sanitizeFlag(flags, "sanitize", sanitizeUsage)
 	trackSource := flags.Bool("track-source", false, trackSourceUsage)
@@ -207,6 +215,7 @@ func run(args []string) error {
 	}
 
 	opts := compiler.Options{
+		Assert:      *assert,
 		PanicMode:   *panicMode,
 		Sanitize:    sanitize.list,
 		TrackSource: *trackSource,

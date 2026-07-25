@@ -87,8 +87,9 @@ func Alloca[T any](n int) *T {
 	return &v[0]
 }
 
-// assert panics with the given message if the condition is false.
-// NDEBUG removes the check entirely, so cond must be free of side effects.
+// Assert panics with the given message if the condition is false.
+// The -assert=off build flag removes the check entirely,
+// so cond must be free of side effects.
 //
 //	so_assert(cond, msg)
 //

@@ -1039,13 +1039,11 @@ A panic prints its message with a source location, then terminates the program. 
 
 ### Assertions
 
-_"Assertion" here means a precondition check. It is unrelated to a [type assertion](#interfaces)._
-
 An assertion checks a precondition the caller is required to satisfy. Assertions panic on failure, so they report a source location and honor the panic mode. They cover slice and string bounds, index-out-of-range, slice-to-array length, zero map capacity, and integer division or modulo by a zero divisor. Since Go's syntax doesn't have a built-in `assert`, it's provided through the `c.Assert` function in the standard library.
 
-Defining `NDEBUG` in a C build completely removes assertions. The condition inside the assertion won't be checked at all, so it shouldn't have any side effects. Only use `NDEBUG` when you're sure your program is correct.
+A build can remove assertions; see [Building](building.md#assertions) for details. A removed assertion doesn't evaluate its condition at all, so the condition must be free of side effects.
 
-Not every failure is an assertion. Other runtime checks, like calling `append` beyond capacity, always cause a panic and are not affected by `NDEBUG`, because they report situations the caller can't always predict ahead of time.
+Not every failure is an assertion. Other runtime checks, like calling `append` beyond capacity, always cause a panic and can't be turned off, because they report situations the caller can't always predict ahead of time.
 
 A nil pointer dereference (or other invalid memory access) is caught at runtime in POSIX hosted builds and reported as a panic that honors the panic mode: trace mode prints `panic: nil pointer dereference` and a backtrace, exit mode prints just the message, and abort mode leaves the fault untouched for a core dump. Unlike an explicit panic it carries no source line, so use the backtrace to locate it. Freestanding builds and Windows install no handler and fault like C.
 

@@ -559,8 +559,9 @@ void so_print_trace(void);
 #endif  // so_build_hosted
 
 // assert panics with the given message if the condition is false.
-// NDEBUG removes the check entirely, so cond must be free of side effects.
-#ifdef NDEBUG
+// SO_NO_ASSERT removes the check entirely, so cond must be free of side
+// effects. NDEBUG has no effect here.
+#ifdef SO_NO_ASSERT
 #define so_assert(cond, msg) ((void)0)
 #else
 #define so_assert(cond, msg) \

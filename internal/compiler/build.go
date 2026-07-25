@@ -106,9 +106,14 @@ func newCompileOptions(opts Options) (compileOptions, error) {
 	if err != nil {
 		return compileOptions{}, err
 	}
+	assertDefs, err := assertMode(opts.Assert)
+	if err != nil {
+		return compileOptions{}, err
+	}
 	flags := append(panicFlags, sanitizeFlags(opts.Sanitize)...)
+	defines := append([]string{panicDef}, assertDefs...)
 	return compileOptions{
-		defines: []string{panicDef},
+		defines: defines,
 		flags:   flags,
 	}, nil
 }
@@ -157,6 +162,19 @@ func panicMode(mode string) (define string, flags []string, err error) {
 		return "-DSO_PANIC_MODE=SO_PANIC_ABORT", nil, nil
 	default:
 		return "", nil, fmt.Errorf("invalid panic mode %q (want exit, abort, or trace)", mode)
+	}
+}
+
+// assertMode maps an assert mode name to the C defines the mode needs.
+// An empty mode defaults to "on", which needs no defines.
+func assertMode(mode string) (defines []string, err error) {
+	switch mode {
+	case "", "on":
+		return nil, nil
+	case "off":
+		return []string{"-DSO_NO_ASSERT"}, nil
+	default:
+		return nil, fmt.Errorf("invalid assert mode %q (want on or off)", mode)
 	}
 }
 

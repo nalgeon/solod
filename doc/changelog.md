@@ -2,6 +2,18 @@
 
 This document outlines the main changes in different So versions.
 
+## Solod 0.4 (in progress)
+
+### Safety
+
+**Assertions are no longer tied to NDEBUG**. They are on by default and removed only by the new `-assert` flag:
+
+```sh
+so build -assert=off .
+```
+
+Previously, `NDEBUG` removed these checks. This meant that a C project that defines it could accidentally turn So's safety net off.
+
 ## Solod 0.3
 
 ### Language
