@@ -98,7 +98,7 @@ func (g *Generator) emitFuncTypeSpec(w io.Writer, spec *ast.TypeSpec) {
 	}
 
 	name := g.declSymbolName(g.types.Defs[spec.Name])
-	fmt.Fprintf(w, "%stypedef %s (*%s)(%s);\n", g.indent(), retType, name, strings.Join(params, ", "))
+	fmt.Fprintf(w, "%stypedef %s (*%s)(%s);\n", g.indent(), retType, name, funcParams(params))
 }
 
 // emitFuncDecl emits a function declaration into the .c file.
@@ -543,4 +543,14 @@ func recvTypeParams(recv *ast.Field) []string {
 		return names
 	}
 	return nil
+}
+
+// funcParams formats a C function pointer parameter list.
+func funcParams(params []string) string {
+	// An empty list becomes "void", because C reads "()" as
+	// unspecified parameters rather than none.
+	if len(params) == 0 {
+		return "void"
+	}
+	return strings.Join(params, ", ")
 }

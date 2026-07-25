@@ -8,8 +8,8 @@ static so_int rateMovie(main_Movie m, so_int (*f)(main_Movie));
 // -- Variables and constants --
 
 // Global function variable.
-void (*main_Global1)() = NULL;
-void (*main_Global2)() = NULL;
+void (*main_Global1)(void) = NULL;
+void (*main_Global2)(void) = NULL;
 static so_int (*rate)(main_Movie) = freshness;
 
 // -- Implementation --

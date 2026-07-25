@@ -24,7 +24,7 @@ type CType struct {
 //   - func pointer: bool (*fn)(double)
 func (t CType) Decl(name string) string {
 	if t.FuncPtr {
-		return t.FuncRet + " (*" + name + ")(" + strings.Join(t.FuncParams, ", ") + ")"
+		return t.FuncRet + " (*" + name + ")(" + funcParams(t.FuncParams) + ")"
 	}
 	if t.PtrToArray {
 		return t.Base + " (*" + name + ")" + t.Dims

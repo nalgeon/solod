@@ -5,7 +5,6 @@ import (
 	"go/ast"
 	"go/types"
 	"io"
-	"strings"
 )
 
 // emitStructTypeSpec emits a typedef struct for a struct type declaration.
@@ -53,7 +52,7 @@ func (g *Generator) emitFuncPtrField(w io.Writer, node ast.Node, fieldName strin
 		}
 		params = append(params, cType)
 	}
-	fmt.Fprintf(w, "%s%s (*%s)(%s);\n", g.indent(), retType, fieldName, strings.Join(params, ", "))
+	fmt.Fprintf(w, "%s%s (*%s)(%s);\n", g.indent(), retType, fieldName, funcParams(params))
 }
 
 // emitInlineStructField emits an anonymous struct field inline within a parent struct.

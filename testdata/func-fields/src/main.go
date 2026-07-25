@@ -4,6 +4,7 @@ type Movie struct {
 	year     int
 	ratingFn func(m Movie) int
 	updateFn func(m *Movie)
+	notifyFn func()
 }
 
 func freshness(m Movie) int {
