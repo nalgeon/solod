@@ -2,7 +2,7 @@
 
 This document outlines the main changes in different So versions.
 
-## v0.3 (in progress)
+## Solod 0.3
 
 ### Language
 
@@ -160,7 +160,7 @@ Defining `NDEBUG` removes assertions. Other runtime checks, like calling `append
 
 [4cb27cd](https://github.com/solod-dev/solod/commit/4cb27cd4eed149348c84a9a01eff9df7c0e5d67f)
 
-## v0.2
+## Solod 0.2
 
 Networking, new targets, and friendlier interop.
 

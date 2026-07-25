@@ -228,14 +228,7 @@ Core language features and stdlib packages.
 ✓ [v0.2](https://github.com/solod-dev/solod/releases/tag/v0.2.0) —
 Networking, uuids and more targets: WebAssembly, 32-bit, freestanding.
 
-⏳ [v0.3](./doc/changelog.md) — Concurrency and tooling:
-
-- Concurrency building blocks: thread, channel, bounded worker pool.
-- Synchronization primitives: mutex, condition variable, run once.
-- Atomics.
-- Low-level JSON API.
-- CLI commands to run tests and benchmarks.
-- Escape analysis, leak checking, and stack traces.
+✓ [v0.3](https://github.com/solod-dev/solod/releases/tag/v0.3.0) — Concurrency, JSON, testing and benchmarking, more safety (escape analysis, leak checking, stack traces).
 
 Future plans:
 

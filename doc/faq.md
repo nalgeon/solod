@@ -16,11 +16,11 @@ _Is it safe?_
 
 So has extra safeguards beyond Go's default type checking:
 
-- It will panic on out-of-bounds array access.
+- It will panic on out-of-bounds array access and nil dereference.
 - It won't let you return stack-allocated memory in common situations.
-- Tests can detect memory leaks with a tracking allocator.
+- Programs can detect memory leaks with a tracking allocator.
 
-However, the leak check only reports an aggregate count, not which allocation leaked, and So won't catch double-free or use-after-free errors on its own.
+However, escape analysis doesn't catch every case, and the leak checker won't detect double-free or use-after-free errors by itself.
 
 Most memory-related problems can be caught with AddressSanitizer in modern compilers. I strongly recommend turning on sanitizers with the `-sanitize` flag while developing. Or set the flags in `CFLAGS` yourself:
 
