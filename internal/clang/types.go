@@ -253,6 +253,11 @@ func (g *Generator) zeroValue(node ast.Node, typ types.Type) string {
 		return "NULL"
 	}
 
+	// Functions (map to C function pointers).
+	if _, ok := typ.Underlying().(*types.Signature); ok {
+		return "NULL"
+	}
+
 	// Structs.
 	if _, ok := typ.Underlying().(*types.Struct); ok {
 		return "{0}"

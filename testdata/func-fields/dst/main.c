@@ -5,6 +5,13 @@ static so_int freshness(main_Movie m);
 static main_RatingFn getRatingFn(void);
 static so_int rateMovie(main_Movie m, so_int (*f)(main_Movie));
 
+// -- Variables and constants --
+
+// Global function variable.
+void (*main_Global1)() = NULL;
+void (*main_Global2)() = NULL;
+static so_int (*rate)(main_Movie) = freshness;
+
 // -- Implementation --
 
 static so_int freshness(main_Movie m) {
@@ -56,6 +63,19 @@ int main(void) {
         so_int r4b = fn3(m);
         if (r4b != 50) {
             so_panic("unexpected r4b");
+        }
+        so_int r5 = rate(m);
+        if (r5 != 50) {
+            so_panic("unexpected r5");
+        }
+        // Function variable without an initializer is nil.
+        so_int (*fn4)(main_Movie) = NULL;
+        if (fn4 != NULL) {
+            so_panic("unexpected fn4");
+        }
+        fn4 = freshness;
+        if (fn4(m) != 50) {
+            so_panic("unexpected fn4 result");
         }
     }
     {

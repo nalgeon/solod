@@ -15,3 +15,9 @@ typedef struct main_Movie {
 typedef so_int (*main_RatingFn)(main_Movie);
 
 typedef void (*main_UpdateFn)(main_Movie*);
+
+// -- Variables and constants --
+
+// Global function variable.
+extern void (*main_Global1)();
+extern void (*main_Global2)();

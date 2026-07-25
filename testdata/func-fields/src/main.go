@@ -10,6 +10,11 @@ func freshness(m Movie) int {
 	return m.year - 1970
 }
 
+// Global function variable.
+var Global1 func()
+var Global2 func() = nil
+var rate func(m Movie) int = freshness
+
 // A named function type can be used as a function argument or return value.
 type RatingFn func(m Movie) int
 type UpdateFn func(m *Movie)
@@ -63,6 +68,21 @@ func main() {
 		r4b := fn3(m)
 		if r4b != 50 {
 			panic("unexpected r4b")
+		}
+
+		r5 := rate(m)
+		if r5 != 50 {
+			panic("unexpected r5")
+		}
+
+		// Function variable without an initializer is nil.
+		var fn4 func(m Movie) int
+		if fn4 != nil {
+			panic("unexpected fn4")
+		}
+		fn4 = freshness
+		if fn4(m) != 50 {
+			panic("unexpected fn4 result")
 		}
 	}
 	{
