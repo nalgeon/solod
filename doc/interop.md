@@ -3,14 +3,13 @@
 So provides several tools for easy C interop.
 
 [Includes](#includes) •
-[Linking](#linking-v03) •
+[Linking](#linking) •
 [Extern declarations](#extern-declarations) •
-[Extern options](#extern-options) •
 [Inlining](#inlining) •
-[Promoting](#promoting-v03) •
+[Promoting](#promoting) •
 [Qualifiers](#qualifiers) •
 [Embeds](#embeds) •
-[Raw C](#raw-c) •
+[Raw C](#raw-c-experimental) •
 [Helpers](#helpers)
 
 ## Includes
@@ -27,7 +26,7 @@ Use `so:include.c` when the include is purely an implementation detail that shou
 //so:include.c "internal_helper.h"
 ```
 
-## Linking (v0.3)
+## Linking
 
 When a package uses a C library that must be linked explicitly, declare it with `so:link`. The name is the library as passed to the linker's `-l` flag, without the prefix:
 
@@ -82,7 +81,7 @@ The `so:extern` directive supports two optional parameters: a C name override an
 
 Methods can be extern too.
 
-## Extern options
+### Extern options
 
 _Name override_ specifies the C name to use instead of the default package-prefixed name. Useful for extern types that must match a C header:
 
@@ -113,6 +112,22 @@ Both options can be combined:
 func MyFunc(s string)
 ```
 
+### Field names
+
+A `c:"..."` struct tag overrides the C name of a single field. This is needed when a C struct has a field whose name is a Go keyword, such as `type`:
+
+```go
+//so:extern SDL_CommonEvent
+type SDL_CommonEvent struct {
+    etype     uint32 `c:"type"`
+    timestamp uint64
+}
+```
+
+So sees the field as `etype`; the generated C uses `type` everywhere, including field accesses in packages that import the struct. The tag value must be a valid C identifier that is not a C keyword, and it may not collide with another field's C name in the same struct.
+
+The tag is honored only on the fields of a named struct type, not on anonymous or function-local structs. It works on any named struct, not just extern ones, but its main use is matching an external C layout.
+
 ## Inlining
 
 Force a function to be emitted as `static inline` in the header file using `//so:inline`. This is useful for small, frequently used functions when the compiler won't inline them automatically:
@@ -126,7 +141,7 @@ func add(a, b int) int {
 
 The function body is emitted directly in the `.h` file and skipped from the `.c` file. Works with both functions and methods.
 
-## Promoting (v0.3)
+## Promoting
 
 By default an unexported symbol (lowercase name) stays in the `.c` file with its bare name. You can promote it into the header with `//so:promote`, which also gives it the package prefix:
 

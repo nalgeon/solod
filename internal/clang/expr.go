@@ -488,10 +488,10 @@ func (g *Generator) emitSelectorExpr(w io.Writer, n *ast.SelectorExpr) {
 	_, isPtr := xType.Underlying().(*types.Pointer)
 	if isPtr {
 		g.emitExpr(w, n.X)
-		fmt.Fprintf(w, "->%s", n.Sel.Name)
+		fmt.Fprintf(w, "->%s", g.fieldNameOf(n.Sel))
 	} else {
 		g.emitExpr(w, n.X)
-		fmt.Fprintf(w, ".%s", n.Sel.Name)
+		fmt.Fprintf(w, ".%s", g.fieldNameOf(n.Sel))
 	}
 }
 

@@ -101,6 +101,7 @@ type Generator struct {
 	state       State
 	externs     map[types.Object]externInfo  // symbols provided by C headers
 	promoted    map[types.Object]bool        // unexported symbols forced into the header
+	fieldNames  map[*types.Var]string        // C name overrides from `c:"..."` field tags
 	includes    Includes                     // included headers from so:include
 	links       []string                     // link libraries from so:link
 	embeds      Embeds                       // embedded C files from so:embed
@@ -115,11 +116,12 @@ type Generator struct {
 // newGenerator creates a new Generator instance.
 func newGenerator(opts EmitOptions) *Generator {
 	return &Generator{
-		opts:     opts,
-		pkg:      opts.Pkg,
-		types:    opts.Pkg.TypesInfo,
-		externs:  make(map[types.Object]externInfo),
-		funcDirs: make(map[*ast.FuncDecl]directives),
+		opts:       opts,
+		pkg:        opts.Pkg,
+		types:      opts.Pkg.TypesInfo,
+		externs:    make(map[types.Object]externInfo),
+		fieldNames: make(map[*types.Var]string),
+		funcDirs:   make(map[*ast.FuncDecl]directives),
 	}
 }
 

@@ -22,14 +22,15 @@ func (g *Generator) emitStructTypeSpec(w io.Writer, spec *ast.TypeSpec, dirs dir
 	for _, field := range st.Fields.List {
 		typ := g.types.TypeOf(field.Type)
 		for _, name := range field.Names {
+			fieldName := g.fieldNameOf(name)
 			if innerSt, ok := field.Type.(*ast.StructType); ok {
-				g.emitInlineStructField(w, innerSt, name.Name)
+				g.emitInlineStructField(w, innerSt, fieldName)
 			} else if sig, ok := typ.(*types.Signature); ok {
-				g.emitFuncPtrField(w, spec, name.Name, sig, cName)
+				g.emitFuncPtrField(w, spec, fieldName, sig, cName)
 			} else {
 				// Regular struct field (arrays get dimension suffix).
 				ct := g.mapTypeDecl(field, typ)
-				fmt.Fprintf(w, "%s%s;\n", g.indent(), ct.Decl(name.Name))
+				fmt.Fprintf(w, "%s%s;\n", g.indent(), ct.Decl(fieldName))
 			}
 		}
 	}
@@ -65,7 +66,7 @@ func (g *Generator) emitInlineStructField(w io.Writer, st *ast.StructType, field
 		typ := g.types.TypeOf(f.Type)
 		ct := g.mapTypeDecl(f, typ)
 		for _, name := range f.Names {
-			fmt.Fprintf(w, "%s%s;\n", g.indent(), ct.Decl(name.Name))
+			fmt.Fprintf(w, "%s%s;\n", g.indent(), ct.Decl(g.fieldNameOf(name)))
 		}
 	}
 	g.state.indent--
@@ -134,25 +135,24 @@ func (g *Generator) emitAnonStructLit(w io.Writer, n *ast.CompositeLit, st *ast.
 		typ := g.types.TypeOf(field.Type)
 		cType := g.mapTypeName(field, typ)
 		for _, name := range field.Names {
-			fmt.Fprintf(w, "%s    %s %s;\n", g.indent(), cType, name.Name)
+			fmt.Fprintf(w, "%s    %s %s;\n", g.indent(), cType, g.fieldNameOf(name))
 		}
 	}
 	fmt.Fprintf(w, "%s})", g.indent())
 
 	// Struct fields initialization.
 	fmt.Fprint(w, "{\n")
-	fields := collectFieldNames(st)
 	struc := g.types.TypeOf(n).Underlying().(*types.Struct)
 	for i, elt := range n.Elts {
 		if i > 0 {
 			fmt.Fprint(w, ",\n")
 		}
 		if kv, ok := elt.(*ast.KeyValueExpr); ok {
-			fieldName := kv.Key.(*ast.Ident).Name
-			fmt.Fprintf(w, "%s    .%s = ", g.indent(), fieldName)
-			g.emitFieldValue(w, n, kv.Value, structFieldType(struc, fieldName))
+			key := kv.Key.(*ast.Ident)
+			fmt.Fprintf(w, "%s    .%s = ", g.indent(), g.fieldNameOf(key))
+			g.emitFieldValue(w, n, kv.Value, structFieldType(struc, key.Name))
 		} else {
-			fmt.Fprintf(w, "%s    .%s = ", g.indent(), fields[i])
+			fmt.Fprintf(w, "%s    .%s = ", g.indent(), g.fieldName(struc.Field(i)))
 			g.emitFieldValue(w, n, elt, struc.Field(i).Type())
 		}
 	}
@@ -183,12 +183,12 @@ func (g *Generator) emitBareStructInit(w io.Writer, n *ast.CompositeLit) {
 			fmt.Fprint(w, ", ")
 		}
 		if kv, ok := elt.(*ast.KeyValueExpr); ok {
-			fieldName := kv.Key.(*ast.Ident).Name
-			fmt.Fprintf(w, ".%s = ", fieldName)
+			key := kv.Key.(*ast.Ident)
+			fmt.Fprintf(w, ".%s = ", g.fieldNameOf(key))
 			if lit, ok := isAnonStructLit(kv.Value); ok {
 				g.emitBareStructInit(w, lit)
 			} else {
-				g.emitFieldValue(w, n, kv.Value, structFieldType(struc, fieldName))
+				g.emitFieldValue(w, n, kv.Value, structFieldType(struc, key.Name))
 			}
 		} else {
 			if lit, ok := isAnonStructLit(elt); ok {
@@ -360,6 +360,34 @@ func (g *Generator) emitMethodVarArgs(w io.Writer, sel *ast.SelectorExpr, call *
 	fmt.Fprintf(w, "}, %d, %d}%s", count, count, rparen)
 }
 
+// fieldNameOf resolves the C name for a field named by ident, whether ident is
+// a field access selector, a field declaration, or a composite literal key.
+// It falls back to the identifier text when ident does not denote a field, so
+// output is unchanged for anonymous struct fields go/types may not record.
+func (g *Generator) fieldNameOf(ident *ast.Ident) string {
+	obj := g.types.Uses[ident]
+	if obj == nil {
+		obj = g.types.Defs[ident]
+	}
+	if field, ok := obj.(*types.Var); ok {
+		return g.fieldName(field)
+	}
+	return ident.Name
+}
+
+// fieldName returns the C name emitted for a struct field: the override from a
+// `c:"..."` tag if present, otherwise the field's Go name. Every field name
+// reaches the generated C through this single function.
+func (g *Generator) fieldName(field *types.Var) string {
+	// The override map is keyed by the field's canonical Var. Origin normalize
+	// an instantiated generic field back to its declaration, so accesses on a
+	// Box[int] resolve the same override recorded on Box's declaration.
+	if name, ok := g.fieldNames[field.Origin()]; ok {
+		return name
+	}
+	return field.Name()
+}
+
 // structFieldType returns the type of a struct field by name.
 func structFieldType(st *types.Struct, name string) types.Type {
 	for field := range st.Fields() {
@@ -368,17 +396,6 @@ func structFieldType(st *types.Struct, name string) types.Type {
 		}
 	}
 	panic("structFieldType: field not found: " + name)
-}
-
-// collectFieldNames returns the field names from a struct type in order.
-func collectFieldNames(st *ast.StructType) []string {
-	var names []string
-	for _, field := range st.Fields.List {
-		for _, name := range field.Names {
-			names = append(names, name.Name)
-		}
-	}
-	return names
 }
 
 // isAnonStructLit checks if an expression is an anonymous struct composite literal.

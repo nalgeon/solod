@@ -91,6 +91,7 @@ func (g *Generator) collect() {
 		}
 	}
 
+	g.collectFieldTags()
 	g.collectPromoted()
 	g.collectResultTypes()
 

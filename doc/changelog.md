@@ -4,6 +4,17 @@ This document outlines the main changes in different So versions.
 
 ## Solod 0.4 (in progress)
 
+### Interop
+
+**C field name override**. A `c:"..."` struct tag sets the C name of a field, so an extern struct can match a C header field whose name is a Go keyword:
+
+```go
+//so:extern SDL_CommonEvent
+type SDL_CommonEvent struct {
+    etype uint32 `c:"type"` // emitted as .type in C
+}
+```
+
 ### Safety
 
 **Assertions are no longer tied to NDEBUG**. They are on by default and removed only by the new `-assert` flag:
