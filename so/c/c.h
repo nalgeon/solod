@@ -1,5 +1,16 @@
 #include "so/builtin/builtin.h"
 
+#include <stddef.h>  // ptrdiff_t
+
+// ssize_t is a POSIX type, so it is missing on Windows and in freestanding
+// builds. intptr_t is the same width and sign everywhere.
+#if defined(so_build_hosted) && !defined(_WIN32)
+#include <sys/types.h>
+typedef ssize_t so_ssize_t;
+#else
+typedef intptr_t so_ssize_t;
+#endif
+
 #define c_Alignof(T) ((so_int)alignof(T))
 
 #define c_Alloca(T, n) ((T*)so_alloca(sizeof(T) * (size_t)(n)))

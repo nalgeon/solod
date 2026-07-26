@@ -15,6 +15,16 @@ type SDL_CommonEvent struct {
 }
 ```
 
+**Target-width C types**. `so/c` now supports more common C types:
+
+```text
+size_t      - c.Size
+ssize_t     - c.SSize
+ptrdiff_t   - c.Ptrdiff
+intptr_t    - c.Intptr
+long double - c.LongDouble
+```
+
 ### Safety
 
 **Assertions are no longer tied to NDEBUG**. They are on by default and removed only by the new `-assert` flag:

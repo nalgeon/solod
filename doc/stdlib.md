@@ -102,6 +102,7 @@ Types:
 
 - `Char`, and `ConstChar` represent a C `char` type.
 - `Int`, `UInt`, `Long`, `ULong`, etc. represent numeric C types.
+- `Size`, `SSize`, `Ptrdiff` and `Intptr` represent C types whose width follows the target.
 
 ## [so/cmp](https://pkg.go.dev/solod.dev/so/cmp)
 

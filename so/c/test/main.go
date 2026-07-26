@@ -16,5 +16,8 @@ func main() {
 		{Name: "TestRaw", F: TestRaw},
 		{Name: "TestCString", F: TestCString},
 		{Name: "TestNumericTypes", F: TestNumericTypes},
+		{Name: "TestSizeTypes", F: TestSizeTypes},
+		{Name: "TestPtrTypes", F: TestPtrTypes},
+		{Name: "TestLongDouble", F: TestLongDouble},
 	})
 }

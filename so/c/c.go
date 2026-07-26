@@ -68,6 +68,32 @@ type LongLong int64
 //so:extern unsigned long long
 type ULongLong uint64
 
+// LongDouble represents a C long double type.
+//
+//so:extern long double
+type LongDouble float64
+
+// Size represents a C size_t type.
+//
+//so:extern size_t
+type Size uint
+
+// SSize represents a C ssize_t type.
+// In freestanding builds it maps to intptr_t.
+//
+//so:extern so_ssize_t
+type SSize int
+
+// Ptrdiff represents a C ptrdiff_t type.
+//
+//so:extern ptrdiff_t
+type Ptrdiff int
+
+// Intptr represents a C intptr_t type.
+//
+//so:extern intptr_t
+type Intptr int
+
 // Alignof returns the alignment of type T in bytes.
 //
 //	alignof(T)
