@@ -301,7 +301,7 @@ func (g *Generator) zeroValue(node ast.Node, typ types.Type) string {
 // declSymbolName returns the C name for a declaration that could be
 // either package-level or function-local.
 func (g *Generator) declSymbolName(obj types.Object) string {
-	if g.state.indent == 0 {
+	if g.state.atTopLevel() {
 		return g.symbolName(obj)
 	}
 	return obj.Name()

@@ -119,7 +119,7 @@ func (g *Generator) emitMapRange(w io.Writer, stmt *ast.RangeStmt) {
 	g.emitExpr(w, stmt.X)
 	fmt.Fprint(w, "->cap; _i++) {\n")
 
-	g.state.indent++
+	g.state.depth++
 
 	// Skip empty slots in hash table.
 	fmt.Fprintf(w, "%sif (!", g.indent())
@@ -152,7 +152,7 @@ func (g *Generator) emitMapRange(w io.Writer, stmt *ast.RangeStmt) {
 		}
 	}
 
-	g.state.indent--
+	g.state.depth--
 
 	g.emitBlock(w, stmt.Body)
 	fmt.Fprintf(w, "%s}\n", g.indent())

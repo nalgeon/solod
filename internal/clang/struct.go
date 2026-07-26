@@ -18,7 +18,7 @@ func (g *Generator) emitStructTypeSpec(w io.Writer, spec *ast.TypeSpec, dirs dir
 	} else {
 		fmt.Fprintf(w, "%stypedef struct %s {\n", g.indent(), cName)
 	}
-	g.state.indent++
+	g.state.depth++
 	for _, field := range st.Fields.List {
 		typ := g.types.TypeOf(field.Type)
 		for _, name := range field.Names {
@@ -34,7 +34,7 @@ func (g *Generator) emitStructTypeSpec(w io.Writer, spec *ast.TypeSpec, dirs dir
 			}
 		}
 	}
-	g.state.indent--
+	g.state.depth--
 	fmt.Fprintf(w, "%s} %s;\n", g.indent(), cName)
 }
 
@@ -61,7 +61,7 @@ func (g *Generator) emitFuncPtrField(w io.Writer, node ast.Node, fieldName strin
 // Does not support function pointer fields within the inline struct.
 func (g *Generator) emitInlineStructField(w io.Writer, st *ast.StructType, fieldName string) {
 	fmt.Fprintf(w, "%sstruct {\n", g.indent())
-	g.state.indent++
+	g.state.depth++
 	for _, f := range st.Fields.List {
 		typ := g.types.TypeOf(f.Type)
 		ct := g.mapTypeDecl(f, typ)
@@ -69,7 +69,7 @@ func (g *Generator) emitInlineStructField(w io.Writer, st *ast.StructType, field
 			fmt.Fprintf(w, "%s%s;\n", g.indent(), ct.Decl(g.fieldNameOf(name)))
 		}
 	}
-	g.state.indent--
+	g.state.depth--
 	fmt.Fprintf(w, "%s} %s;\n", g.indent(), fieldName)
 }
 
@@ -85,8 +85,8 @@ func (g *Generator) emitMethodDecl(w io.Writer, decl *ast.FuncDecl) {
 	named := len(recv.Names) > 0
 	_, isValueRecv := recv.Type.(*ast.Ident)
 
-	g.state.funcSig = sig
-	g.state.tempCount = 0
+	g.state.enterFunc(sig)
+	defer g.state.leaveFunc()
 
 	// Emit comments and function prototype.
 	if !g.emitComments(w, decl) {
@@ -94,7 +94,7 @@ func (g *Generator) emitMethodDecl(w io.Writer, decl *ast.FuncDecl) {
 	}
 	g.emitFuncProto(w, decl)
 	fmt.Fprintln(w, " {")
-	g.state.indent++
+	g.state.depth++
 
 	// Emit receiver preamble.
 	if isValueRecv {
@@ -118,12 +118,8 @@ func (g *Generator) emitMethodDecl(w io.Writer, decl *ast.FuncDecl) {
 	if !endsWithReturn(decl.Body.List) {
 		g.emitDeferredCalls(w)
 	}
-	g.state.indent--
+	g.state.depth--
 	fmt.Fprint(w, "}\n")
-
-	// Reset state.
-	g.state.defers = nil
-	g.state.funcSig = nil
 }
 
 // emitAnonStructLit emits an anonymous struct literal.

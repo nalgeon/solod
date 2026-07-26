@@ -62,7 +62,7 @@ func (g *Generator) emitArrayRange(w io.Writer, stmt *ast.RangeStmt) {
 	// Emit value variable if present (e.g. `for i, v := range nums`).
 	if stmt.Value != nil {
 		if valIdent, ok := stmt.Value.(*ast.Ident); ok && valIdent.Name != "_" {
-			g.state.indent++
+			g.state.depth++
 			valDecl := elemType + " "
 			if stmt.Tok == token.ASSIGN {
 				valDecl = ""
@@ -76,7 +76,7 @@ func (g *Generator) emitArrayRange(w io.Writer, stmt *ast.RangeStmt) {
 				g.emitExpr(w, stmt.X)
 				fmt.Fprintf(w, "[%s];\n", key.Name)
 			}
-			g.state.indent--
+			g.state.depth--
 		}
 	}
 
@@ -111,7 +111,7 @@ func (g *Generator) emitSliceRange(w io.Writer, stmt *ast.RangeStmt) {
 	// Emit value variable if present (e.g. `for i, v := range nums`).
 	if stmt.Value != nil {
 		if valIdent, ok := stmt.Value.(*ast.Ident); ok && valIdent.Name != "_" {
-			g.state.indent++
+			g.state.depth++
 			valDecl := elemType + " "
 			if stmt.Tok == token.ASSIGN {
 				valDecl = ""
@@ -119,7 +119,7 @@ func (g *Generator) emitSliceRange(w io.Writer, stmt *ast.RangeStmt) {
 			fmt.Fprintf(w, "%s%s%s = so_at(%s, ", g.indent(), valDecl, valIdent.Name, elemType)
 			g.emitExpr(w, stmt.X)
 			fmt.Fprintf(w, ", %s);\n", key.Name)
-			g.state.indent--
+			g.state.depth--
 		}
 	}
 
@@ -134,12 +134,12 @@ func (g *Generator) emitStringRange(w io.Writer, stmt *ast.RangeStmt) {
 		fmt.Fprintf(w, "%sfor (so_int _i = 0, _iw = 0; _i < so_len(", g.indent())
 		g.emitExpr(w, stmt.X)
 		fmt.Fprint(w, "); _i += _iw) {\n")
-		g.state.indent++
+		g.state.depth++
 		fmt.Fprintf(w, "%s_iw = 0;\n", g.indent())
 		fmt.Fprintf(w, "%sso_utf8_decode(", g.indent())
 		g.emitExpr(w, stmt.X)
 		fmt.Fprint(w, ", _i, &_iw);\n")
-		g.state.indent--
+		g.state.depth--
 		g.emitBlock(w, stmt.Body)
 		fmt.Fprintf(w, "%s}\n", g.indent())
 		return
@@ -154,7 +154,7 @@ func (g *Generator) emitStringRange(w io.Writer, stmt *ast.RangeStmt) {
 	fmt.Fprintf(w, "); %s += %s) {\n", key.Name, widthVar)
 
 	// Decode rune and width once per iteration.
-	g.state.indent++
+	g.state.depth++
 	fmt.Fprintf(w, "%s%s = 0;\n", g.indent(), widthVar)
 	if stmt.Value != nil {
 		if valIdent, ok := stmt.Value.(*ast.Ident); ok && valIdent.Name != "_" {
@@ -171,7 +171,7 @@ func (g *Generator) emitStringRange(w io.Writer, stmt *ast.RangeStmt) {
 	}
 	g.emitExpr(w, stmt.X)
 	fmt.Fprintf(w, ", %s, &%s);\n", key.Name, widthVar)
-	g.state.indent--
+	g.state.depth--
 
 	g.emitBlock(w, stmt.Body)
 

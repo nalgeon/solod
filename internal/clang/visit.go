@@ -8,6 +8,7 @@ import (
 	"go/types"
 	"io"
 	"os"
+	"slices"
 	"strings"
 )
 
@@ -206,7 +207,7 @@ func (g *Generator) emitGenDecl(w io.Writer, decl *ast.GenDecl) {
 		// Imports are handled separately at [Generator.emitImpl].
 		return
 	case token.CONST:
-		if g.state.indent == 0 {
+		if g.state.atTopLevel() {
 			// Package-level consts are hoisted by emitPackageVars.
 			return
 		}
@@ -214,7 +215,7 @@ func (g *Generator) emitGenDecl(w io.Writer, decl *ast.GenDecl) {
 			g.emitConstSpec(w, spec.(*ast.ValueSpec))
 		}
 	case token.VAR:
-		if g.state.indent == 0 {
+		if g.state.atTopLevel() {
 			// Package-level vars are hoisted by emitPackageVars.
 			return
 		}
@@ -229,7 +230,7 @@ func (g *Generator) emitGenDecl(w io.Writer, decl *ast.GenDecl) {
 	case token.TYPE:
 		// Package-level types are emitted by emitUnexportedTypes (unexported)
 		// or emitHeaderDecls (exported). Only emit inside function bodies.
-		if g.state.indent == 0 {
+		if g.state.atTopLevel() {
 			return
 		}
 		for _, spec := range decl.Specs {
@@ -253,7 +254,7 @@ func (g *Generator) emitConstSpec(w io.Writer, spec *ast.ValueSpec) {
 
 		// Determine constant specifier and name.
 		specifier, constName := "", name.Name
-		if g.state.indent == 0 {
+		if g.state.atTopLevel() {
 			// Exported package-level constants are emitted
 			// in the header with static linkage.
 			if ast.IsExported(constName) {
@@ -294,7 +295,7 @@ func (g *Generator) emitConstVal(w io.Writer, node ast.Node, name *ast.Ident) {
 // dirs provides parsed so: directives for package-level declarations.
 func (g *Generator) emitVarSpec(w io.Writer, spec *ast.ValueSpec, dirs directives) {
 	// Detect self-shadowing in local variable declarations.
-	if g.state.indent > 0 && len(spec.Values) > 0 {
+	if !g.state.atTopLevel() && len(spec.Values) > 0 {
 		rhsNames := collectIdents(spec.Values...)
 		for _, name := range spec.Names {
 			if name.Name == "_" {
@@ -309,7 +310,7 @@ func (g *Generator) emitVarSpec(w io.Writer, spec *ast.ValueSpec, dirs directive
 	// Local multi-variable declaration: group consecutive same-type variables,
 	// but emit separate declarations for different types
 	// (e.g. `int a = 1, b = 2; float c = 3.14;`).
-	if g.state.indent > 0 && len(spec.Names) > 1 {
+	if !g.state.atTopLevel() && len(spec.Names) > 1 {
 		// emitInit emits the i-th initializer, or the zero value if absent.
 		emitInit := func(i int, typ types.Type) {
 			if len(spec.Values) > i {
@@ -371,7 +372,7 @@ func (g *Generator) emitVarSpec(w io.Writer, spec *ast.ValueSpec, dirs directive
 		typ := g.types.Defs[name].Type()
 		ct := g.mapTypeDecl(spec, typ)
 		specifier := ""
-		if g.state.indent == 0 {
+		if g.state.atTopLevel() {
 			// Package-level variable: build specifier with qualifiers.
 			if !ast.IsExported(name.Name) && !dirs.promote {
 				specifier = "static "
@@ -457,10 +458,10 @@ func (g *Generator) emitTypeSpec(w io.Writer, spec *ast.TypeSpec, dirs directive
 func (g *Generator) emitIfStmt(w io.Writer, stmt *ast.IfStmt) {
 	if stmt.Init != nil {
 		fmt.Fprintf(w, "%s{\n", g.indent())
-		g.state.indent++
+		g.state.depth++
 		g.walkAST(w, stmt.Init)
 		g.emitIfInner(w, stmt, g.indent())
-		g.state.indent--
+		g.state.depth--
 		fmt.Fprintf(w, "%s}\n", g.indent())
 	} else {
 		g.emitIfInner(w, stmt, g.indent())
@@ -563,8 +564,7 @@ func (g *Generator) emitReturnStmt(w io.Writer, stmt *ast.ReturnStmt) {
 	// into a temp before running the deferred calls, so the value is captured
 	// before the defers (matching Go, which evaluates the return value first).
 	if len(stmt.Results) > 0 && len(g.state.defers) > 0 && g.returnIsNotConst(stmt) {
-		g.state.tempCount++
-		tmp := fmt.Sprintf("_res%d", g.state.tempCount)
+		tmp := g.state.newTemp()
 		retType := g.returnType(stmt, g.state.funcSig)
 		fmt.Fprintf(w, "%s%s %s = ", g.indent(), retType, tmp)
 		g.emitReturnExpr(w, stmt)
@@ -654,16 +654,16 @@ func (g *Generator) emitComments(w io.Writer, nodes ...ast.Node) bool {
 
 // emitDeferredCalls emits saved generic deferred calls in LIFO order.
 func (g *Generator) emitDeferredCalls(w io.Writer) {
-	for i := len(g.state.defers) - 1; i >= 0; i-- {
-		fmt.Fprintf(w, "%s%s;\n", g.indent(), g.state.defers[i])
+	for _, call := range slices.Backward(g.state.defers) {
+		fmt.Fprintf(w, "%s%s;\n", g.indent(), call)
 	}
 }
 
 // emitBlock emits the statements within a block, adjusting indentation.
 func (g *Generator) emitBlock(w io.Writer, block *ast.BlockStmt) {
-	g.state.indent++
+	g.state.depth++
 	g.walkStmts(w, block.List)
-	g.state.indent--
+	g.state.depth--
 }
 
 // walkStmts walks statements, emitting any associated comments before each.

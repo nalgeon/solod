@@ -173,15 +173,9 @@ func (g *Generator) emitMacroFuncDecl(w io.Writer, decl *ast.FuncDecl) {
 
 	// Capture body output.
 	var buf strings.Builder
-	savedState := g.state
-	g.state.funcSig = sig
-	g.state.tempCount = 0
-	g.state.indent = 1
-	g.state.inMacro = true
-	g.state.macroParams = macroParams
-	g.state.defers = nil
+	g.state.enterMacro(sig, macroParams)
 	g.walkStmts(&buf, decl.Body.List)
-	g.state = savedState
+	g.state.leaveFunc()
 
 	// Determine if returning or void.
 	hasReturn := sig.Results() != nil && sig.Results().Len() > 0
@@ -224,8 +218,8 @@ func (g *Generator) emitFuncBody(w io.Writer, decl *ast.FuncDecl) {
 	// Init emission state.
 	sig := g.funcSig(decl)
 	g.rejectNamedReturns(decl, sig)
-	g.state.funcSig = sig
-	g.state.tempCount = 0
+	g.state.enterFunc(sig)
+	defer g.state.leaveFunc()
 
 	// Emit comments and function prototype.
 	if !g.emitComments(w, decl) {
@@ -235,7 +229,7 @@ func (g *Generator) emitFuncBody(w io.Writer, decl *ast.FuncDecl) {
 	fmt.Fprintln(w, " {")
 
 	// Emit function body, handling deferred calls if needed.
-	g.state.indent++
+	g.state.depth++
 	if isMainFunc(decl) && g.importsOS() {
 		fmt.Fprintf(w, "%sso_String _so_argv[argc];\n", g.indent())
 		fmt.Fprintf(w, "%sso_args_init(argc, argv, _so_argv);\n", g.indent())
@@ -247,12 +241,8 @@ func (g *Generator) emitFuncBody(w io.Writer, decl *ast.FuncDecl) {
 			fmt.Fprintf(w, "%sreturn 0;\n", g.indent())
 		}
 	}
-	g.state.indent--
+	g.state.depth--
 	fmt.Fprint(w, "}\n")
-
-	// Reset state.
-	g.state.defers = nil
-	g.state.funcSig = nil
 }
 
 // emitFuncCall emits a regular function call.

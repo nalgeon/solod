@@ -70,23 +70,6 @@ func Emit(opts EmitOptions) (res EmitResult, err error) {
 	return res, nil
 }
 
-// State holds the code generation state for the current scope.
-type State struct {
-	// Current indentation level (number of tabs).
-	indent int
-	// Current function's signature (for multi-return).
-	funcSig *types.Signature
-	// Deferred generic calls to emit before returns, panics, and function end.
-	defers []string
-	// Counter for unique temp variable names.
-	tempCount int
-	// Whether we are emitting inside a #define macro body.
-	inMacro bool
-	// Non-type macro parameter names. They are suffixed with _ and parenthesized
-	// to avoid name collisions (b->val = val) and syntax errors (&b->val) in macro bodies.
-	macroParams map[string]bool
-}
-
 // Includes holds the C headers to be included in the emitted .h and .c files.
 type Includes struct {
 	header []string // so:include -> emitted in .h
@@ -187,21 +170,18 @@ func (g *Generator) emitInitFunc(w io.Writer) {
 		return
 	}
 	decl := g.initFunc
-	g.state.funcSig = g.funcSig(decl)
-	g.state.tempCount = 0
+	g.state.enterFunc(g.funcSig(decl))
+	defer g.state.leaveFunc()
 
 	fmt.Fprintf(w, "\nstatic void __attribute__((constructor)) %s_init() {\n", g.pkg.Name)
-	g.state.indent++
+	g.state.depth++
 	g.walkStmts(w, decl.Body.List)
 	g.emitDeferredCalls(w)
-	g.state.indent--
+	g.state.depth--
 	fmt.Fprint(w, "}\n")
-
-	g.state.defers = nil
-	g.state.funcSig = nil
 }
 
-// indent returns the current indentation string based on the indent level.
+// indent is a shorthand for the current scope's indentation.
 func (g *Generator) indent() string {
-	return strings.Repeat("    ", g.state.indent)
+	return g.state.indent()
 }

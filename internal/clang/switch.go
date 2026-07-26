@@ -11,10 +11,10 @@ import (
 func (g *Generator) emitSwitchStmt(w io.Writer, stmt *ast.SwitchStmt) {
 	if stmt.Init != nil {
 		fmt.Fprintf(w, "%s{\n", g.indent())
-		g.state.indent++
+		g.state.depth++
 		g.walkAST(w, stmt.Init)
 		g.emitSwitchBody(w, stmt)
-		g.state.indent--
+		g.state.depth--
 		fmt.Fprintf(w, "%s}\n", g.indent())
 	} else {
 		g.emitSwitchBody(w, stmt)
@@ -74,16 +74,16 @@ func (g *Generator) emitSwitchBody(w io.Writer, stmt *ast.SwitchStmt) {
 			}
 		}
 		fmt.Fprint(w, ") {\n")
-		g.state.indent++
+		g.state.depth++
 		g.walkStmts(w, cc.Body)
-		g.state.indent--
+		g.state.depth--
 	}
 
 	if def != nil {
 		fmt.Fprintf(w, "%s} else {\n", g.indent())
-		g.state.indent++
+		g.state.depth++
 		g.walkStmts(w, def.Body)
-		g.state.indent--
+		g.state.depth--
 	}
 	fmt.Fprintf(w, "%s}\n", g.indent())
 }
