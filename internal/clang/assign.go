@@ -164,7 +164,7 @@ func (g *Generator) emitDefine(w io.Writer, stmt *ast.AssignStmt) {
 		// Pointer types and anonymous structs can't be grouped:
 		//  - `T* a, b` declares a as T* but b as T
 		//  - __auto_type allows only one declarator per statement
-		if _, isPtr := typ.(*types.Pointer); isPtr || isAnonStruct(typ) {
+		if ct.IsPointer() || isAnonStruct(typ) {
 			fmt.Fprint(w, ";\n")
 			continue
 		}

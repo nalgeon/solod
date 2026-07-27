@@ -1,5 +1,7 @@
 package main
 
+import "unsafe"
+
 type number int
 
 type point struct {
@@ -56,6 +58,16 @@ func main() {
 		acceptAny(n)
 		acceptAny(any(n))
 		acceptByte(any(n).(*byte))
+	}
+	{
+		// Unsafe pointer.
+		nval := 42
+		p := unsafe.Pointer(&nval)
+		acceptAny(p)
+		acceptAny(any(p))
+		if any(p).(unsafe.Pointer) != p {
+			panic("want any(p).(unsafe.Pointer) == p")
+		}
 	}
 	{
 		// String value.

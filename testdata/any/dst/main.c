@@ -75,6 +75,16 @@ int main(void) {
         acceptByte((so_byte*)n);
     }
     {
+        // Unsafe pointer.
+        so_int nval = 42;
+        void* p = (void*)(&nval);
+        acceptAny(p);
+        acceptAny(p);
+        if ((void*)p != p) {
+            so_panic("want any(p).(unsafe.Pointer) == p");
+        }
+    }
+    {
         // String value.
         so_String s = so_str("hello");
         acceptAny(&s);

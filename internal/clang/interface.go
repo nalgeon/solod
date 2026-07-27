@@ -97,7 +97,7 @@ func (g *Generator) emitTypeAssertExpr(w io.Writer, n *ast.TypeAssertExpr) {
 	if iface, ok := sourceType.Underlying().(*types.Interface); ok && iface.Empty() {
 		targetType := g.types.TypeOf(n.Type)
 		cType := g.mapTypeName(n, targetType)
-		if _, isPtr := targetType.Underlying().(*types.Pointer); isPtr {
+		if isPointerType(targetType) {
 			// Pointer assertion: any.(*Type) -> (Type*)expr
 			fmt.Fprintf(w, "(%s)", cType)
 			g.emitExpr(w, n.X)
@@ -143,9 +143,8 @@ func (g *Generator) emitAnyValue(w io.Writer, node ast.Node, expr ast.Expr) {
 		return
 	}
 
-	_, isPtr := valType.Underlying().(*types.Pointer)
 	iface, isIface := valType.Underlying().(*types.Interface)
-	if isPtr || (isIface && iface.Empty()) {
+	if isPointerType(valType) || (isIface && iface.Empty()) {
 		// Pointer values pass through as-is (implicitly convertible to void*).
 		// Empty interface (any) values pass through as-is (already void*).
 		g.emitExpr(w, expr)

@@ -45,6 +45,12 @@ func (t CType) IsArray() bool {
 	return t.Dims != "" && !t.PtrToArray
 }
 
+// IsPointer reports whether the declaration uses a `*` to indicate a pointer.
+// A named pointer type is a typedef, so it hides the `*` and reports false.
+func (t CType) IsPointer() bool {
+	return t.PtrToArray || strings.HasSuffix(t.Base, "*")
+}
+
 // mapTypeDecl maps a Go type to a [CType].
 //
 // Use it when the type introduces a name (locals, params, struct fields,
@@ -355,6 +361,18 @@ func isErrorType(typ types.Type) bool {
 func isNilType(t types.Type) bool {
 	basic, ok := t.(*types.Basic)
 	return ok && basic.Kind() == types.UntypedNil
+}
+
+// isPointerType reports whether t is a pointer type. unsafe.Pointer counts:
+// it maps to void*, so it behaves like a pointer everywhere in the generated C.
+func isPointerType(t types.Type) bool {
+	switch u := t.Underlying().(type) {
+	case *types.Pointer:
+		return true
+	case *types.Basic:
+		return u.Kind() == types.UnsafePointer
+	}
+	return false
 }
 
 // isIntegerType reports whether t is an integer type (named or not).

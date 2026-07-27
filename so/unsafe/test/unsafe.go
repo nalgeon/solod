@@ -81,4 +81,10 @@ func TestPointer(t *testing.T) {
 	if *(*int)(p) != 42 {
 		t.Error("want *(int*)p == 42")
 	}
+
+	// An unsafe pointer is stored in an any as is, not by address.
+	var a any = p
+	if *(*int)(a.(unsafe.Pointer)) != 42 {
+		t.Error("want *(int*)a == 42")
+	}
 }

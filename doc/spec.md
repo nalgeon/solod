@@ -912,6 +912,10 @@ a = r // in C: a = &r
 var rp *Rect = &Rect{5, 10}
 a = rp // in C: a = rp
 
+// Unsafe pointer (also a pointer, so it is stored as is).
+var up = unsafe.Pointer(rp)
+a = up // in C: a = up
+
 // Named interface value.
 var sh Shape = &r
 a = sh // in C: a = &sh

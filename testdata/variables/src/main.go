@@ -1,5 +1,7 @@
 package main
 
+import "unsafe"
+
 type person struct {
 	age int
 }
@@ -172,6 +174,9 @@ func main() {
 		n1, n2 := number(&vStruct.age), number(&vStruct.age)
 		_ = n1
 		_ = n2
+		u1, u2 := unsafe.Pointer(&vStruct), unsafe.Pointer(&vStruct)
+		_ = u1
+		_ = u2
 	}
 	{
 		// Discarding values with blank identifier.

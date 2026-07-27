@@ -188,6 +188,10 @@ int main(void) {
         number n1 = (number)(&vStruct.age), n2 = (number)(&vStruct.age);
         (void)n1;
         (void)n2;
+        void* u1 = (void*)(&vStruct);
+        void* u2 = (void*)(&vStruct);
+        (void)u1;
+        (void)u2;
     }
     {
         // Discarding values with blank identifier.
