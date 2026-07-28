@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -10,32 +11,49 @@ import (
 	"github.com/nalgeon/be"
 )
 
-func TestTranslate(t *testing.T) {
-	testDirs, err := filepath.Glob("../../testdata/*")
-	be.Err(t, err, nil)
+// badDir holds the cases that must fail to translate.
+const badDir = "bad"
 
-	for _, testDir := range testDirs {
-		if !isDir(testDir) {
+func TestTranslate(t *testing.T) {
+	for _, testDir := range caseDirs(t, "../../testdata/*") {
+		name := filepath.Base(testDir)
+		if name == badDir {
 			continue
 		}
-		parts := strings.Split(testDir, string(filepath.Separator))
-		name := parts[len(parts)-1]
 		t.Run(name, func(t *testing.T) {
 			testPackage(t, testDir)
 		})
 	}
 }
 
+func TestTranslateBad(t *testing.T) {
+	for _, testDir := range caseDirs(t, filepath.Join("../../testdata", badDir, "*")) {
+		t.Run(filepath.Base(testDir), func(t *testing.T) {
+			testBadPackage(t, testDir)
+		})
+	}
+}
+
+func caseDirs(t *testing.T, pattern string) []string {
+	matches, err := filepath.Glob(pattern)
+	be.Err(t, err, nil)
+
+	dirs := make([]string, 0, len(matches))
+	for _, match := range matches {
+		if isDir(match) {
+			dirs = append(dirs, match)
+		}
+	}
+	return dirs
+}
+
+// testPackage asserts that the case translates and matches its dst files.
 func testPackage(t *testing.T, testDir string) {
 	srcDir := filepath.Join(testDir, "src")
 	expectedDir := filepath.Join(testDir, "dst")
+	tempOut := t.TempDir()
 
-	// Create temp output dir
-	tempOut, err := os.MkdirTemp("", "solod_out")
-	be.Err(t, err, nil)
-	defer os.RemoveAll(tempOut)
-
-	_, err = Translate(srcDir, tempOut, Options{})
+	libs, err := Translate(srcDir, tempOut, Options{})
 	be.Err(t, err, nil)
 
 	// Compare output with expected (recursively)
@@ -50,6 +68,51 @@ func testPackage(t *testing.T, testDir string) {
 			t.Errorf("missing builtin file: %s", name)
 		}
 	}
+
+	// Compare linked libraries with expected, if the case declares any.
+	if want, ok := readGolden(t, filepath.Join(testDir, "links.txt")); ok {
+		be.Equal(t, strings.Join(libs, "\n"), want)
+	}
+}
+
+// testBadPackage asserts that the case fails to translate
+// with the error recorded in error.txt.
+func testBadPackage(t *testing.T, testDir string) {
+	srcDir := filepath.Join(testDir, "src")
+
+	_, err := Translate(srcDir, t.TempDir(), Options{})
+	if err == nil {
+		t.Fatal("expected translation to fail")
+	}
+
+	got := cleanError(err, srcDir)
+	want, ok := readGolden(t, filepath.Join(testDir, "error.txt"))
+	if !ok {
+		t.Fatalf("missing error.txt:\ngot:\n%s", got)
+	}
+	if got != want {
+		t.Errorf("error.txt:\ngot:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+// readGolden reads a golden file, reporting whether it exists.
+func readGolden(t *testing.T, path string) (string, bool) {
+	content, err := os.ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", false
+	}
+	be.Err(t, err, nil)
+	return strings.TrimSpace(string(content)), true
+}
+
+// cleanError strips the absolute source path from the error message,
+// so that golden errors do not depend on the checkout location.
+func cleanError(err error, srcDir string) string {
+	msg := err.Error()
+	if absSrc, absErr := filepath.Abs(srcDir); absErr == nil {
+		msg = strings.ReplaceAll(msg, absSrc+string(filepath.Separator), "")
+	}
+	return strings.TrimSpace(msg)
 }
 
 func assertFile(t *testing.T, dir, path, tempOut string, d fs.DirEntry, err error) error {
@@ -88,11 +151,9 @@ func assertFile(t *testing.T, dir, path, tempOut string, d fs.DirEntry, err erro
 
 func TestTrackSource(t *testing.T) {
 	srcDir := "../../testdata/panic/src"
-	tempOut, err := os.MkdirTemp("", "so_tracksource")
-	be.Err(t, err, nil)
-	defer os.RemoveAll(tempOut)
+	tempOut := t.TempDir()
 
-	_, err = Translate(srcDir, tempOut, Options{TrackSource: true})
+	_, err := Translate(srcDir, tempOut, Options{TrackSource: true})
 	be.Err(t, err, nil)
 
 	content, err := os.ReadFile(filepath.Join(tempOut, "main.c"))
@@ -115,54 +176,6 @@ func TestTrackSource(t *testing.T) {
 	if !found {
 		t.Fatal("no #line directives found")
 	}
-}
-
-func TestTranslateLinks(t *testing.T) {
-	// The fixture imports so/math, which declares //so:link m.
-	srcDir := "testdata/link"
-	tempOut, err := os.MkdirTemp("", "so_link")
-	be.Err(t, err, nil)
-	defer os.RemoveAll(tempOut)
-
-	libs, err := Translate(srcDir, tempOut, Options{})
-	be.Err(t, err, nil)
-	be.Equal(t, libs, []string{"m"})
-}
-
-func TestTranslateLinkEmpty(t *testing.T) {
-	// A so:link directive without a library name must be rejected.
-	srcDir := "testdata/link_empty"
-	tempOut, err := os.MkdirTemp("", "so_link_empty")
-	be.Err(t, err, nil)
-	defer os.RemoveAll(tempOut)
-
-	_, err = Translate(srcDir, tempOut, Options{})
-	be.True(t, err != nil)
-}
-
-func TestTranslateGenericField(t *testing.T) {
-	// A type parameter in a struct field has no C representation.
-	srcDir := "testdata/generic_field"
-	tempOut, err := os.MkdirTemp("", "so_generic_field")
-	be.Err(t, err, nil)
-	defer os.RemoveAll(tempOut)
-
-	_, err = Translate(srcDir, tempOut, Options{})
-	be.True(t, err != nil)
-	be.True(t, strings.Contains(err.Error(), "type parameter T"))
-}
-
-func TestTranslateGenericMethod(t *testing.T) {
-	// A generic method must be so:inline or so:extern, because call sites
-	// pass the receiver's type arguments that a regular C function cannot take.
-	srcDir := "testdata/generic_method"
-	tempOut, err := os.MkdirTemp("", "so_generic_method")
-	be.Err(t, err, nil)
-	defer os.RemoveAll(tempOut)
-
-	_, err = Translate(srcDir, tempOut, Options{})
-	be.True(t, err != nil)
-	be.True(t, strings.Contains(err.Error(), "generic method Get"))
 }
 
 func isDir(path string) bool {

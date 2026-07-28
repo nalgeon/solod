@@ -1,0 +1,3 @@
+main.go:5:2: type parameter T is only allowed in a so:inline macro
+	a, b T
+	^here

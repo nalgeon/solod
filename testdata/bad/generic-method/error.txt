@@ -1,0 +1,3 @@
+main.go:10:1: generic method Get must be so:inline or so:extern
+func (b *Box[T]) Get() uint32 {
+^here

@@ -84,13 +84,15 @@ update-dst:
 	cp generated/$(name)/main.* testdata/$(name)/dst
 	go test -run TestTranslate/$(name) ./internal/compiler
 
-# Runs tests in every testdata/* subdirectory.
+# Runs tests in every testdata/* subdirectory, except testdata/bad
+# (those cases must fail to translate, so there is nothing to run).
 test-lang:
 	@mkdir -p generated
 	@failed=0; \
 	for dir in $$(ls -d testdata/*/); do \
 		name=$${dir#testdata/}; \
 		name=$${name%/}; \
+		if [ "$$name" = "bad" ]; then continue; fi; \
 		if make run-case name=$$name > generated/so_test_out.txt 2>&1; then \
 			echo "PASS $$name"; \
 		else \
