@@ -1,0 +1,3 @@
+main.go:9:1: no matching function type for signature
+func pick() func(int) int {
+^here

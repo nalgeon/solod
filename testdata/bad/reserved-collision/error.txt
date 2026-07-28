@@ -1,0 +1,3 @@
+main.go:6:2: mangled name "long_" for reserved word "long" collides with an existing identifier; rename one of them
+	long := 2
+	^here

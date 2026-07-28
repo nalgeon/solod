@@ -1,0 +1,3 @@
+main.go:4:6: recursive type StateFn cannot be expressed in C
+type StateFn func() StateFn
+     ^here

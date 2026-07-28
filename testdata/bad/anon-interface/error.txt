@@ -1,0 +1,3 @@
+main.go:4:6: unsupported non-empty anonymous interface
+	var r interface{ Read() int }
+	    ^here

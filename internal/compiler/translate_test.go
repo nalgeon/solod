@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"errors"
+	"flag"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -13,6 +14,9 @@ import (
 
 // badDir holds the cases that must fail to translate.
 const badDir = "bad"
+
+// update rewrites the error.txt goldens instead of comparing them.
+var update = flag.Bool("update", false, "overwrite expected errors with actual ones")
 
 func TestTranslate(t *testing.T) {
 	for _, testDir := range caseDirs(t, "../../testdata/*") {
@@ -86,7 +90,13 @@ func testBadPackage(t *testing.T, testDir string) {
 	}
 
 	got := cleanError(err, srcDir)
-	want, ok := readGolden(t, filepath.Join(testDir, "error.txt"))
+	errPath := filepath.Join(testDir, "error.txt")
+	if *update {
+		be.Err(t, os.WriteFile(errPath, []byte(got+"\n"), 0o644), nil)
+		return
+	}
+
+	want, ok := readGolden(t, errPath)
 	if !ok {
 		t.Fatalf("missing error.txt:\ngot:\n%s", got)
 	}

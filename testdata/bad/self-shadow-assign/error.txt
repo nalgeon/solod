@@ -1,0 +1,3 @@
+main.go:7:3: self-shadowing variable "x" is not supported
+		x := x + 1
+		^here

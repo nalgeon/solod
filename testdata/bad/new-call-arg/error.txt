@@ -1,0 +1,3 @@
+main.go:8:7: new() with function call argument is not supported
+	p := new(value())
+	     ^here

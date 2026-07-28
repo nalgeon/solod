@@ -84,6 +84,12 @@ update-dst:
 	cp generated/$(name)/main.* testdata/$(name)/dst
 	go test -run TestTranslate/$(name) ./internal/compiler
 
+# Overwrites the expected error of a testdata/bad case with the actual one.
+# Updates every case if name is empty.
+update-err:
+	go test -run 'TestTranslateBad/$(name)' ./internal/compiler -update
+	go test -run 'TestTranslateBad/$(name)' ./internal/compiler
+
 # Runs tests in every testdata/* subdirectory, except testdata/bad
 # (those cases must fail to translate, so there is nothing to run).
 test-lang:

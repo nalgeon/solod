@@ -1,0 +1,3 @@
+main.go:10:19: cannot use an array value in a composite literal: use an array literal or assign the field separately
+	g := Grid{cells: cells}
+	                 ^here

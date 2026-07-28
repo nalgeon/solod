@@ -1,0 +1,3 @@
+main.go:6:2: multiple assignment with LHS/RHS variable overlap is not supported
+	a, b = b, a
+	^here
