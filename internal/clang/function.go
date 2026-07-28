@@ -114,6 +114,15 @@ func (g *Generator) emitFuncDecl(w io.Writer, decl *ast.FuncDecl) {
 	if g.funcDirs[decl].inline {
 		return
 	}
+	if isGenericFunc(decl) {
+		// Type parameters only exist as macro arguments. A regular function
+		// can't handle them, yet call sites still pass them.
+		kind := "function"
+		if decl.Recv != nil {
+			kind = "method"
+		}
+		g.fail(decl, "generic %s %s must be so:inline or so:extern", kind, decl.Name.Name)
+	}
 	g.emitFuncBody(w, decl)
 }
 

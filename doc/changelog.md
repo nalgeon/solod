@@ -4,6 +4,18 @@ This document outlines the main changes in different So versions.
 
 ## Solod 0.4 (in progress)
 
+### Language
+
+**Type parameters are rejected where C has nothing to emit**. A type parameter exists for Go type-checking and as a macro argument, so it may only appear inside an `so:inline` macro. Declarations that would have emitted a bare `T` into C are now errors instead of invalid output:
+
+```go
+type Pair[T any] struct{ a, b T } // rejected: no C type for T
+
+type Stack[T any] struct{ items []T } // OK: so_Slice is type-erased
+```
+
+A generic function or method must be `so:inline` or `so:extern`, even when its signature never mentions the type parameter. See the [generics guide](./generics.md) for details.
+
 ### Interop
 
 **C field name override**. A `c:"..."` struct tag sets the C name of a field, so an extern struct can match a C header field whose name is a Go keyword:

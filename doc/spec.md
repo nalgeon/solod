@@ -1070,11 +1070,11 @@ Defer can only use variables declared at the top level of a function, not inside
 
 ## C interop
 
-So provides several tools for easy C interop. They are explained in a [separate document](./interop.md).
+So provides several tools for easy C interop. See the [interop guide](./interop.md) for details.
 
 ## Generics
 
-So supports two forms of generic functions: extern declarations and inline macros. Both are very limited and usually not needed. They are explained in a [separate document](./generics.md).
+So supports generic functions as extern declarations and inline macros, and also supports generic types. However, these features are very limited, and you should only use generics for the simplest cases (or, even better — don't use them at all). See the [generics guide](./generics.md) for details.
 
 ## Packages
 

@@ -140,6 +140,31 @@ func TestTranslateLinkEmpty(t *testing.T) {
 	be.True(t, err != nil)
 }
 
+func TestTranslateGenericField(t *testing.T) {
+	// A type parameter in a struct field has no C representation.
+	srcDir := "testdata/generic_field"
+	tempOut, err := os.MkdirTemp("", "so_generic_field")
+	be.Err(t, err, nil)
+	defer os.RemoveAll(tempOut)
+
+	_, err = Translate(srcDir, tempOut, Options{})
+	be.True(t, err != nil)
+	be.True(t, strings.Contains(err.Error(), "type parameter T"))
+}
+
+func TestTranslateGenericMethod(t *testing.T) {
+	// A generic method must be so:inline or so:extern, because call sites
+	// pass the receiver's type arguments that a regular C function cannot take.
+	srcDir := "testdata/generic_method"
+	tempOut, err := os.MkdirTemp("", "so_generic_method")
+	be.Err(t, err, nil)
+	defer os.RemoveAll(tempOut)
+
+	_, err = Translate(srcDir, tempOut, Options{})
+	be.True(t, err != nil)
+	be.True(t, strings.Contains(err.Error(), "generic method Get"))
+}
+
 func isDir(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()

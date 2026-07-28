@@ -1,6 +1,6 @@
 # Generics
 
-So supports two forms of generic functions: extern declarations and inline macros. Both are very limited and usually not needed.
+So supports generic functions as [extern declarations](#generic-extern-declarations) and [inline macros](#generic-inline-macros), and also supports [generic types](#generic-types). However, these features are very limited, and you should only use generics for the simplest cases (or, even better — don't use them at all).
 
 ## Generic extern declarations
 
@@ -73,8 +73,6 @@ typedef struct {
 ```
 
 Constraints (`any`, `comparable`, etc.) are used only for Go type-checking and are not emitted in C.
-
-Non-extern generic types are not supported.
 
 ## Generic inline macros
 
@@ -198,3 +196,57 @@ func max[T int](a, b T) T {
     return b
 }
 ```
+
+## Generic types
+
+A type parameter never reaches the generated C. It exists for Go type-checking and as a macro argument, nothing else. A generic type declaration is therefore allowed only when its C representation does not depend on the type parameters:
+
+```go
+// OK: one C struct serves every instantiation.
+type Stack[T any] struct {
+    items []T          // so_Slice items;
+    index map[string]T // so_Map* index;
+}
+
+// Rejected: there is no C type to emit for T.
+type Pair[T any] struct{ a, b T }
+type Ref[T any] struct{ p *T }
+type List[T any] func(T)
+```
+
+Slices and maps are type-erased in C (`so_Slice`, `so_Map*`), so a `[]T` or `map[K]V` field carries no dependency on the type parameters. A field typed `T`, `*T`, or a function mentioning `T` does.
+
+The usual pattern uses a phantom type parameter: the Go type is generic for type safety, the C struct doesn't include the type parameter, and the type parameter is used by `so:inline` methods:
+
+```go
+type Chan[T any] struct {
+    buf *Buffer     // no field mentions T
+    rdv *Rendezvous
+}
+
+//so:inline
+func (ch *Chan[T]) Send(v T) {
+    // T is a macro argument here
+}
+```
+
+If the type is marked with `so:extern`, you can use type parameters in fields without any restrictions, because extern type definitions aren't emitted (they come from hand-written C code):
+
+```go
+// OK: type definiton comes from C.
+//so:extern atomic_Pointer
+type Pointer[T any] struct {
+	v *T
+}
+```
+
+The same rule covers functions and methods. A generic one must be `so:inline` or `so:extern`, because a regular C function has nowhere to declare a type parameter while its call sites still pass one:
+
+```go
+//so:inline
+func (s *Stack[T]) First() T { ... } // OK: #define main_Stack_First(T, s_)
+
+func (s *Stack[T]) First() T { ... } // rejected
+```
+
+This holds even when the signature itself never mentions `T`: the receiver's type parameters are still prepended at every call site.
