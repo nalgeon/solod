@@ -564,7 +564,7 @@ func (g *Generator) emitReturnStmt(w io.Writer, stmt *ast.ReturnStmt) {
 	// into a temp before running the deferred calls, so the value is captured
 	// before the defers (matching Go, which evaluates the return value first).
 	if len(stmt.Results) > 0 && len(g.state.defers) > 0 && g.returnIsNotConst(stmt) {
-		tmp := g.state.newTemp()
+		tmp := g.newTemp(stmt, tempResult)
 		retType := g.returnType(stmt, g.state.funcSig)
 		fmt.Fprintf(w, "%s%s %s = ", g.indent(), retType, tmp)
 		g.emitReturnExpr(w, stmt)

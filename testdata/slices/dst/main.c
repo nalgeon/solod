@@ -510,12 +510,18 @@ int main(void) {
         }
     }
     {
-        // Nil slice: comparison.
+        // Nil slice: comparison. Nil works on either side.
         so_Slice s = {0};
         if (s.ptr != NULL) {
             so_panic("want nil slice");
         }
+        if (s.ptr != NULL) {
+            so_panic("want nil slice");
+        }
         s = (so_Slice){(so_int[1]){1}, 1, 1};
+        if (s.ptr == NULL) {
+            so_panic("want non-nil slice");
+        }
         if (s.ptr == NULL) {
             so_panic("want non-nil slice");
         }

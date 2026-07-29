@@ -76,9 +76,12 @@ func main() {
 		_ = s
 	}
 	{
-		// Nil interface.
+		// Nil interface. Nil works on either side.
 		var s1 Shape
 		if s1 != nil {
+			panic("want nil interface")
+		}
+		if nil != s1 {
 			panic("want nil interface")
 		}
 		var s2 Shape = nil
@@ -96,6 +99,9 @@ func main() {
 		var r Rect
 		var s4 Shape = &r
 		if s4 == nil {
+			panic("want non-nil interface")
+		}
+		if nil == s4 {
 			panic("want non-nil interface")
 		}
 	}

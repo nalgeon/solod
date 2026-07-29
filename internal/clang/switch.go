@@ -3,51 +3,92 @@ package clang
 import (
 	"fmt"
 	"go/ast"
+	"go/token"
+	"go/types"
 	"io"
 )
 
-// emitSwitchStmt emits a switch statement, wrapping
-// in a scope block if there's an init statement.
+// emitSwitchStmt emits a switch statement, wrapping in a scope block
+// if there's an init statement or a tag temporary.
 func (g *Generator) emitSwitchStmt(w io.Writer, stmt *ast.SwitchStmt) {
-	if stmt.Init != nil {
-		fmt.Fprintf(w, "%s{\n", g.indent())
-		g.state.depth++
-		g.walkAST(w, stmt.Init)
-		g.emitSwitchBody(w, stmt)
-		g.state.depth--
-		fmt.Fprintf(w, "%s}\n", g.indent())
-	} else {
-		g.emitSwitchBody(w, stmt)
-	}
-}
-
-// emitSwitchBody emits the if/else-if/else chain for a switch statement.
-func (g *Generator) emitSwitchBody(w io.Writer, stmt *ast.SwitchStmt) {
-	var cases []*ast.CaseClause
-	var def *ast.CaseClause
-	for _, s := range stmt.Body.List {
-		cc := s.(*ast.CaseClause)
-		if cc.List == nil {
-			def = cc
-		} else {
-			cases = append(cases, cc)
-		}
+	cases, def := splitCases(stmt)
+	if stmt.Tag != nil {
+		g.checkTagType(stmt.Tag)
 	}
 
-	// Empty switch.
-	if len(cases) == 0 && def == nil {
-		fmt.Fprintf(w, "%sif (false) {\n%s}\n", g.indent(), g.indent())
+	// The if/else chain repeats the tag in every comparison, but Go evaluates
+	// it exactly once, so the tag goes into a temporary.
+	hoist := stmt.Tag != nil && len(cases) > 0
+	if stmt.Init == nil && !hoist {
+		g.emitSwitchBody(w, stmt.Tag, nil, cases, def)
 		return
 	}
 
-	// Default-only.
+	// Wrap the switch in a scope block for the init statement and the temporary.
+	fmt.Fprintf(w, "%s{\n", g.indent())
+	g.state.depth++
+	if stmt.Init != nil {
+		g.walkAST(w, stmt.Init)
+	}
+	var tagRef *ast.Ident
+	if hoist {
+		tagRef = g.emitTagTemp(w, stmt.Tag)
+	}
+	g.emitSwitchBody(w, stmt.Tag, tagRef, cases, def)
+	g.state.depth--
+	fmt.Fprintf(w, "%s}\n", g.indent())
+}
+
+// checkTagType rejects a switch tag whose type has no place to go.
+func (g *Generator) checkTagType(tag ast.Expr) {
+	switch types.Default(g.types.TypeOf(tag)).Underlying().(type) {
+	case *types.Array:
+		// C has no array assignment, so the value has nowhere to go.
+		g.fail(tag, "switch on an array is not supported")
+	case *types.Struct:
+		// Case comparisons follow the rules of ==, which rejects structs.
+		g.fail(tag, "switch on a struct is not supported")
+	}
+}
+
+// emitTagTemp declares a temporary holding the switch tag value and returns
+// a reference to it. The reference carries the tag's type and position, so
+// comparisons and diagnostics treat it like the tag itself.
+func (g *Generator) emitTagTemp(w io.Writer, tag ast.Expr) *ast.Ident {
+	typ := types.Default(g.types.TypeOf(tag))
+	ref := &ast.Ident{NamePos: tag.Pos(), Name: g.newTemp(tag, tempSwitch)}
+	// The reference has no declaration to look up, so record its type directly.
+	g.types.Types[ref] = types.TypeAndValue{Type: typ}
+	fmt.Fprintf(w, "%s%s = ", g.indent(), g.mapTypeDecl(tag, typ).Decl(ref.Name))
+	g.emitExpr(w, tag)
+	fmt.Fprint(w, ";\n")
+	return ref
+}
+
+// emitSwitchBody emits the if/else-if/else chain for a switch statement.
+// tagRef refers to the temporary holding the tag value, if there is one.
+func (g *Generator) emitSwitchBody(w io.Writer, tag ast.Expr, tagRef *ast.Ident, cases []*ast.CaseClause, def *ast.CaseClause) {
+	// No comparisons to emit, but the tag still runs.
 	if len(cases) == 0 {
+		if tag != nil {
+			g.emitDiscard(w, tag)
+		}
+		if def == nil {
+			// Empty switch.
+			fmt.Fprintf(w, "%sif (false) {\n%s}\n", g.indent(), g.indent())
+			return
+		}
+		// Default-only. The body keeps its own scope block, so that its
+		// declarations do not collide with the surrounding ones.
+		fmt.Fprintf(w, "%s{\n", g.indent())
+		g.state.depth++
 		g.walkStmts(w, def.Body)
+		g.state.depth--
+		fmt.Fprintf(w, "%s}\n", g.indent())
 		return
 	}
 
 	// Emit if/else-if chain.
-	isString := stmt.Tag != nil && g.hasStringType(stmt.Tag)
 	for i, cc := range cases {
 		if i == 0 {
 			fmt.Fprintf(w, "%sif (", g.indent())
@@ -58,20 +99,12 @@ func (g *Generator) emitSwitchBody(w io.Writer, stmt *ast.SwitchStmt) {
 			if j > 0 {
 				fmt.Fprint(w, " || ")
 			}
-			if stmt.Tag == nil {
+			if tagRef == nil {
 				g.emitExpr(w, expr)
-			} else if isString {
-				fmt.Fprint(w, "so_string_eq(")
-				g.emitExpr(w, stmt.Tag)
-				fmt.Fprint(w, ", ")
-				g.emitExpr(w, expr)
-				fmt.Fprint(w, ")")
-			} else {
-				g.emitExpr(w, stmt.Tag)
-				fmt.Fprint(w, " == (")
-				g.emitExpr(w, expr)
-				fmt.Fprint(w, ")")
+				continue
 			}
+			cond := &ast.BinaryExpr{X: tagRef, OpPos: expr.Pos(), Op: token.EQL, Y: g.groupCase(expr)}
+			g.emitExpr(w, cond)
 		}
 		fmt.Fprint(w, ") {\n")
 		g.state.depth++
@@ -86,4 +119,31 @@ func (g *Generator) emitSwitchBody(w io.Writer, stmt *ast.SwitchStmt) {
 		g.state.depth--
 	}
 	fmt.Fprintf(w, "%s}\n", g.indent())
+}
+
+// groupCase parenthesizes a case expression so that comparing it to the tag
+// keeps the Go grouping. Go treats the expression as a whole, but C would
+// regroup it: && and || bind looser than ==, and == and != chain left to right.
+func (g *Generator) groupCase(expr ast.Expr) ast.Expr {
+	if _, ok := expr.(*ast.BinaryExpr); !ok {
+		return expr
+	}
+	paren := &ast.ParenExpr{Lparen: expr.Pos(), X: expr, Rparen: expr.End()}
+	// Like any other node, the wrapper has to carry the type of its value,
+	// because the comparison reads the types of both operands.
+	g.types.Types[paren] = g.types.Types[expr]
+	return paren
+}
+
+// splitCases separates the case clauses of a switch from its default clause.
+func splitCases(stmt *ast.SwitchStmt) (cases []*ast.CaseClause, def *ast.CaseClause) {
+	for _, s := range stmt.Body.List {
+		cc := s.(*ast.CaseClause)
+		if cc.List == nil {
+			def = cc
+		} else {
+			cases = append(cases, cc)
+		}
+	}
+	return cases, def
 }

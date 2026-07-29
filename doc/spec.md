@@ -472,9 +472,9 @@ case 42:
 }
 ```
 
-String switch uses `memcmp` for comparisons.
+The tag is evaluated once, before any case expression, and the case expressions are compared to it in order.
 
-`fallthrough` and type switches are not supported.
+Not supported: switching on structs or arrays, type switches, `fallthrough`.
 
 ## For
 
@@ -858,6 +858,7 @@ Interface methods must use pointer receivers, since the vtable uses `void* self`
 Converting a concrete type to an interface requires passing a pointer:
 
 ```go
+r := Rect{2, 4}
 s := Shape(&r)
 var s2 Shape = &r
 ```
@@ -886,6 +887,15 @@ r := s.(*Rect)        // direct assertion
 Empty interfaces (`interface{}` and `any`) are translated to `void*`.
 
 Converting between named interfaces is not supported: no type assertions like `iface.(AnotherIface)` and no type switches.
+
+Two interfaces are equal when they hold the same pointer, and an interface compares with `nil` as expected. Comparing an interface with a concrete type is not supported:
+
+```go
+var s Shape = &r
+if s == nil { }   // supported
+if s == other { } // supported, other is a Shape
+if s == &r { }    // not supported
+```
 
 ## Any
 
@@ -932,6 +942,15 @@ r2 := a.(*Rect)  // DO NOT do this
 ```
 
 Because `any` carries no runtime type information, the assertion `a.(Shape)` is unchecked — it trusts that `a` holds a `Shape`. Unlike Go, you should never assert `a.(*Rect)`; doing so will give you an incorrectly typed pointer. Once an interface is boxed into an `any`, you have to assert it back to the interface type (`Shape`), not the concrete pointer type inside it (`*Rect`).
+
+An `any` compares (`==`, `!=`) with `nil`, with a pointer, or with another `any`. Comparing it with a value is not supported: an `any` holds the address of the value, not the value itself:
+
+```go
+var a any = n
+if a == nil { }  // supported
+if a == &n { }   // supported, &n is a pointer
+if a == n { }    // not supported
+```
 
 ## Enums
 

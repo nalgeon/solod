@@ -18,6 +18,9 @@ typedef struct rater {
 // -- Forward declarations --
 static so_int scale(so_int long_, so_int register_);
 static so_int shadow(so_int long_);
+static so_int switchTemp(so_int x);
+static so_R_int_int pair(void);
+static so_int resultTemp(void);
 
 // -- Variables and constants --
 
@@ -43,6 +46,32 @@ static so_int shadow(so_int long_) {
     return long_;
 }
 
+// A name that looks like a generated temporary is not reserved: the switch
+// tag temporary picks the next free name instead of shadowing the variable.
+static so_int switchTemp(so_int x) {
+    so_int _sw1 = 99;
+    {
+        so_int _sw2 = x;
+        if (_sw2 == 1) {
+            return _sw1;
+        }
+    }
+    return 0;
+}
+
+static so_R_int_int pair(void) {
+    return (so_R_int_int){.val = 1, .val2 = 2};
+}
+
+// The same for the temporary that holds a multi-value call result.
+static so_int resultTemp(void) {
+    so_int _res1 = 99;
+    so_R_int_int _res2 = pair();
+    so_int a = _res2.val;
+    so_int b = _res2.val2;
+    return _res1 + a + b;
+}
+
 int main(void) {
     // C keywords used as local variables.
     so_int long_ = 10;
@@ -50,6 +79,8 @@ int main(void) {
     so_int value = scale(long_, short_);
     (void)value;
     (void)shadow(value);
+    (void)switchTemp(1);
+    (void)resultTemp();
     // The name should be mangled everywhere it is used.
     for (so_int bool_ = 0; bool_ < long_; bool_++) {
         so_int b = bool_;

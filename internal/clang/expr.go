@@ -69,16 +69,20 @@ func (g *Generator) emitNumericLit(w io.Writer, n *ast.BasicLit) {
 
 // emitBinaryExpr emits a binary expression.
 func (g *Generator) emitBinaryExpr(w io.Writer, n *ast.BinaryExpr) {
-	// String comparison: emit so_string_eq/ne/lt/gt/lte/gte calls.
-	if isCompare(n.Op) {
-		if g.hasStringType(n.X) {
-			fmt.Fprintf(w, "%s(", stringCompareFunc(n.Op))
-			g.emitExpr(w, n.X)
-			fmt.Fprint(w, ", ")
-			g.emitExpr(w, n.Y)
-			fmt.Fprint(w, ")")
-			return
-		}
+	// Equality comparison.
+	if n.Op == token.EQL || n.Op == token.NEQ {
+		g.emitEqual(w, n)
+		return
+	}
+
+	// String ordering comparison: emit so_string_lt/gt/lte/gte calls.
+	if isOrderCompare(n.Op) && g.hasStringType(n.X) {
+		fmt.Fprintf(w, "%s(", stringCompareFunc(n.Op))
+		g.emitExpr(w, n.X)
+		fmt.Fprint(w, ", ")
+		g.emitExpr(w, n.Y)
+		fmt.Fprint(w, ")")
+		return
 	}
 
 	// String addition.
@@ -95,59 +99,6 @@ func (g *Generator) emitBinaryExpr(w io.Writer, n *ast.BinaryExpr) {
 		g.emitExpr(w, n.Y)
 		fmt.Fprint(w, ")")
 		return
-	}
-
-	// Equality comparison for various cases.
-	if n.Op == token.EQL || n.Op == token.NEQ {
-		// Interface comparison: emit iface.self == NULL for nil,
-		// or iface.self == other.self for non-nil.
-		if isNamedNonEmptyInterface(g.types.TypeOf(n.X)) {
-			if isNilType(g.types.TypeOf(n.Y)) {
-				g.emitExpr(w, n.X)
-				fmt.Fprintf(w, ".self %s NULL", n.Op.String())
-				return
-			}
-			g.emitExpr(w, n.X)
-			fmt.Fprintf(w, ".self %s ", n.Op.String())
-			g.emitExpr(w, n.Y)
-			fmt.Fprint(w, ".self")
-			return
-		}
-
-		// Slice nil comparison: emit s.ptr == NULL / != NULL.
-		if _, ok := g.types.TypeOf(n.X).Underlying().(*types.Slice); ok && isNilType(g.types.TypeOf(n.Y)) {
-			g.emitExpr(w, n.X)
-			fmt.Fprintf(w, ".ptr %s NULL", n.Op.String())
-			return
-		}
-
-		// Map nil comparison: emit m == NULL / != NULL.
-		if _, ok := g.types.TypeOf(n.X).Underlying().(*types.Map); ok && isNilType(g.types.TypeOf(n.Y)) {
-			g.emitExpr(w, n.X)
-			fmt.Fprintf(w, " %s NULL", n.Op.String())
-			return
-		}
-
-		// Struct comparison.
-		if _, ok := g.types.TypeOf(n.X).Underlying().(*types.Struct); ok {
-			g.fail(n, "struct comparison is not supported")
-			return
-		}
-
-		// Array comparison: emit so_mem_eq/ne calls.
-		if arr, ok := g.types.TypeOf(n.X).Underlying().(*types.Array); ok {
-			if n.Op == token.EQL {
-				fmt.Fprint(w, "so_mem_eq(")
-			} else {
-				fmt.Fprint(w, "so_mem_ne(")
-			}
-			g.emitArrayCmpOperand(w, n.X, arr)
-			fmt.Fprint(w, ", ")
-			g.emitArrayCmpOperand(w, n.Y, arr)
-			elemType := g.mapTypeName(n, arr.Elem())
-			fmt.Fprintf(w, ", %d * sizeof(%s))", arr.Len(), elemType)
-			return
-		}
 	}
 
 	// Shift expression: parenthesize because Go's << >> have multiplicative
@@ -209,6 +160,98 @@ func (g *Generator) emitBinaryExpr(w io.Writer, n *ast.BinaryExpr) {
 	g.emitExpr(w, n.X)
 	fmt.Fprintf(w, " %s ", n.Op.String())
 	g.emitExpr(w, n.Y)
+}
+
+// emitEqual emits an == or != comparison. Strings, interfaces,
+// slices, maps and arrays each compare in their own way.
+func (g *Generator) emitEqual(w io.Writer, n *ast.BinaryExpr) {
+	// Every rule below picks the comparison by the left operand's type, so
+	// keep nil on the right: it says nothing about how to compare. Swapping
+	// is safe, since a nil literal has no side effects.
+	left, right := n.X, n.Y
+	if isNilType(g.types.TypeOf(left)) {
+		left, right = right, left
+	}
+	op := n.Op.String()
+
+	leftType := g.types.TypeOf(left)
+	rightType := g.types.TypeOf(right)
+	rightIsNil := isNilType(rightType)
+
+	// An interface holds a pointer to the value, so comparing it with a
+	// concrete value would compare an address with a value. Report the error
+	// at the concrete operand, which is the one to fix.
+	if !rightIsNil && !comparableInC(leftType, rightType) {
+		bad := right
+		if !isInterfaceType(leftType) {
+			bad = left
+		}
+		g.fail(bad, "cannot compare %s with %s", leftType, rightType)
+	}
+
+	// String comparison: emit so_string_eq/ne calls.
+	if g.hasStringType(left) {
+		fmt.Fprintf(w, "%s(", stringCompareFunc(n.Op))
+		g.emitExpr(w, left)
+		fmt.Fprint(w, ", ")
+		g.emitExpr(w, right)
+		fmt.Fprint(w, ")")
+		return
+	}
+
+	// Interface comparison: emit iface.self == NULL for nil,
+	// or iface.self == other.self for non-nil.
+	if isNamedNonEmptyInterface(leftType) {
+		g.emitExpr(w, left)
+		fmt.Fprintf(w, ".self %s ", op)
+		if rightIsNil {
+			fmt.Fprint(w, "NULL")
+			return
+		}
+		g.emitExpr(w, right)
+		fmt.Fprint(w, ".self")
+		return
+	}
+
+	// Slice nil comparison: emit s.ptr == NULL / != NULL.
+	if _, ok := leftType.Underlying().(*types.Slice); ok && rightIsNil {
+		g.emitExpr(w, left)
+		fmt.Fprintf(w, ".ptr %s NULL", op)
+		return
+	}
+
+	// Map nil comparison: emit m == NULL / != NULL.
+	if _, ok := leftType.Underlying().(*types.Map); ok && rightIsNil {
+		g.emitExpr(w, left)
+		fmt.Fprintf(w, " %s NULL", op)
+		return
+	}
+
+	// Struct comparison.
+	if _, ok := leftType.Underlying().(*types.Struct); ok {
+		g.fail(left, "struct comparison is not supported")
+		return
+	}
+
+	// Array comparison: emit so_mem_eq/ne calls.
+	if arr, ok := leftType.Underlying().(*types.Array); ok {
+		if n.Op == token.EQL {
+			fmt.Fprint(w, "so_mem_eq(")
+		} else {
+			fmt.Fprint(w, "so_mem_ne(")
+		}
+		g.emitArrayCmpOperand(w, left, arr)
+		fmt.Fprint(w, ", ")
+		g.emitArrayCmpOperand(w, right, arr)
+		elemType := g.mapTypeName(left, arr.Elem())
+		fmt.Fprintf(w, ", %d * sizeof(%s))", arr.Len(), elemType)
+		return
+	}
+
+	// Plain comparison.
+	g.emitExpr(w, left)
+	fmt.Fprintf(w, " %s ", op)
+	g.emitExpr(w, right)
 }
 
 // emitCallExpr emits a function call or type conversion.
@@ -665,6 +708,20 @@ func (g *Generator) emitMacroArg(w io.Writer, arg ast.Expr) {
 	g.emitExpr(w, arg)
 }
 
+// emitDiscard emits an expression statement that evaluates expr
+// and throws the value away: (void)expr;
+func (g *Generator) emitDiscard(w io.Writer, expr ast.Expr) {
+	fmt.Fprintf(w, "%s(void)", g.indent())
+	if g.needsVoidParens(expr) {
+		fmt.Fprint(w, "(")
+		g.emitExpr(w, expr)
+		fmt.Fprint(w, ")")
+	} else {
+		g.emitExpr(w, expr)
+	}
+	fmt.Fprint(w, ";\n")
+}
+
 // needsVoidParens reports whether expr needs parentheses in a (void) cast.
 func (g *Generator) needsVoidParens(expr ast.Expr) bool {
 	// Binary expressions need wrapping in case we want to cast them,
@@ -674,7 +731,7 @@ func (g *Generator) needsVoidParens(expr ast.Expr) bool {
 		// Not a binary expression — no need for parentheses.
 		return false
 	}
-	if isCompare(bin.Op) {
+	if bin.Op == token.EQL || bin.Op == token.NEQ || isOrderCompare(bin.Op) {
 		// String comparisons are emitted as function calls and don't need wrapping.
 		if g.hasStringType(bin.X) {
 			return false
@@ -730,10 +787,11 @@ func isSelfParenthesized(expr ast.Expr) bool {
 	return false
 }
 
-// isCompare reports whether a token is a comparison operator.
-func isCompare(op token.Token) bool {
+// isOrderCompare reports whether a token is an ordering comparison
+// operator, as opposed to == and !=.
+func isOrderCompare(op token.Token) bool {
 	switch op {
-	case token.EQL, token.NEQ, token.LSS, token.GTR, token.LEQ, token.GEQ:
+	case token.LSS, token.GTR, token.LEQ, token.GEQ:
 		return true
 	}
 	return false

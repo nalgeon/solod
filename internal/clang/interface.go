@@ -209,3 +209,30 @@ func isInterfaceType(t types.Type) bool {
 	_, ok := t.Underlying().(*types.Interface)
 	return ok
 }
+
+// isEmptyInterface reports whether t is an empty interface
+// (interface{} or any), which maps to void*.
+func isEmptyInterface(t types.Type) bool {
+	iface, ok := t.Underlying().(*types.Interface)
+	return ok && iface.Empty()
+}
+
+// comparableInC reports whether == and != can compare the C representations
+// of x and y. A named interface is a struct with a pointer to the value, so
+// it only compares with another named interface. An empty interface is a
+// void*, so it compares with a pointer, but not with a value.
+func comparableInC(x, y types.Type) bool {
+	if isNamedNonEmptyInterface(x) || isNamedNonEmptyInterface(y) {
+		return isNamedNonEmptyInterface(x) && isNamedNonEmptyInterface(y)
+	}
+	if isEmptyInterface(x) || isEmptyInterface(y) {
+		return isVoidPtrOperand(x) && isVoidPtrOperand(y)
+	}
+	return true
+}
+
+// isVoidPtrOperand reports whether a value of type t can be compared
+// with a void*.
+func isVoidPtrOperand(t types.Type) bool {
+	return isPointerType(t) || isEmptyInterface(t)
+}

@@ -107,7 +107,7 @@ func (g *Generator) emitMultiReturnDefine(w io.Writer, stmt *ast.AssignStmt, cal
 	multi := g.multiReturnFields(stmt, sig)
 
 	// Emit temp variable with result of the call.
-	tmp := g.state.newTemp()
+	tmp := g.newTemp(stmt, tempResult)
 	fmt.Fprintf(w, "%s%s %s = ", g.indent(), multi.typeName(), tmp)
 	g.emitExpr(w, call)
 	fmt.Fprint(w, ";\n")
@@ -142,7 +142,7 @@ func (g *Generator) emitMultiReturnAssign(w io.Writer, stmt *ast.AssignStmt, cal
 	multi := g.multiReturnFields(stmt, sig)
 
 	// Emit temp variable with result of the call.
-	tmp := g.state.newTemp()
+	tmp := g.newTemp(stmt, tempResult)
 	fmt.Fprintf(w, "%s%s %s = ", g.indent(), multi.typeName(), tmp)
 	g.emitExpr(w, call)
 	fmt.Fprint(w, ";\n")

@@ -20,6 +20,28 @@ func shadow(long int) int {
 	return long
 }
 
+// A name that looks like a generated temporary is not reserved: the switch
+// tag temporary picks the next free name instead of shadowing the variable.
+func switchTemp(x int) int {
+	_sw1 := 99
+	switch x {
+	case 1:
+		return _sw1
+	}
+	return 0
+}
+
+func pair() (int, int) {
+	return 1, 2
+}
+
+// The same for the temporary that holds a multi-value call result.
+func resultTemp() int {
+	_res1 := 99
+	a, b := pair()
+	return _res1 + a + b
+}
+
 // A function pointer field with a reserved parameter name.
 type movie struct {
 	rate func(long int) int
@@ -37,6 +59,8 @@ func main() {
 	value := scale(long, short)
 	_ = value
 	_ = shadow(value)
+	_ = switchTemp(1)
+	_ = resultTemp()
 
 	// The name should be mangled everywhere it is used.
 	for bool := 0; bool < long; bool++ {

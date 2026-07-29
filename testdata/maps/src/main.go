@@ -446,10 +446,13 @@ func main() {
 		}
 	}
 	{
-		// Nil: assign and check
+		// Nil: assign and check. Nil works on either side.
 		m := map[string]int{"a": 1}
 		m = nil
 		if m != nil {
+			panic("nil after assign")
+		}
+		if nil != m {
 			panic("nil after assign")
 		}
 	}

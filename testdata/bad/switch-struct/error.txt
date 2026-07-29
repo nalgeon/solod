@@ -1,0 +1,3 @@
+main.go:10:9: switch on a struct is not supported
+	switch p {
+	       ^here

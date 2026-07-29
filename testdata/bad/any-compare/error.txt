@@ -1,0 +1,3 @@
+main.go:12:10: cannot compare any with int
+	if a == 1 {
+	        ^here

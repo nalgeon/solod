@@ -521,13 +521,19 @@ func main() {
 		}
 	}
 	{
-		// Nil slice: comparison.
+		// Nil slice: comparison. Nil works on either side.
 		var s []int
 		if s != nil {
 			panic("want nil slice")
 		}
+		if nil != s {
+			panic("want nil slice")
+		}
 		s = []int{1}
 		if s == nil {
+			panic("want non-nil slice")
+		}
+		if nil == s {
 			panic("want non-nil slice")
 		}
 	}

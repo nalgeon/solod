@@ -2,6 +2,8 @@ package clang
 
 import (
 	"fmt"
+	"go/ast"
+	"go/token"
 	"go/types"
 	"strings"
 )
@@ -53,8 +55,34 @@ func (s *State) indent() string {
 	return strings.Repeat("    ", s.depth)
 }
 
-// newTemp returns a fresh name for a temporary variable in the current function.
-func (s *State) newTemp() string {
-	s.tempCount++
-	return fmt.Sprintf("_res%d", s.tempCount)
+// Prefixes for generated temporary names. The prefix describes what the
+// temporary holds.
+const (
+	tempResult = "res" // result of a call
+	tempSwitch = "sw"  // switch tag
+)
+
+// newTemp returns a fresh name for a temporary variable at node's position.
+// It skips names that are visible there, so the temporary does not redeclare
+// an existing identifier in the same C block.
+func (g *Generator) newTemp(node ast.Node, prefix string) string {
+	for {
+		g.state.tempCount++
+		name := fmt.Sprintf("_%s%d", prefix, g.state.tempCount)
+		if !g.isVisible(node.Pos(), name) {
+			return name
+		}
+	}
+}
+
+// isVisible reports whether name is declared in any scope enclosing pos.
+func (g *Generator) isVisible(pos token.Pos, name string) bool {
+	scope := g.pkg.Types.Scope().Innermost(pos)
+	if scope == nil {
+		scope = g.pkg.Types.Scope()
+	}
+	// The position within the scope does not matter: a name declared
+	// after pos still shares a C block with the temporary.
+	_, obj := scope.LookupParent(name, token.NoPos)
+	return obj != nil
 }

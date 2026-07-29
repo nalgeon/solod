@@ -16,6 +16,38 @@ type Stack[T any] struct{ items []T } // OK: so_Slice is type-erased
 
 A generic function or method must be `so:inline` or `so:extern`, even when its signature never mentions the type parameter. See the [generics guide](./generics.md) for details.
 
+**Switch tag evaluation**. A switch translates to an if/else-if chain, which repeats the tag in every comparison. The tag now goes into a temporary variable first, so a call in the tag runs once, as in Go:
+
+```go
+switch inc() { // used to call inc() once per case
+case 2:
+    println("two")
+default:
+    println("other")
+}
+```
+
+Switching on a struct or array is not supported.
+
+**Interface comparison**. Two interfaces are equal when they hold the same pointer, and an interface compares with `nil` as expected. Comparing an interface with a concrete type is not supported:
+
+```go
+r := Rect{2, 4}
+var s Shape = &r
+if s == nil { }   // supported
+if s == other { } // supported, other is a Shape
+if s == &r { }    // not supported
+```
+
+An `any` compares with `nil`, with a pointer, or with another `any`. Comparing it with a value is not supported, because an `any` holds the address of the value:
+
+```go
+var a any = n
+if a == nil { }  // supported
+if a == &n { }   // supported, &n is a pointer
+if a == n { }    // not supported
+```
+
 ### Interop
 
 **C field name override**. A `c:"..."` struct tag sets the C name of a field, so an extern struct can match a C header field whose name is a Go keyword:

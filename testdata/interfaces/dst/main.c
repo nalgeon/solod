@@ -78,8 +78,11 @@ int main(void) {
         (void)s;
     }
     {
-        // Nil interface.
+        // Nil interface. Nil works on either side.
         main_Shape s1 = {0};
+        if (s1.self != NULL) {
+            so_panic("want nil interface");
+        }
         if (s1.self != NULL) {
             so_panic("want nil interface");
         }
@@ -97,6 +100,9 @@ int main(void) {
         }
         main_Rect r = {0};
         main_Shape s4 = (main_Shape){.self = &r, .Area = main_Rect_Area, .Perim = main_Rect_Perim};
+        if (s4.self == NULL) {
+            so_panic("want non-nil interface");
+        }
         if (s4.self == NULL) {
             so_panic("want non-nil interface");
         }

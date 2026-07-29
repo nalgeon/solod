@@ -232,15 +232,7 @@ func (g *Generator) emitAssign(w io.Writer, stmt *ast.AssignStmt) {
 	for i, lhs := range stmt.Lhs {
 		// Blank identifier - emit a void expression.
 		if ident, ok := lhs.(*ast.Ident); ok && ident.Name == "_" {
-			fmt.Fprintf(w, "%s(void)", g.indent())
-			if g.needsVoidParens(stmt.Rhs[i]) {
-				fmt.Fprint(w, "(")
-				g.emitExpr(w, stmt.Rhs[i])
-				fmt.Fprint(w, ")")
-			} else {
-				g.emitExpr(w, stmt.Rhs[i])
-			}
-			fmt.Fprint(w, ";\n")
+			g.emitDiscard(w, stmt.Rhs[i])
 			continue
 		}
 

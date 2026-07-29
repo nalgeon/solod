@@ -467,9 +467,12 @@ int main(void) {
         }
     }
     {
-        // Nil: assign and check
+        // Nil: assign and check. Nil works on either side.
         so_Map* m = so_map_lit(so_String, so_int, 1, ((so_String[]){so_str("a")}), ((so_int[]){1}));
         m = NULL;
+        if (m != NULL) {
+            so_panic("nil after assign");
+        }
         if (m != NULL) {
             so_panic("nil after assign");
         }

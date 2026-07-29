@@ -1,0 +1,3 @@
+main.go:7:9: switch on an array is not supported
+	switch a {
+	       ^here
