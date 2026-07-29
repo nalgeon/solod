@@ -237,7 +237,7 @@ func (g *Generator) mapTypeName(node ast.Node, typ types.Type) string {
 	case types.UnsafePointer:
 		return "void*"
 	default:
-		g.fail(node, "unsupported type: %s", typ)
+		g.fail(node, "unsupported type: %s", g.typeString(typ))
 		panic("unreachable")
 	}
 }
@@ -304,7 +304,7 @@ func (g *Generator) zeroValue(node ast.Node, typ types.Type) string {
 		types.Float32, types.Float64:
 		return "0"
 	default:
-		g.fail(node, "unsupported type for zero value: %s", typ)
+		g.fail(node, "unsupported type for zero value: %s", g.typeString(typ))
 		panic("unreachable")
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"go/types"
 	"os"
 	"strings"
 )
@@ -29,6 +30,11 @@ func (g *Generator) fail(node ast.Node, format string, args ...any) {
 	pos := g.pkg.Fset.Position(node.Pos())
 	err := &failure{pos: pos, msg: fmt.Sprintf(format, args...)}
 	panic(err)
+}
+
+// typeString returns a type name for diagnostics.
+func (g *Generator) typeString(typ types.Type) string {
+	return types.TypeString(typ, types.RelativeTo(g.pkg.Types))
 }
 
 // readSourceLine reads a single line from a source file (1-indexed).

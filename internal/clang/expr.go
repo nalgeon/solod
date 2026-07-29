@@ -186,7 +186,7 @@ func (g *Generator) emitEqual(w io.Writer, n *ast.BinaryExpr) {
 		if !isInterfaceType(leftType) {
 			bad = left
 		}
-		g.fail(bad, "cannot compare %s with %s", leftType, rightType)
+		g.fail(bad, "cannot compare %s with %s", g.typeString(leftType), g.typeString(rightType))
 	}
 
 	// String comparison: emit so_string_eq/ne calls.
@@ -419,7 +419,7 @@ func (g *Generator) emitStringCast(w io.Writer, call *ast.CallExpr, sl *types.Sl
 		g.emitMacroArg(w, call.Args[0])
 		fmt.Fprint(w, ")")
 	default:
-		g.fail(call, "unsupported slice-to-string conversion: %s", elem)
+		g.fail(call, "unsupported slice-to-string conversion: %s", g.typeString(elem))
 	}
 }
 

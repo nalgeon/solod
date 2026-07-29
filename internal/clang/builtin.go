@@ -171,7 +171,7 @@ func (g *Generator) emitMakeCall(w io.Writer, call *ast.CallExpr) {
 		fmt.Fprint(w, ")")
 
 	default:
-		g.fail(call, "make() unsupported type: %s", typ)
+		g.fail(call, "make() unsupported type: %s", g.typeString(typ))
 	}
 }
 
@@ -183,7 +183,7 @@ func (g *Generator) emitMinMaxCall(w io.Writer, call *ast.CallExpr, name string)
 	typ := g.types.TypeOf(call.Args[0])
 	basic, ok := typ.Underlying().(*types.Basic)
 	if !ok {
-		g.fail(call, "%s() requires a basic type, got %s", name, typ)
+		g.fail(call, "%s() requires a basic type, got %s", name, g.typeString(typ))
 	}
 
 	var fn string
@@ -192,7 +192,7 @@ func (g *Generator) emitMinMaxCall(w io.Writer, call *ast.CallExpr, name string)
 		fn = "so_string_" + name
 	default:
 		if basic.Info()&types.IsNumeric == 0 {
-			g.fail(call, "%s() unsupported type: %s", name, typ)
+			g.fail(call, "%s() unsupported type: %s", name, g.typeString(typ))
 		}
 		fn = "so_" + name
 	}
@@ -262,7 +262,7 @@ func (g *Generator) emitPanicCall(w io.Writer, call *ast.CallExpr) {
 	arg := call.Args[0]
 	typ := g.types.TypeOf(arg)
 	if !g.hasStringType(arg) && !isErrorType(typ) {
-		g.fail(call, "panic() only supports string and error arguments, got %s", typ)
+		g.fail(call, "panic() only supports string and error arguments, got %s", g.typeString(typ))
 	}
 	fmt.Fprint(w, "so_panic(")
 	g.emitCArg(w, arg)
@@ -307,7 +307,7 @@ func (g *Generator) buildFormatString(call *ast.CallExpr) string {
 		typ := g.types.TypeOf(arg)
 		spec, macro := g.formatSpec(arg, typ)
 		if spec == "" {
-			g.fail(call, "unsupported type for print/println: %s", typ)
+			g.fail(call, "unsupported type for print/println: %s", g.typeString(typ))
 			panic("unreachable")
 		}
 		if !inStr {

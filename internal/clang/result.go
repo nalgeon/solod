@@ -218,7 +218,7 @@ func resultTypeSuffix(g *Generator, node ast.Node, typ types.Type) string {
 	}
 	basic, ok := typ.Underlying().(*types.Basic)
 	if !ok {
-		g.fail(node, "unsupported multi-return type: %s", typ)
+		g.fail(node, "unsupported multi-return type: %s", g.typeString(typ))
 	}
 	switch basic.Kind() {
 	case types.Bool, types.UntypedBool:
@@ -255,7 +255,7 @@ func resultTypeSuffix(g *Generator, node ast.Node, typ types.Type) string {
 	case types.String, types.UntypedString:
 		return "str"
 	default:
-		g.fail(node, "unsupported multi-return type: %s", typ)
+		g.fail(node, "unsupported multi-return type: %s", g.typeString(typ))
 		panic("unreachable")
 	}
 }
