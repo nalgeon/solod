@@ -239,6 +239,10 @@ func (g *Generator) emitGenDecl(w io.Writer, decl *ast.GenDecl) {
 		}
 		for _, spec := range decl.Specs {
 			ts := spec.(*ast.TypeSpec)
+			if isConstraintInterface(g.types.Defs[ts.Name].Type()) {
+				// A constraint has nothing to represent in C.
+				continue
+			}
 			g.emitComments(w, decl, ts)
 			g.emitTypeSpec(w, ts, directives{})
 		}

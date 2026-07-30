@@ -13,3 +13,24 @@
 typedef struct {
     int len;
 } main_Map;
+
+// -- Types --
+
+typedef struct main_Stringer {
+    void* self;
+    so_String (*String)(void* self);
+} main_Stringer;
+
+// -- Functions and methods --
+
+#define add(T, a_, b_) ({ \
+    a_ + b_; \
+})
+
+#define first(T, a_, b_) ({ \
+    a_; \
+})
+
+#define same(T, v_) ({ \
+    v_; \
+})

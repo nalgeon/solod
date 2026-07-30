@@ -18,6 +18,12 @@ A generic function or method must be `so:inline` or `so:extern`, even when its s
 
 [9501bae](https://github.com/solod-dev/solod/commit/9501baef6386471516b70c22f64ec69b442d008f)
 
+**Constraint interfaces are no longer emitted**. Go allows such an interface only as a type parameter constraint, never as a value type, so it has nothing to represent in C.
+
+```go
+type Number interface{ ~int | ~float64 } // not emitted
+```
+
 **Interface methods with value receivers are rejected**. If a concrete type uses value receivers, converting it to an interface will fail:
 
 ```go

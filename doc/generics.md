@@ -72,7 +72,7 @@ typedef struct {
 } main_Map;
 ```
 
-Constraints (`any`, `comparable`, etc.) are used only for Go type-checking and are not emitted in C.
+Constraints (`any`, `comparable`, etc.) are not emitted in C. See [Type constraints](#type-constraints).
 
 ## Generic inline macros
 
@@ -250,3 +250,21 @@ func (s *Stack[T]) First() T { ... } // rejected
 ```
 
 This holds even when the signature itself never mentions `T`: the receiver's type parameters are still prepended at every call site.
+
+## Type constraints
+
+Constraints are used only for Go type-checking and are not emitted in C. This covers the predeclared ones (`any`, `comparable`) and constraint interfaces you declare yourself:
+
+```go
+// Neither of these produces any C.
+type Number interface {
+    ~int | ~float64
+}
+
+type ordered interface {
+    comparable
+    ~int | ~string
+}
+```
+
+Go allows such an interface only as a type parameter constraint, never as a value type, so it has nothing to represent in C.

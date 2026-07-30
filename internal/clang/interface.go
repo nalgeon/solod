@@ -232,6 +232,14 @@ func isInterfaceType(t types.Type) bool {
 	return ok
 }
 
+// isConstraintInterface reports whether t is a constraint interface.
+// Go allows such an interface only as a type parameter constraint,
+// so it never becomes a C type.
+func isConstraintInterface(t types.Type) bool {
+	iface, ok := t.Underlying().(*types.Interface)
+	return ok && !iface.IsMethodSet()
+}
+
 // isEmptyInterface reports whether t is an empty interface
 // (interface{} or any), which maps to void*.
 func isEmptyInterface(t types.Type) bool {

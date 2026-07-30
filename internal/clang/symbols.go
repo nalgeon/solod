@@ -179,9 +179,11 @@ func (g *Generator) rejectEmbeddedFields(st *ast.StructType) {
 
 // rejectEmbeddedIfaces rejects an interface embedded in another interface.
 func (g *Generator) rejectEmbeddedIfaces(it *ast.InterfaceType) {
-	// Type constraint elements (~int | ~string, and the constraint interfaces
-	// built from them) are left alone: they only serve Go type checking and
-	// never reach C.
+	if isConstraintInterface(g.types.TypeOf(it)) {
+		// A constraint interface never reaches C,
+		// so what it embeds does not matter.
+		return
+	}
 	for _, elem := range it.Methods.List {
 		if _, isMethod := elem.Type.(*ast.FuncType); isMethod {
 			continue
@@ -191,7 +193,7 @@ func (g *Generator) rejectEmbeddedIfaces(it *ast.InterfaceType) {
 			continue
 		}
 		iface, ok := typ.Underlying().(*types.Interface)
-		if !ok || !iface.IsMethodSet() || iface.NumMethods() == 0 {
+		if !ok || iface.NumMethods() == 0 {
 			continue
 		}
 		g.fail(elem, "embedded interface %s is not supported; declare its methods instead", g.typeString(typ))
@@ -447,9 +449,13 @@ func (g *Generator) typeSymbols(header bool) []symbol {
 		return sym.exported || (sym.unexported && sym.dirs.promote)
 	}
 	for _, sym := range g.symbols {
-		if sym.kind == symbolType && inHeader(sym) == header {
-			syms = append(syms, sym)
+		if sym.kind != symbolType || inHeader(sym) != header {
+			continue
 		}
+		if isConstraintInterface(g.types.Defs[sym.typeSpec.Name].Type()) {
+			continue
+		}
+		syms = append(syms, sym)
 	}
 	return g.sortTypes(syms)
 }
