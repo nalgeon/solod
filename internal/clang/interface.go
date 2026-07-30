@@ -46,15 +46,17 @@ func (g *Generator) emitInterfaceLit(w io.Writer, ifaceType types.Type, expr ast
 		isPtr = true
 	}
 	concreteNamed := types.Unalias(concreteType).(*types.Named)
+	g.checkPointerReceivers(expr, iface, concreteNamed)
 
 	cIface := g.mapTypeName(expr, named)
 	cConcrete := g.mapTypeName(expr, concreteNamed)
 
-	if isPtr {
-		fmt.Fprintf(w, "(%s){.self = ", cIface)
-	} else {
-		fmt.Fprintf(w, "(%s){.self = &", cIface)
+	if !isPtr {
+		// Unreachable: checkPointerReceivers rejects value receivers, and Go
+		// rejects a value whose methods have pointer receivers.
+		g.fail(expr, "cannot convert value of type %s to an interface", g.typeString(concreteNamed))
 	}
+	fmt.Fprintf(w, "(%s){.self = ", cIface)
 	g.emitExpr(w, expr)
 	for m := range iface.Methods() {
 		fmt.Fprintf(w, ", .%s = %s_%s", m.Name(), cConcrete, m.Name())
@@ -178,6 +180,26 @@ func (g *Generator) emitAnyValue(w io.Writer, node ast.Node, expr ast.Expr) {
 	fmt.Fprintf(w, "&(%s){", cType)
 	g.emitExpr(w, expr)
 	fmt.Fprint(w, "}")
+}
+
+// checkPointerReceivers verifies that every interface method
+// is declared with a pointer receiver on the concrete type.
+func (g *Generator) checkPointerReceivers(node ast.Node, iface *types.Interface, concrete *types.Named) {
+	ptr := types.NewPointer(concrete)
+	for m := range iface.Methods() {
+		obj, _, _ := types.LookupFieldOrMethod(ptr, true, m.Pkg(), m.Name())
+		fn, ok := obj.(*types.Func)
+		if !ok {
+			g.fail(node, "method %s not found on %s", m.Name(), g.typeString(concrete))
+		}
+		// Go allows a value receiver here, since the method set of *T includes
+		// the methods of T. C does not: the vtable slot expects a function
+		// taking void* self, and a value receiver compiles to a function
+		// taking the struct itself.
+		if _, isPtr := fn.Signature().Recv().Type().(*types.Pointer); !isPtr {
+			g.fail(node, "method %s.%s has a value receiver; interface methods must use pointer receivers", g.typeString(concrete), m.Name())
+		}
+	}
 }
 
 // isNamedNonEmptyInterface reports whether t is a named non-empty interface.

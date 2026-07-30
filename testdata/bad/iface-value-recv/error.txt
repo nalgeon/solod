@@ -1,0 +1,3 @@
+main.go:17:16: method circle.area has a value receiver; interface methods must use pointer receivers
+	var s shape = &c
+	              ^here

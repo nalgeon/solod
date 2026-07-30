@@ -18,6 +18,18 @@ A generic function or method must be `so:inline` or `so:extern`, even when its s
 
 [9501bae](https://github.com/solod-dev/solod/commit/9501baef6386471516b70c22f64ec69b442d008f)
 
+**Interface methods with value receivers are rejected**. If a concrete type uses value receivers, converting it to an interface will fail:
+
+```go
+func (r Rect) Area() int { // value receiver
+    return r.width * r.height
+}
+
+var s Shape = r // rejected: method Rect.Area has a value receiver
+```
+
+Using pointer receivers (`func (r *Rect) Area() int`) works fine.
+
 **Switch tag evaluation**. A switch translates to an if/else-if chain, which repeats the tag in every comparison. The tag now goes into a temporary variable first, so a call in the tag runs once, as in Go:
 
 ```go

@@ -853,7 +853,23 @@ typedef struct main_Shape {
 } main_Shape;
 ```
 
-Interface methods must use pointer receivers, since the vtable uses `void* self` function pointers.
+Interface methods on concrete types must use pointer receivers, since the vtable uses `void* self` function pointers. If a concrete type uses value receivers, converting it to an interface will fail:
+
+```go
+func (r Rect) Area() int { // value receiver
+    return r.width * r.height
+}
+
+var s Shape = r // rejected: method Rect.Area has a value receiver
+```
+
+Using pointer receivers works fine:
+
+```go
+func (r *Rect) Area() int { // pointer receiver
+    return r.width * r.height
+}
+```
 
 Converting a concrete type to an interface requires passing a pointer:
 
