@@ -29,6 +29,8 @@ default:
 
 Switching on a struct or array is not supported.
 
+**Switch case bodies reject `break` and `fallthrough`**. Both used to be emitted as-is, producing C that either lead to incorrect behavior or did not compile at all. Both are errors now.
+
 **Interface comparison**. Two interfaces are equal when they hold the same pointer, and an interface compares with `nil` as expected. Comparing an interface with a concrete type is not supported:
 
 ```go

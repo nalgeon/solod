@@ -323,11 +323,49 @@ int main(void) {
         }
     }
     {
+        // A break in a case body is not supported, but a labeled break is.
+        so_int steps = 0;
+        done:;
+        {
+            so_int _sw19 = 1;
+            if (_sw19 == 1) {
+                steps++;
+                goto done_end;
+            } else {
+                so_panic("unexpected default");
+            }
+        }
+        done_end:;
+        if (steps != 1) {
+            so_panic("want 1 step");
+        }
+    }
+    {
+        // A break inside a loop in a case body leaves the loop.
+        so_int n = 0;
+        {
+            so_int _sw20 = 1;
+            if (_sw20 == 1) {
+                for (so_int _i = 0; _i < 5; _i++) {
+                    n++;
+                    if (n == 2) {
+                        break;
+                    }
+                }
+            } else {
+                so_panic("unexpected default");
+            }
+        }
+        if (n != 2) {
+            so_panic("want n == 2");
+        }
+    }
+    {
         // Switch on a slice compares to nil.
         so_Slice s = {0};
         {
-            so_Slice _sw19 = s;
-            if (_sw19.ptr == NULL) {
+            so_Slice _sw21 = s;
+            if (_sw21.ptr == NULL) {
             } else {
                 so_panic("unexpected default");
             }
@@ -337,8 +375,8 @@ int main(void) {
         // Switch on a map compares to nil.
         so_Map* m = NULL;
         {
-            so_Map* _sw20 = m;
-            if (_sw20 == NULL) {
+            so_Map* _sw22 = m;
+            if (_sw22 == NULL) {
             } else {
                 so_panic("unexpected default");
             }
@@ -348,8 +386,8 @@ int main(void) {
         // Switch on an interface compares to nil.
         main_Shape sh = (main_Shape){.self = &(main_Square){2}, .Area = main_Square_Area};
         {
-            main_Shape _sw21 = sh;
-            if (_sw21.self == NULL) {
+            main_Shape _sw23 = sh;
+            if (_sw23.self == NULL) {
                 so_panic("unexpected sh == nil");
             } else {
                 if (sh.Area(sh.self) != 4) {
@@ -363,10 +401,10 @@ int main(void) {
         so_int a[3] = {1, 2, 3};
         so_int (*p)[3] = &a;
         {
-            so_int (*_sw22)[3] = p;
-            if (_sw22 == NULL) {
+            so_int (*_sw24)[3] = p;
+            if (_sw24 == NULL) {
                 so_panic("unexpected p == nil");
-            } else if (_sw22 == &a) {
+            } else if (_sw24 == &a) {
             } else {
                 so_panic("unexpected default");
             }
@@ -376,8 +414,8 @@ int main(void) {
         // Function pointer.
         so_int (*fn)(so_int) = twice;
         {
-            so_int (*_sw23)(so_int) = fn;
-            if (_sw23 == NULL) {
+            so_int (*_sw25)(so_int) = fn;
+            if (_sw25 == NULL) {
                 so_panic("unexpected fn == nil");
             } else {
                 if (fn(2) != 4) {

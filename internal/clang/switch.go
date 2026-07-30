@@ -15,6 +15,7 @@ func (g *Generator) emitSwitchStmt(w io.Writer, stmt *ast.SwitchStmt) {
 	if stmt.Tag != nil {
 		g.checkTagType(stmt.Tag)
 	}
+	g.checkBreak(stmt)
 
 	// The if/else chain repeats the tag in every comparison, but Go evaluates
 	// it exactly once, so the tag goes into a temporary.
@@ -37,6 +38,28 @@ func (g *Generator) emitSwitchStmt(w io.Writer, stmt *ast.SwitchStmt) {
 	g.emitSwitchBody(w, stmt.Tag, tagRef, cases, def)
 	g.state.depth--
 	fmt.Fprintf(w, "%s}\n", g.indent())
+}
+
+// checkBreak rejects a break that leaves a case body. A switch becomes
+// an if/else chain, so emitting a break would lead to incorrect behavior
+// or a compilation error.
+func (g *Generator) checkBreak(stmt *ast.SwitchStmt) {
+	for _, clause := range stmt.Body.List {
+		for _, s := range clause.(*ast.CaseClause).Body {
+			ast.Inspect(s, func(node ast.Node) bool {
+				switch n := node.(type) {
+				case *ast.ForStmt, *ast.RangeStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt, *ast.SelectStmt:
+					// A break inside these leaves them, not the outer switch.
+					return false
+				case *ast.BranchStmt:
+					if n.Tok == token.BREAK && n.Label == nil {
+						g.fail(n, "break in a switch case is not supported, use a labeled break")
+					}
+				}
+				return true
+			})
+		}
+	}
 }
 
 // checkTagType rejects a switch tag whose type has no place to go.

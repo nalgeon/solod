@@ -474,7 +474,7 @@ case 42:
 
 The tag is evaluated once, before any case expression, and the case expressions are compared to it in order.
 
-Not supported: switching on structs or arrays, type switches, `fallthrough`.
+Not supported: switching on structs or arrays, type switches, `fallthrough`, and unlabeled `break` in a case body (use a labeled break).
 
 ## For
 

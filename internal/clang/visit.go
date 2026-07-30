@@ -105,6 +105,10 @@ func (g *Generator) emitBlockStmt(w io.Writer, stmt *ast.BlockStmt) {
 
 // emitBranchStmt emits a break, continue, or goto statement.
 func (g *Generator) emitBranchStmt(w io.Writer, stmt *ast.BranchStmt) {
+	if stmt.Tok == token.FALLTHROUGH {
+		// A switch becomes an if/else chain, which has no case to fall into.
+		g.fail(stmt, "fallthrough is not supported")
+	}
 	if stmt.Label != nil && stmt.Tok == token.BREAK {
 		// Labeled break is translated to goto because C has no "break label".
 		// ("break label" -> "goto label_end").

@@ -1,0 +1,3 @@
+main.go:9:4: break in a switch case is not supported, use a labeled break
+			break
+			^here

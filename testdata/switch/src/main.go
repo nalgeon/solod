@@ -300,6 +300,39 @@ func main() {
 		}
 	}
 	{
+		// A break in a case body is not supported, but a labeled break is.
+		steps := 0
+	done:
+		switch 1 {
+		case 1:
+			steps++
+			break done
+		default:
+			panic("unexpected default")
+		}
+		if steps != 1 {
+			panic("want 1 step")
+		}
+	}
+	{
+		// A break inside a loop in a case body leaves the loop.
+		n := 0
+		switch 1 {
+		case 1:
+			for range 5 {
+				n++
+				if n == 2 {
+					break
+				}
+			}
+		default:
+			panic("unexpected default")
+		}
+		if n != 2 {
+			panic("want n == 2")
+		}
+	}
+	{
 		// Switch on a slice compares to nil.
 		var s []int
 		switch s {

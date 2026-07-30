@@ -1,0 +1,3 @@
+main.go:9:3: fallthrough is not supported
+		fallthrough
+		^here
