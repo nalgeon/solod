@@ -94,7 +94,7 @@ int main(void) {
     }
     {
         // Rune comparison.
-        so_rune r1 = U'a', r2 = U'b', r3 = U'本';
+        so_rune r1 = 'a', r2 = 'b', r3 = 0x672c;
         bool e1 = ((r1 < r2) && (r2 > r3)) || (r1 == r3);
         (void)e1;
         bool e2 = ((r1 <= r2) && (r2 >= r3)) || (r1 != r3);

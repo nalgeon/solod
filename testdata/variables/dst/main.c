@@ -22,7 +22,7 @@ int main(void) {
         (void)vBool;
         so_byte vByte = 'x';
         (void)vByte;
-        so_rune vRune = U'本';
+        so_rune vRune = 0x672c;
         (void)vRune;
         so_String vString = so_str("hello");
         (void)vString;
@@ -46,9 +46,9 @@ int main(void) {
         (void)vFloat;
         bool vBool = true;
         (void)vBool;
-        so_rune vByte = U'x';
+        so_rune vByte = 'x';
         (void)vByte;
-        so_rune vRune = U'本';
+        so_rune vRune = 0x672c;
         (void)vRune;
         so_String vString = so_str("hello");
         (void)vString;
@@ -72,9 +72,9 @@ int main(void) {
         (void)vFloat;
         bool vBool = true;
         (void)vBool;
-        so_rune vByte = U'x';
+        so_rune vByte = 'x';
         (void)vByte;
-        so_rune vRune = U'本';
+        so_rune vRune = 0x672c;
         (void)vRune;
         so_String vString = so_str("hello");
         (void)vString;
@@ -147,7 +147,7 @@ int main(void) {
         (void)vInt;
         (void)vFloat;
         (void)vBool;
-        so_rune vByte = U'x', vRune = U'本';
+        so_rune vByte = 'x', vRune = 0x672c;
         so_String vString = so_str("hello");
         (void)vByte;
         (void)vRune;
@@ -172,7 +172,7 @@ int main(void) {
         (void)vInt;
         (void)vFloat;
         (void)vBool;
-        so_rune vByte = U'x', vRune = U'本';
+        so_rune vByte = 'x', vRune = 0x672c;
         so_String vString = so_str("hello");
         (void)vByte;
         (void)vRune;

@@ -459,8 +459,8 @@ int main(void) {
     }
     {
         // Element types: rune.
-        so_Slice s = (so_Slice){(so_rune[3]){U'a', U'b', U'c'}, 3, 3};
-        if (so_at(so_rune, s, 0) != U'a' || so_at(so_rune, s, 2) != U'c') {
+        so_Slice s = (so_Slice){(so_rune[3]){'a', 'b', 'c'}, 3, 3};
+        if (so_at(so_rune, s, 0) != 'a' || so_at(so_rune, s, 2) != 'c') {
             so_panic("want rune slice");
         }
     }

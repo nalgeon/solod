@@ -385,7 +385,7 @@ func (g *Generator) emitCallArg(w io.Writer, node ast.Node, arg ast.Expr, paramT
 // string literals to raw C strings, strings to char*, slices to void*.
 func (g *Generator) emitCArg(w io.Writer, arg ast.Expr) {
 	if lit, ok := arg.(*ast.BasicLit); ok && lit.Kind == token.STRING {
-		fmt.Fprint(w, rawStringValue(lit))
+		fmt.Fprint(w, g.cStringLit(lit))
 	} else if g.hasStringType(arg) {
 		fmt.Fprint(w, "so_cstr(")
 		g.emitMacroArg(w, arg)

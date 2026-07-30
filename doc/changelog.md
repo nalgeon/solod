@@ -58,6 +58,15 @@ if a == n { }    // not supported
 
 [06b8ab8]https://github.com/solod-dev/solod/commit/06b8ab85bf4cb065b760c5a0e750b1bf6658d076)
 
+**String and character literals**. A literal is decoded to its value and re-encoded for C instead of being copied into the output as written. A string keeps printable ASCII and UTF-8 as is and escapes other bytes in octal. A byte or rune literal stays a character literal only for printable ASCII, and becomes a number otherwise:
+
+```text
+"日本語"   ->  "日本語"
+"a\xffb"  ->  "a\377b"
+'a'       ->  'a'
+'世'      ->  0x4e16
+```
+
 ### Interop
 
 **C field name override**. A `c:"..."` struct tag sets the C name of a field, so an extern struct can match a C header field whose name is a Go keyword:

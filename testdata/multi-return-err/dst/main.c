@@ -75,7 +75,7 @@ static so_R_int_err returnInt(void) {
 }
 
 static so_R_rune_err returnRune(void) {
-    return (so_R_rune_err){.val = U'x', .err = (so_Error){0}};
+    return (so_R_rune_err){.val = 'x', .err = (so_Error){0}};
 }
 
 static so_R_str_err returnString(void) {

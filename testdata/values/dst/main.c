@@ -45,15 +45,15 @@ int main(void) {
     // }
     {
         // Rune literals.
-        const so_rune r1 = U'a';
+        const so_rune r1 = 'a';
         (void)r1;
-        const so_rune r2 = U'ä';
+        const so_rune r2 = 0xe4;
         (void)r2;
-        const so_rune r3 = U'本';
+        const so_rune r3 = 0x672c;
         (void)r3;
-        const so_rune r4 = U'\xff';
+        const so_rune r4 = 0xff;
         (void)r4;
-        const so_rune r5 = U'\u12e4';
+        const so_rune r5 = 0x12e4;
         (void)r5;
     }
     {
@@ -66,8 +66,45 @@ int main(void) {
         (void)s3;
         const so_String s4 = so_str("日本語");
         (void)s4;
-        const so_String s5 = so_str("\xff\u00FF");
+        const so_String s5 = so_str("\377ÿ");
         (void)s5;
+    }
+    {
+        // Escapes that C reads differently than Go.
+        so_String s1 = so_str("a\377b");
+        if (so_len(s1) != 3 || so_at(so_byte, s1, 1) != 0xff || so_at(so_byte, s1, 2) != 'b') {
+            so_panic("want 3 bytes");
+        }
+        so_String s2 = so_str("\na");
+        if (so_len(s2) != 2 || so_at(so_byte, s2, 0) != '\n' || so_at(so_byte, s2, 1) != 'a') {
+            so_panic("want newline and a");
+        }
+        so_String s3 = so_str("AA");
+        if (so_len(s3) != 2 || so_at(so_byte, s3, 0) != 'A' || so_at(so_byte, s3, 1) != 'A') {
+            so_panic("want AA");
+        }
+        // trigraph
+        so_String s4 = so_str("?\?!");
+        if (so_len(s4) != 3 || so_at(so_byte, s4, 0) != '?' || so_at(so_byte, s4, 1) != '?' || so_at(so_byte, s4, 2) != '!') {
+            so_panic("want ?\?!");
+        }
+        // NUL byte
+        so_String s5 = so_str("a\000b");
+        if (so_len(s5) != 3 || so_at(so_byte, s5, 0) != 'a' || so_at(so_byte, s5, 1) != 0 || so_at(so_byte, s5, 2) != 'b') {
+            so_panic("want a, nul, b");
+        }
+        so_String s6 = so_str("\\x41");
+        if (so_len(s6) != 4 || so_at(so_byte, s6, 0) != '\\') {
+            so_panic("want 4 bytes");
+        }
+        so_rune r = 'A';
+        if (r != 'A') {
+            so_panic("want A");
+        }
+        so_byte b = 0xe9;
+        if (b != 0xe9) {
+            so_panic("want 0xe9");
+        }
     }
     {
         // Conversions.

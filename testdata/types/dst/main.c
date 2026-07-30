@@ -45,7 +45,7 @@ int main(void) {
         (void)aid;
         main_AlsoID alsoID = 789;
         (void)alsoID;
-        main_Rune r = U'A';
+        main_Rune r = 'A';
         (void)r;
     }
     {

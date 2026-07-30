@@ -70,7 +70,7 @@ int main(void) {
         for (so_int _ = 0, __w = 0; _ < so_len(s); _ += __w) {
             __w = 0;
             so_rune c = so_utf8_decode(s, _, &__w);
-            if (c == U'l') {
+            if (c == 'l') {
                 continue;
             }
             n++;
@@ -104,7 +104,7 @@ int main(void) {
             so_panic("unexpected byte");
         }
         so_Slice rs = so_string_runes(s1);
-        if (so_at(so_rune, rs, 1) != U'世') {
+        if (so_at(so_rune, rs, 1) != 0x4e16) {
             so_panic("unexpected rune");
         }
         so_String s2 = so_bytes_string(bs);
@@ -119,7 +119,7 @@ int main(void) {
         if (so_string_ne(so_byte_string(b), so_str("A"))) {
             so_panic("want string(b) == A");
         }
-        so_rune r = U'世';
+        so_rune r = 0x4e16;
         if (so_string_ne(so_rune_string(r), so_str("世"))) {
             so_panic("want string(r) == 世");
         }

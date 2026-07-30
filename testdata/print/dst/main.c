@@ -15,7 +15,7 @@ int main(void) {
     double vFloat = 3.14;
     bool vBool = true;
     so_byte vByte = 'x';
-    so_rune vRune = U'本';
+    so_rune vRune = 0x672c;
     so_String vString = so_str("hello");
     person alice = (person){.name = so_str("alice")};
     person* vPtr = &alice;

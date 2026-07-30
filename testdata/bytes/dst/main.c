@@ -12,8 +12,8 @@ int main(void) {
     }
     {
         // Rune literals.
-        so_rune r1 = U'世', r2 = U'界', r3 = U'!';
-        if (r1 != U'世' || r2 != U'界' || r3 != U'!') {
+        so_rune r1 = 0x4e16, r2 = 0x754c, r3 = '!';
+        if (r1 != 0x4e16 || r2 != 0x754c || r3 != '!') {
             so_panic("unexpected rune");
         }
     }
@@ -27,7 +27,7 @@ int main(void) {
     }
     {
         // Rune slices and strings.
-        so_Slice r = (so_Slice){(so_rune[2]){U'世', U'界'}, 2, 2};
+        so_Slice r = (so_Slice){(so_rune[2]){0x4e16, 0x754c}, 2, 2};
         so_String s = so_runes_string(r);
         if (so_string_ne(s, so_str("世界"))) {
             so_panic("want s == 世界");

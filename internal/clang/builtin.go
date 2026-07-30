@@ -282,7 +282,7 @@ func (g *Generator) emitPrintCall(w io.Writer, call *ast.CallExpr, name string) 
 		if g.hasStringType(arg) {
 			if lit, ok := arg.(*ast.BasicLit); ok && lit.Kind == token.STRING {
 				// String literal: emit as a simple C string.
-				fmt.Fprint(w, rawStringValue(lit))
+				fmt.Fprint(w, g.cStringLit(lit))
 			} else {
 				// String expression: emit expr.len, expr.ptr
 				g.emitPostfixOperand(w, arg)

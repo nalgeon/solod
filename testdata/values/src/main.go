@@ -74,6 +74,42 @@ func main() {
 	}
 
 	{
+		// Escapes that C reads differently than Go.
+		s1 := "a\xffb"
+		if len(s1) != 3 || s1[1] != 0xff || s1[2] != 'b' {
+			panic("want 3 bytes")
+		}
+		s2 := "\x0aa"
+		if len(s2) != 2 || s2[0] != '\n' || s2[1] != 'a' {
+			panic("want newline and a")
+		}
+		s3 := "\U00000041\101"
+		if len(s3) != 2 || s3[0] != 'A' || s3[1] != 'A' {
+			panic("want AA")
+		}
+		s4 := "??!" // trigraph
+		if len(s4) != 3 || s4[0] != '?' || s4[1] != '?' || s4[2] != '!' {
+			panic("want ??!")
+		}
+		s5 := "a\x00b" // NUL byte
+		if len(s5) != 3 || s5[0] != 'a' || s5[1] != 0 || s5[2] != 'b' {
+			panic("want a, nul, b")
+		}
+		s6 := `\x41`
+		if len(s6) != 4 || s6[0] != '\\' {
+			panic("want 4 bytes")
+		}
+		r := '\U00000041'
+		if r != 'A' {
+			panic("want A")
+		}
+		var b byte = '\u00E9'
+		if b != 0xe9 {
+			panic("want 0xe9")
+		}
+	}
+
+	{
 		// Conversions.
 		const x uint = 123
 		const n1 = int(x)

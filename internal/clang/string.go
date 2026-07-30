@@ -3,26 +3,60 @@ package clang
 import (
 	"fmt"
 	"go/ast"
+	"go/constant"
 	"go/token"
 	"go/types"
 	"io"
+	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 // emitStringLit emits a string literal, handling both interpreted and raw strings.
 func (g *Generator) emitStringLit(w io.Writer, n *ast.BasicLit) {
-	fmt.Fprintf(w, "so_str(%s)", rawStringValue(n))
+	fmt.Fprintf(w, "so_str(%s)", g.cStringLit(n))
 }
 
 // emitStringLitConcat emits a chain of string literal additions as adjacent C string literals.
 func (g *Generator) emitStringLitConcat(w io.Writer, expr ast.Expr) {
 	switch e := expr.(type) {
 	case *ast.BasicLit:
-		fmt.Fprint(w, rawStringValue(e))
+		fmt.Fprint(w, g.cStringLit(e))
 	case *ast.BinaryExpr:
 		g.emitStringLitConcat(w, e.X)
 		fmt.Fprint(w, " ")
 		g.emitStringLitConcat(w, e.Y)
+	}
+}
+
+// emitCharLit emits a byte or rune literal. Like cStringLit, it works from the
+// value rather than the source text, since Go and C disagree on some escapes.
+func (g *Generator) emitCharLit(w io.Writer, n *ast.BasicLit) {
+	tv, ok := g.types.Types[n]
+	if !ok || tv.Value == nil {
+		g.fail(n, "unresolved character literal: %s", n.Value)
+	}
+	code, exact := constant.Int64Val(constant.ToInt(tv.Value))
+	if !exact {
+		g.fail(n, "character literal out of range: %s", n.Value)
+	}
+
+	switch {
+	case code == '\n':
+		fmt.Fprint(w, `'\n'`)
+	case code == '\t':
+		fmt.Fprint(w, `'\t'`)
+	case code == '\r':
+		fmt.Fprint(w, `'\r'`)
+	case code == '\\' || code == '\'':
+		fmt.Fprintf(w, `'\%c'`, code)
+	case code >= 0x20 && code < 0x7f:
+		// Only printable ASCII becomes a C character literal.
+		fmt.Fprintf(w, "'%c'", code)
+	default:
+		// Anything else becomes a number. Not U'...': that is a char32_t,
+		// which is unsigned and would make rune arithmetic unsigned too.
+		fmt.Fprintf(w, "0x%02x", code)
 	}
 }
 
@@ -45,32 +79,51 @@ func isStringLit(expr ast.Expr) bool {
 	return false
 }
 
-// rawStringValue returns the C string literal for a Go string literal,
-// handling both interpreted and raw strings. Does not include the so_str() wrapper.
-func rawStringValue(n *ast.BasicLit) string {
-	if strings.HasPrefix(n.Value, "`") {
-		// Raw string: strip backticks, escape for C.
-		raw := n.Value[1 : len(n.Value)-1]
-		var b strings.Builder
-		for _, ch := range raw {
-			switch ch {
-			case '\\':
-				b.WriteString(`\\`)
-			case '"':
-				b.WriteString(`\"`)
-			case '\n':
-				b.WriteString(`\n`)
-			case '\t':
-				b.WriteString(`\t`)
-			case '\r':
-				b.WriteString(`\r`)
-			default:
-				b.WriteRune(ch)
+// cStringLit returns the C string literal for a Go string literal, interpreted or
+// raw. The literal is decoded to its bytes and re-encoded, because Go escape rules
+// differ from C. Does not include the so_str() wrapper.
+func (g *Generator) cStringLit(n *ast.BasicLit) string {
+	s, err := strconv.Unquote(n.Value)
+	if err != nil {
+		g.fail(n, "invalid string literal: %s", n.Value)
+	}
+
+	var b strings.Builder
+	b.WriteByte('"')
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+		// Multi-byte UTF-8 passes through, so the C stays readable.
+		if ch >= utf8.RuneSelf {
+			if _, size := utf8.DecodeRuneInString(s[i:]); size > 1 {
+				b.WriteString(s[i : i+size])
+				i += size - 1
+				continue
 			}
 		}
-		return `"` + b.String() + `"`
+		switch {
+		case ch == '\\' || ch == '"':
+			b.WriteByte('\\')
+			b.WriteByte(ch)
+		case ch == '\n':
+			b.WriteString(`\n`)
+		case ch == '\t':
+			b.WriteString(`\t`)
+		case ch == '\r':
+			b.WriteString(`\r`)
+		case ch < 0x20 || ch >= 0x7f:
+			// A C octal escape ends after three digits,
+			// while \x absorbs every hex digit that follows it.
+			fmt.Fprintf(&b, `\%03o`, ch)
+		case ch == '?' && i > 0 && s[i-1] == '?':
+			// Escape the second ? of a pair, so no two ? end up next to each
+			// other and the bytes cannot form a C trigraph like ??!.
+			b.WriteString(`\?`)
+		default:
+			b.WriteByte(ch)
+		}
 	}
-	return n.Value
+	b.WriteByte('"')
+	return b.String()
 }
 
 func stringCompareFunc(op token.Token) string {

@@ -48,11 +48,7 @@ func (g *Generator) emitBasicLit(w io.Writer, n *ast.BasicLit) {
 		return
 	}
 	if n.Kind == token.CHAR {
-		if basic, ok := g.types.TypeOf(n).(*types.Basic); ok && basic.Kind() == types.Byte {
-			fmt.Fprint(w, n.Value)
-		} else {
-			fmt.Fprintf(w, "U%s", n.Value)
-		}
+		g.emitCharLit(w, n)
 		return
 	}
 	g.emitNumericLit(w, n)
