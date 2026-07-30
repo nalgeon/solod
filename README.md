@@ -230,6 +230,8 @@ Networking, uuids and more targets: WebAssembly, 32-bit, freestanding.
 
 ✓ [v0.3](https://github.com/solod-dev/solod/releases/tag/v0.3.0) — Concurrency, JSON, testing and benchmarking, more safety (escape analysis, leak checking, stack traces).
 
+⏳ [v0.4](./doc/changelog.md#solod-04-in-progress) — work in progress.
+
 Future plans:
 
 - High-level JSON API.

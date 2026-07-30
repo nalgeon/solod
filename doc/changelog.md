@@ -16,6 +16,8 @@ type Stack[T any] struct{ items []T } // OK: so_Slice is type-erased
 
 A generic function or method must be `so:inline` or `so:extern`, even when its signature never mentions the type parameter. See the [generics guide](./generics.md) for details.
 
+[9501bae](https://github.com/solod-dev/solod/commit/9501baef6386471516b70c22f64ec69b442d008f)
+
 **Switch tag evaluation**. A switch translates to an if/else-if chain, which repeats the tag in every comparison. The tag now goes into a temporary variable first, so a call in the tag runs once, as in Go:
 
 ```go
@@ -29,7 +31,11 @@ default:
 
 Switching on a struct or array is not supported.
 
+[06b8ab8]https://github.com/solod-dev/solod/commit/06b8ab85bf4cb065b760c5a0e750b1bf6658d076)
+
 **Switch case bodies reject `break` and `fallthrough`**. Both used to be emitted as-is, producing C that either lead to incorrect behavior or did not compile at all. Both are errors now.
+
+[fd8659b](https://github.com/solod-dev/solod/commit/fd8659b66bbb2e24f2b70062c5b08b84abffe551)
 
 **Interface comparison**. Two interfaces are equal when they hold the same pointer, and an interface compares with `nil` as expected. Comparing an interface with a concrete type is not supported:
 
@@ -50,6 +56,8 @@ if a == &n { }   // supported, &n is a pointer
 if a == n { }    // not supported
 ```
 
+[06b8ab8]https://github.com/solod-dev/solod/commit/06b8ab85bf4cb065b760c5a0e750b1bf6658d076)
+
 ### Interop
 
 **C field name override**. A `c:"..."` struct tag sets the C name of a field, so an extern struct can match a C header field whose name is a Go keyword:
@@ -61,6 +69,8 @@ type SDL_CommonEvent struct {
 }
 ```
 
+[fc25bb8]https://github.com/solod-dev/solod/commit/fc25bb875b10e4d64a6f223ad3f5ec647ed2733e)
+
 **Target-width C types**. `so/c` now supports more common C types:
 
 ```text
@@ -71,6 +81,8 @@ intptr_t    - c.Intptr
 long double - c.LongDouble
 ```
 
+[c06b294]https://github.com/solod-dev/solod/commit/c06b29494cda8c822a4191843120fb6a6091a25d)
+
 ### Safety
 
 **Assertions are no longer tied to NDEBUG**. They are on by default and removed only by the new `-assert` flag:
@@ -80,6 +92,8 @@ so build -assert=off .
 ```
 
 Previously, `NDEBUG` removed these checks. This meant that a C project that defines it could accidentally turn So's safety net off.
+
+[f67d8ca]https://github.com/solod-dev/solod/commit/f67d8ca3660437d6f648dd905d7784a5fbb180fa)
 
 ## Solod 0.3
 
