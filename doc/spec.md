@@ -768,6 +768,8 @@ b.loop.n = 100
 
 Anonymous structs are only supported as local variables (the `dog` example) and as inner struct fields (the `Benchmark` example). In other cases — slice/array elements, params, returns — use a named type instead.
 
+Embedded fields are not supported; declare named fields instead.
+
 Struct comparison (`==`, `!=`) is not supported.
 
 `new()` works with types and values:
@@ -903,6 +905,8 @@ r := s.(*Rect)        // direct assertion
 Empty interfaces (`interface{}` and `any`) are translated to `void*`.
 
 Converting between named interfaces is not supported: no type assertions like `iface.(AnotherIface)` and no type switches.
+
+Embedded interfaces are not supported; list the methods explicitly instead.
 
 Two interfaces are equal when they hold the same pointer, and an interface compares with `nil` as expected. Comparing an interface with a concrete type is not supported:
 

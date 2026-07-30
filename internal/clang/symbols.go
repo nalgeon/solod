@@ -97,6 +97,7 @@ func (g *Generator) collect() {
 
 	g.validateExported()
 	g.validatePromoted()
+	g.rejectEmbedding()
 }
 
 // validateExported rejects exported functions and methods that use
@@ -146,6 +147,54 @@ func (g *Generator) validatePromoted() {
 					sym.funcDecl.Name.Name, recvTypeName(recv))
 			}
 		}
+	}
+}
+
+// rejectEmbedding rejects embedded fields in structs
+// and embedded interfaces in interfaces.
+func (g *Generator) rejectEmbedding() {
+	for _, file := range g.pkg.Syntax {
+		ast.Inspect(file, func(n ast.Node) bool {
+			switch t := n.(type) {
+			case *ast.StructType:
+				g.rejectEmbeddedFields(t)
+			case *ast.InterfaceType:
+				g.rejectEmbeddedIfaces(t)
+			}
+			return true
+		})
+	}
+}
+
+// rejectEmbeddedFields rejects struct fields declared without a name.
+func (g *Generator) rejectEmbeddedFields(st *ast.StructType) {
+	for _, field := range st.Fields.List {
+		if len(field.Names) > 0 {
+			continue
+		}
+		typ := g.typeString(g.types.TypeOf(field.Type))
+		g.fail(field, "embedded field %s is not supported; declare a named field instead", typ)
+	}
+}
+
+// rejectEmbeddedIfaces rejects an interface embedded in another interface.
+func (g *Generator) rejectEmbeddedIfaces(it *ast.InterfaceType) {
+	// Type constraint elements (~int | ~string, and the constraint interfaces
+	// built from them) are left alone: they only serve Go type checking and
+	// never reach C.
+	for _, elem := range it.Methods.List {
+		if _, isMethod := elem.Type.(*ast.FuncType); isMethod {
+			continue
+		}
+		typ := g.types.TypeOf(elem.Type)
+		if typ == nil {
+			continue
+		}
+		iface, ok := typ.Underlying().(*types.Interface)
+		if !ok || !iface.IsMethodSet() || iface.NumMethods() == 0 {
+			continue
+		}
+		g.fail(elem, "embedded interface %s is not supported; declare its methods instead", g.typeString(typ))
 	}
 }
 

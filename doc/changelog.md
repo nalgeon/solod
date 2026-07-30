@@ -30,6 +30,21 @@ var s Shape = r // rejected: method Rect.Area has a value receiver
 
 Using pointer receivers (`func (r *Rect) Area() int`) works fine.
 
+**Type embedding is rejected**. Both struct and interface embedding are errors now:
+
+```go
+type number struct {
+    base // rejected: embedded field
+}
+
+type readWriter interface {
+    reader // rejected: embedded interface
+    write(v int)
+}
+```
+
+Declare a named field or list the methods instead.
+
 **Switch tag evaluation**. A switch translates to an if/else-if chain, which repeats the tag in every comparison. The tag now goes into a temporary variable first, so a call in the tag runs once, as in Go:
 
 ```go

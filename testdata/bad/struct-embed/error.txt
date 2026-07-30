@@ -1,0 +1,3 @@
+main.go:8:2: embedded field base is not supported; declare a named field instead
+	base
+	^here
