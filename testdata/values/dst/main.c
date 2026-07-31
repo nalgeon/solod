@@ -5,17 +5,17 @@
 int main(void) {
     {
         // Integer literals.
-        const int64_t d1 = 123;
+        const so_unused int64_t d1 = 123;
         (void)d1;
-        const int64_t d2 = 100000;
+        const so_unused int64_t d2 = 100000;
         (void)d2;
-        const int64_t d3 = 0b1010;
+        const so_unused int64_t d3 = 0b1010;
         (void)d3;
-        const int64_t d4 = 0600;
+        const so_unused int64_t d4 = 0600;
         (void)d4;
-        const int64_t d5 = 0xBadFace;
+        const so_unused int64_t d5 = 0xBadFace;
         (void)d5;
-        const int64_t d6 = 0x677a2fcc40c6;
+        const so_unused int64_t d6 = 0x677a2fcc40c6;
         (void)d6;
     }
     {
@@ -28,22 +28,22 @@ int main(void) {
         if (u2 - 1 != 9223372036854775807) {
             so_panic("want MaxInt64+1");
         }
-        const uint64_t u3 = 0xFFFFFFFFFFFFFFFFu;
+        const so_unused uint64_t u3 = 0xFFFFFFFFFFFFFFFFu;
         if (u3 != u1) {
             so_panic("want MaxUint64");
         }
     }
     {
         // Floating-point literals.
-        const double f1 = 3.14;
+        const so_unused double f1 = 3.14;
         (void)f1;
-        const double f2 = 0.25;
+        const so_unused double f2 = 0.25;
         (void)f2;
-        const double f3 = 1e-9;
+        const so_unused double f3 = 1e-9;
         (void)f3;
-        const double f4 = 6.022e23;
+        const so_unused double f4 = 6.022e23;
         (void)f4;
-        const double f5 = 1e6;
+        const so_unused double f5 = 1e6;
         (void)f5;
     }
     // {
@@ -60,28 +60,28 @@ int main(void) {
     // }
     {
         // Rune literals.
-        const so_rune r1 = 'a';
+        const so_unused so_rune r1 = 'a';
         (void)r1;
-        const so_rune r2 = 0xe4;
+        const so_unused so_rune r2 = 0xe4;
         (void)r2;
-        const so_rune r3 = 0x672c;
+        const so_unused so_rune r3 = 0x672c;
         (void)r3;
-        const so_rune r4 = 0xff;
+        const so_unused so_rune r4 = 0xff;
         (void)r4;
-        const so_rune r5 = 0x12e4;
+        const so_unused so_rune r5 = 0x12e4;
         (void)r5;
     }
     {
         // String literals.
-        const so_String s1 = so_str("abc");
+        const so_unused so_String s1 = so_str("abc");
         (void)s1;
-        const so_String s2 = so_str("abc\n\t\tdef");
+        const so_unused so_String s2 = so_str("abc\n\t\tdef");
         (void)s2;
-        const so_String s3 = so_str("\n");
+        const so_unused so_String s3 = so_str("\n");
         (void)s3;
-        const so_String s4 = so_str("日本語");
+        const so_unused so_String s4 = so_str("日本語");
         (void)s4;
-        const so_String s5 = so_str("\377ÿ");
+        const so_unused so_String s5 = so_str("\377ÿ");
         (void)s5;
     }
     {
@@ -123,12 +123,12 @@ int main(void) {
     }
     {
         // Conversions.
-        const so_uint x = 123;
-        const so_int n1 = (so_int)(x);
+        const so_unused so_uint x = 123;
+        const so_unused so_int n1 = (so_int)(x);
         (void)n1;
-        const so_int n2 = (so_int)(x & 7);
+        const so_unused so_int n2 = (so_int)(x & 7);
         (void)n2;
-        const int64_t mask2 = 0b00011111;
+        const so_unused int64_t mask2 = 0b00011111;
         so_byte p0 = 'x';
         so_rune r = (so_rune)(p0 & mask2);
         (void)r;

@@ -3,12 +3,12 @@
 // -- Variables and constants --
 
 // File-level constants.
-static const so_int fInt = 42;
-static const so_String fString = so_str("file");
-static const main_HttpStatus statusSecret = 999;
-static const uint64_t halfUint64 = 9223372036854775808u;
-static const uint64_t bigIota = 9223372036854775808u;
-static const uint64_t bigIotaNext = 9223372036854775809u;
+static const so_unused so_int fInt = 42;
+static const so_unused so_String fString = so_str("file");
+static const so_unused main_HttpStatus statusSecret = 999;
+static const so_unused uint64_t halfUint64 = 9223372036854775808u;
+static const so_unused uint64_t bigIota = 9223372036854775808u;
+static const so_unused uint64_t bigIotaNext = 9223372036854775809u;
 main_Point main_PointZero = (main_Point){.X = main_Zero, .Y = main_Zero};
 main_Point main_PointSubZero = (main_Point){.X = sub_Zero, .Y = sub_Zero};
 
@@ -17,12 +17,9 @@ main_Point main_PointSubZero = (main_Point){.X = sub_Zero, .Y = sub_Zero};
 int main(void) {
     {
         // Local constants.
-        const int64_t lInt = 500000000;
-        (void)lInt;
-        const double lFloat = 3e20 / lInt;
-        (void)lFloat;
-        const so_String lString = so_str("local");
-        (void)lString;
+        const so_unused int64_t lInt = 500000000;
+        const so_unused double lFloat = 3e20 / lInt;
+        const so_unused so_String lString = so_str("local");
     }
     {
         // Using constants in expressions.
@@ -60,12 +57,6 @@ int main(void) {
         if (next != 9223372036854775809u) {
             so_panic("bigIotaNext");
         }
-    }
-    {
-        // Using _ on file level is not supported,
-        // so silence the unused file-level constants here.
-        (void)fInt;
-        (void)fString;
     }
     return 0;
 }

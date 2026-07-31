@@ -6,9 +6,6 @@
 
 typedef struct main_Point main_Point;
 
-// Using _ on file level is not supported.
-// var _ = fInt
-// var _ = fString
 // Typedefed constant group.
 typedef so_int main_HttpStatus;
 

@@ -90,6 +90,7 @@
 #define so_auto __auto_type
 #define so_typeof __typeof__
 #define so_unreachable() __builtin_unreachable()
+#define so_unused __attribute__((unused))
 
 typedef uint8_t so_byte;
 typedef int32_t so_rune;

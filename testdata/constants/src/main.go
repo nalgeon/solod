@@ -6,10 +6,6 @@ import "example/sub"
 const fInt int = 42
 const fString string = "file"
 
-// Using _ on file level is not supported.
-// var _ = fInt
-// var _ = fString
-
 // Typedefed constant group.
 type HttpStatus int
 
@@ -63,11 +59,8 @@ func main() {
 	{
 		// Local constants.
 		const lInt = 500000000
-		_ = lInt
 		const lFloat = 3e20 / lInt
-		_ = lFloat
 		const lString = "local"
-		_ = lString
 	}
 	{
 		// Using constants in expressions.
@@ -107,11 +100,5 @@ func main() {
 		if next != 9223372036854775809 {
 			panic("bigIotaNext")
 		}
-	}
-	{
-		// Using _ on file level is not supported,
-		// so silence the unused file-level constants here.
-		_ = fInt
-		_ = fString
 	}
 }

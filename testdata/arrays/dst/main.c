@@ -222,7 +222,7 @@ int main(void) {
     {
         // Variable-length arrays are not possible, because
         // Go's type checker resolves n to a constant.
-        const int64_t n = 3;
+        const so_unused int64_t n = 3;
         (void)n;
         so_int a[3] = {};
         if (a[0] != 0 || a[1] != 0 || a[2] != 0) {

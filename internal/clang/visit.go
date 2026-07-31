@@ -272,8 +272,9 @@ func (g *Generator) emitConstSpec(w io.Writer, spec *ast.ValueSpec) {
 			constName = g.symbolName(g.types.Defs[name])
 		}
 
-		// Emit the constant declaration.
-		fmt.Fprintf(w, "%s%sconst %s %s = ", g.indent(), specifier, cType, constName)
+		// Emit the constant declaration. Go allows unused constants, so mark
+		// them so_unused to avoid unused-variable warnings from the C compiler.
+		fmt.Fprintf(w, "%s%sconst so_unused %s %s = ", g.indent(), specifier, cType, constName)
 		if isIota {
 			g.emitConstVal(w, spec, name)
 		} else {

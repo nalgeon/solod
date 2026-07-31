@@ -6,7 +6,7 @@ static so_int add(so_int a, so_int b);
 // -- Variables and constants --
 static so_int x = 11;
 so_int main_Y = 22;
-static const so_int z = 33;
+static const so_unused so_int z = 33;
 
 // -- add.go --
 
