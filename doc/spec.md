@@ -65,42 +65,18 @@ Complex numbers are not supported.
 
 Constants are translated to C `const` qualifiers.
 
-A constant integer expression is emitted as its value when C cannot compute it step by step:
+A constant integer expression is emitted as its value when C cannot compute it step by step. Expressions that C computes correctly are emitted as operators:
 
 ```go
-var mask uint64 = 1<<64 - 1
+var mask uint64 = 1<<64 - 1      // folds to 18446744073709551615u
+var flags int64 = 1<<20 | 1<<10  // emits as is
 ```
 
-```c
-uint64_t mask = 18446744073709551615u;
-```
-
-Expressions that C computes correctly are emitted as operators:
-
-```go
-var flags int64 = 1<<20 | 1<<10
-```
-
-```c
-int64_t flags = (((int64_t)1 << 20) | ((int64_t)1 << 10));
-```
-
-A constant float expression is emitted as its value, not as the operators used to produce it:
+A constant float expression is always emitted as its value, not as the operators used to produce it:
 
 ```go
 const pi = 3.14159
-const twoPi = 2 * pi
-```
-
-```c
-static const so_unused double pi = 3.14159;
-static const so_unused double twoPi = 6.28318;
-```
-
-A constant float value that does not fit its C type is rejected:
-
-```go
-const huge = 1e200 * 1e200 // rejected: constant 1e+400 overflows float64
+const twoPi = 2 * pi  // folds to 6.28318
 ```
 
 ## Variables
