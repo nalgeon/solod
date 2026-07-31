@@ -119,6 +119,37 @@ A constant that does not fit `uint64_t` either is rejected:
 const huge = 1 << 200 // rejected: constant huge does not fit in int64 or uint64
 ```
 
+**Float constant expressions**. A constant float expression is emitted as its value, not as the operators used to produce it:
+
+```go
+const pi = 3.14159
+const twoPi = 2 * pi
+```
+
+```c
+static const so_unused double pi = 3.14159;
+static const so_unused double twoPi = 6.28318;
+```
+
+A constant that does not fit the C float type is rejected:
+
+```go
+const huge = 1e200 * 1e200 // rejected: constant 1e+400 overflows float64
+```
+
+**Float32 literals**. Such a literal now gets an `f` suffix in C. Without it the literal is a `double`, and C promotes the other operand to match instead of computing in `float` as Go does:
+
+```go
+var x float32 = 0.1
+_ = x == 0.1 // was false, now true
+```
+
+**Integer literals in a float context**. Such a literal is now emitted as a float literal. C has no integer type wide enough for the larger ones:
+
+```go
+var x float64 = 10000000000000000000000 // was 10000000000000000000000, now 1e+22
+```
+
 ### Interop
 
 **C field name override**. A `c:"..."` struct tag sets the C name of a field, so an extern struct can match a C header field whose name is a Go keyword:

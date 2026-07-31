@@ -3,6 +3,7 @@
 Solod (So) is a strict subset of Go that transpiles to regular C. This document lists the features it supports. If a feature isn't listed, it's not supported.
 
 [Values](#values) •
+[Constants](#constants) •
 [Variables](#variables) •
 [Strings](#strings) •
 [Arrays](#arrays) •
@@ -60,7 +61,27 @@ In C, the default type for integers is `so_int` (`int64_t`), for floats it's `do
 
 Complex numbers are not supported.
 
+## Constants
+
 Constants are translated to C `const` qualifiers.
+
+A constant float expression is emitted as its value, not as the operators used to produce it:
+
+```go
+const pi = 3.14159
+const twoPi = 2 * pi
+```
+
+```c
+static const so_unused double pi = 3.14159;
+static const so_unused double twoPi = 6.28318;
+```
+
+A constant float value that does not fit its C type is rejected:
+
+```go
+const huge = 1e200 * 1e200 // rejected: constant 1e+400 overflows float64
+```
 
 ## Variables
 
@@ -1000,7 +1021,7 @@ const (
 
 Each constant is emitted as a C `const`.
 
-`iota` is supported for integer-typed constants:
+`iota` is supported for integer- and float-typed constants:
 
 ```go
 type Day int
@@ -1012,7 +1033,7 @@ const (
 )
 ```
 
-Iota values are evaluated at compile time and translated to integer literals.
+Iota values are evaluated at compile time and translated to numeric literals.
 
 ## Errors
 

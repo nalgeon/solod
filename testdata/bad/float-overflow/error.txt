@@ -1,0 +1,3 @@
+main.go:3:14: constant 1e+400 overflows float64
+const huge = 1e200 * 1e200
+             ^here

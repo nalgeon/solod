@@ -288,8 +288,10 @@ func (g *Generator) emitConstSpec(w io.Writer, spec *ast.ValueSpec) {
 func (g *Generator) emitConstVal(w io.Writer, node ast.Node, name *ast.Ident) {
 	obj := g.types.Defs[name].(*types.Const)
 	val := obj.Val()
-	switch val.Kind() {
-	case constant.Int:
+	switch {
+	case isFloatType(obj.Type()):
+		fmt.Fprint(w, g.floatLit(node, val, obj.Type()))
+	case val.Kind() == constant.Int:
 		fmt.Fprint(w, val.ExactString())
 		if exceedsInt64(val) {
 			fmt.Fprint(w, "u") // unsigned suffix for C

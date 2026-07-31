@@ -58,8 +58,8 @@ int main(void) {
     }
     {
         // Key type: float32 (eq_4)
-        so_Map* m = so_map_lit(float, so_int, 2, ((float[]){1.5, 2.5}), ((so_int[]){10, 20}));
-        if (so_map_get(float, so_int, m, 1.5) != 10 || so_map_get(float, so_int, m, 2.5) != 20) {
+        so_Map* m = so_map_lit(float, so_int, 2, ((float[]){1.5f, 2.5f}), ((so_int[]){10, 20}));
+        if (so_map_get(float, so_int, m, 1.5f) != 10 || so_map_get(float, so_int, m, 2.5f) != 20) {
             so_panic("float32 key");
         }
     }

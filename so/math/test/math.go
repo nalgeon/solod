@@ -71,6 +71,19 @@ func TestCeil(t *testing.T) {
 	}
 }
 
+func TestConst(t *testing.T) {
+	// Log2E and Log10E are constant expressions. Go computes them in arbitrary
+	// precision and rounds once, so these are the values it arrives at.
+	var log2E float64 = math.Log2E
+	if log2E != 1.4426950408889634 {
+		t.Error("Log2E != 1.4426950408889634")
+	}
+	var log10E float64 = math.Log10E
+	if log10E != 0.4342944819032518 {
+		t.Error("Log10E != 0.4342944819032518")
+	}
+}
+
 func TestCopysign(t *testing.T) {
 	if math.Copysign(3.2, -1) != -3.2 {
 		t.Error("Copysign(3.2, -1) != -3.2")

@@ -12,6 +12,10 @@ import (
 
 // emitExpr dispatches expression generation to per-type methods.
 func (g *Generator) emitExpr(w io.Writer, expr ast.Expr) {
+	// A computed constant float expression is emitted as its value.
+	if g.emitFloatConst(w, expr) {
+		return
+	}
 	switch e := expr.(type) {
 	case *ast.BasicLit:
 		g.emitBasicLit(w, e)
@@ -57,12 +61,17 @@ func (g *Generator) emitBasicLit(w io.Writer, n *ast.BasicLit) {
 
 // emitNumericLit emits a numeric literal, converting Go-specific formats to C.
 func (g *Generator) emitNumericLit(w io.Writer, n *ast.BasicLit) {
+	tv := g.types.Types[n]
 	val := strings.ReplaceAll(n.Value, "_", "")
+	if isFloatType(tv.Type) {
+		g.emitFloatLit(w, n, val, tv)
+		return
+	}
 	if n.Kind == token.INT && (strings.HasPrefix(val, "0o") || strings.HasPrefix(val, "0O")) {
 		val = "0" + val[2:]
 	}
 	fmt.Fprint(w, val)
-	if n.Kind == token.INT && exceedsInt64(g.types.Types[n].Value) {
+	if n.Kind == token.INT && exceedsInt64(tv.Value) {
 		fmt.Fprint(w, "u") // unsigned suffix for C
 	}
 }

@@ -19,6 +19,7 @@ func main() {
 		{Name: "TestAtanh", F: TestAtanh},
 		{Name: "TestCbrt", F: TestCbrt},
 		{Name: "TestCeil", F: TestCeil},
+		{Name: "TestConst", F: TestConst},
 		{Name: "TestCopysign", F: TestCopysign},
 		{Name: "TestCos", F: TestCos},
 		{Name: "TestCosh", F: TestCosh},
