@@ -30,6 +30,8 @@ so run -panic=trace .
 
 Trace mode adds `-rdynamic -fno-omit-frame-pointer` to the C build so frames can be unwound and named. The trace shows C symbols (`package_Func`), which map directly onto So functions; combine it with `-track-source` to relate the panic site back to So source. The default fits glibc and macOS. Use `-panic=exit` or `-panic=abort` on musl, where the trace comes out empty, and on freestanding, which always traps.
 
+`-rdynamic` is an ELF-only option that the MinGW driver rejects, and So omits it when `CC` looks like a MinGW compiler (`CC=x86_64-w64-mingw32-gcc`). Trace mode still builds for Windows, but the trace comes out empty there: MinGW has no `execinfo.h`.
+
 ## Assertions
 
 Assertions check preconditions like slice bounds and index-out-of-range, plus the `c.Assert` calls the program makes itself. They are on by default. The `-assert` flag removes them for `build`, `run`, `test`, and `bench`:

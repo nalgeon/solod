@@ -102,7 +102,7 @@ type compileOptions struct {
 
 // newCompileOptions derives the C defines and flags from opts.
 func newCompileOptions(opts Options) (compileOptions, error) {
-	panicDef, panicFlags, err := panicMode(opts.PanicMode)
+	panicDef, panicFlags, err := panicMode(opts.PanicMode, ccName())
 	if err != nil {
 		return compileOptions{}, err
 	}
@@ -120,10 +120,7 @@ func newCompileOptions(opts Options) (compileOptions, error) {
 
 // compileC invokes the C compiler to produce an executable.
 func compileC(includeDir string, cFiles []string, outFile string, copts compileOptions) error {
-	cc := os.Getenv("CC")
-	if cc == "" {
-		cc = "cc"
-	}
+	cc := ccName()
 
 	args := []string{"-I" + includeDir}
 	args = append(args, fmt.Sprintf(`-Dso_version="%s"`, Version()))
@@ -149,13 +146,18 @@ func compileC(includeDir string, cFiles []string, outFile string, copts compileO
 }
 
 // panicMode maps a panic mode name to the -DSO_PANIC_MODE define and any
-// extra C compiler flags the mode needs. An empty mode defaults to "trace".
-func panicMode(mode string) (define string, flags []string, err error) {
+// extra C compiler flags the mode needs, given the C compiler cc.
+// An empty mode defaults to "trace".
+func panicMode(mode, cc string) (define string, flags []string, err error) {
 	switch mode {
 	case "", "trace":
-		// Needs -rdynamic for symbol names and frame pointers to unwind.
-		return "-DSO_PANIC_MODE=SO_PANIC_TRACE",
-			[]string{"-rdynamic", "-fno-omit-frame-pointer"}, nil
+		// Needs frame pointers to unwind and -rdynamic for symbol names.
+		// MinGW rejects -rdynamic, so we skip it there.
+		flags := []string{"-fno-omit-frame-pointer"}
+		if !isMinGW(cc) {
+			flags = append(flags, "-rdynamic")
+		}
+		return "-DSO_PANIC_MODE=SO_PANIC_TRACE", flags, nil
 	case "exit":
 		return "-DSO_PANIC_MODE=SO_PANIC_EXIT", nil, nil
 	case "abort":
@@ -211,4 +213,17 @@ func splitList(s string) []string {
 		}
 	}
 	return items
+}
+
+// ccName returns the C compiler to invoke, from CC (default "cc").
+func ccName() string {
+	if cc := os.Getenv("CC"); cc != "" {
+		return cc
+	}
+	return "cc"
+}
+
+// isMinGW reports whether cc names a MinGW compiler, which targets Windows.
+func isMinGW(cc string) bool {
+	return strings.Contains(strings.ToLower(cc), "mingw")
 }
