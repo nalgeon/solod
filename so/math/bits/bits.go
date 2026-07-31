@@ -151,7 +151,7 @@ func OnesCount64(x uint64) int {
 	// Per "Hacker's Delight", the first line can be simplified
 	// more, but it saves at best one instruction, so we leave
 	// it alone for clarity.
-	const m = -1 // all bits set; 1<<64 - 1 would overflow in C
+	const m = 1<<64 - 1 // all bits set
 	x = x>>1&(m0&m) + x&(m0&m)
 	x = x>>2&(m1&m) + x&(m1&m)
 	x = (x>>4 + x) & (m2 & m)
@@ -245,7 +245,7 @@ func Reverse32(x uint32) uint32 {
 
 // Reverse64 returns the value of x with its bits in reversed order.
 func Reverse64(x uint64) uint64 {
-	const m = -1 // all bits set; 1<<64 - 1 would overflow in C
+	const m = 1<<64 - 1 // all bits set
 	x = x>>1&(m0&m) | x&(m0&m)<<1
 	x = x>>2&(m1&m) | x&(m1&m)<<2
 	x = x>>4&(m2&m) | x&(m2&m)<<4
@@ -284,7 +284,7 @@ func ReverseBytes32(x uint32) uint32 {
 //
 // This function's execution time does not depend on the inputs.
 func ReverseBytes64(x uint64) uint64 {
-	const m = -1 // all bits set; 1<<64 - 1 would overflow in C
+	const m = 1<<64 - 1 // all bits set
 	x = x>>8&(m3&m) | x&(m3&m)<<8
 	x = x>>16&(m4&m) | x&(m4&m)<<16
 	return x>>32 | x<<32

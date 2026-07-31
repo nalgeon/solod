@@ -33,6 +33,67 @@ func (g *Generator) emitFloatConst(w io.Writer, n ast.Expr) bool {
 	return true
 }
 
+// emitIntConst emits a computed constant integer expression as a single
+// literal and reports whether it did.
+//
+// Go computes a constant expression in arbitrary precision and converts once,
+// at the end, so an intermediate value may exceed the destination type.
+// C evaluates step by step in a fixed width type instead. It still reaches
+// the same value for everything that fits int64, but if some value in the
+// expression does not fit, we have to emit the computed Go value instead
+// of the operators.
+func (g *Generator) emitIntConst(w io.Writer, n ast.Expr) bool {
+	switch n.(type) {
+	case *ast.Ident, *ast.SelectorExpr, *ast.BasicLit:
+		return false
+	}
+	tv := g.types.Types[n]
+	if tv.Value == nil || tv.Value.Kind() != constant.Int || !g.needsIntFold(n) {
+		return false
+	}
+	// Go has already checked that the value fits the destination type.
+	fmt.Fprint(w, intLit(tv.Value))
+	return true
+}
+
+// needsIntFold reports whether C would fail to reproduce the value of a
+// constant integer expression: some value in it does not fit int64,
+// or some shift count reaches 64 bits.
+func (g *Generator) needsIntFold(n ast.Expr) bool {
+	fold := false
+	ast.Inspect(n, func(node ast.Node) bool {
+		expr, ok := node.(ast.Expr)
+		if !ok {
+			return true
+		}
+		if exceedsInt64(g.types.Types[expr].Value) {
+			fold = true
+		}
+		if bin, ok := expr.(*ast.BinaryExpr); ok && (bin.Op == token.SHL || bin.Op == token.SHR) {
+			if count := g.types.Types[bin.Y].Value; count != nil && count.Kind() == constant.Int {
+				if bits, ok := constant.Int64Val(count); ok && bits >= 64 {
+					fold = true
+				}
+			}
+		}
+		return !fold
+	})
+	return fold
+}
+
+// intLit formats an integer constant as a C literal.
+func intLit(val constant.Value) string {
+	if exceedsInt64(val) {
+		return val.ExactString() + "u" // unsigned suffix for C
+	}
+	if num, ok := constant.Int64Val(val); ok && num == math.MinInt64 {
+		// C has no negative literals: -9223372036854775808 is a unary minus
+		// applied to a value that no signed C type can hold.
+		return "INT64_MIN"
+	}
+	return val.ExactString()
+}
+
 // emitFloatLit emits a literal of a float type. val is the literal text with
 // the digit separators removed.
 func (g *Generator) emitFloatLit(w io.Writer, n *ast.BasicLit, val string, tv types.TypeAndValue) {

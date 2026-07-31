@@ -173,7 +173,7 @@ type Time struct {
 }
 
 const (
-	hasMonotonic uint64 = 0x8000000000000000 // 1<<63
+	hasMonotonic uint64 = 1 << 63
 	// maxWall      = wallToInternal + ((1 << 33) - 1) // year 2157
 	minWall   = wallToInternal // year 1885
 	nsecMask  = (1 << 30) - 1

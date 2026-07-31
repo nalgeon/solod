@@ -65,6 +65,26 @@ Complex numbers are not supported.
 
 Constants are translated to C `const` qualifiers.
 
+A constant integer expression is emitted as its value when C cannot compute it step by step:
+
+```go
+var mask uint64 = 1<<64 - 1
+```
+
+```c
+uint64_t mask = 18446744073709551615u;
+```
+
+Expressions that C computes correctly are emitted as operators:
+
+```go
+var flags int64 = 1<<20 | 1<<10
+```
+
+```c
+int64_t flags = (((int64_t)1 << 20) | ((int64_t)1 << 10));
+```
+
 A constant float expression is emitted as its value, not as the operators used to produce it:
 
 ```go

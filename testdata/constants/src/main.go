@@ -47,6 +47,12 @@ const (
 	bigIotaNext
 )
 
+// An integer constant expression is folded when C cannot compute it
+// step by step, and emitted as operators when it can.
+const bigMask = 1<<64 - 1
+const bigQuo = bigMask / 3
+const smallMask = 1<<20 - 1
+
 // Float constant expressions are folded.
 const (
 	ln10   = 2.30258509299404568401799145468436420760110148862877297603332790
@@ -118,6 +124,53 @@ func main() {
 		var next uint64 = bigIotaNext
 		if next != 9223372036854775809 {
 			panic("bigIotaNext")
+		}
+	}
+	{
+		// An intermediate value above int64 is folded away.
+		var mask uint64 = 1<<64 - 1
+		if mask != MaxUint64 {
+			panic("1<<64 - 1")
+		}
+		var wide uint64 = 1<<100 >> 37
+		if wide != 9223372036854775808 {
+			panic("1<<100 >> 37")
+		}
+		var sum uint64 = 1<<63 + 1
+		if sum != 9223372036854775809 {
+			panic("1<<63 + 1")
+		}
+		var neg int64 = -(1 << 63)
+		if neg != -9223372036854775808 {
+			panic("-(1 << 63)")
+		}
+		var quo uint64 = bigQuo
+		if quo != 6148914691236517205 {
+			panic("bigMask / 3")
+		}
+		var mixed uint64 = MaxUint64 + (-1)
+		if mixed != 18446744073709551614 {
+			panic("MaxUint64 + (-1)")
+		}
+		// A shift count of 64 is undefined in C, even with a value in range.
+		var none uint64 = 0 << 64
+		if none != 0 {
+			panic("0 << 64")
+		}
+	}
+	{
+		// Expressions that C computes correctly are left as operators.
+		var narrow int32 = 1<<40 >> 20
+		if narrow != 1048576 {
+			panic("1<<40 >> 20")
+		}
+		var small int64 = smallMask + 1
+		if small != 1048576 {
+			panic("smallMask + 1")
+		}
+		var flags int64 = 1<<20 | 1<<10
+		if flags != 1049600 {
+			panic("1<<20 | 1<<10")
 		}
 	}
 	{

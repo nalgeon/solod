@@ -12,8 +12,8 @@ import (
 
 // emitExpr dispatches expression generation to per-type methods.
 func (g *Generator) emitExpr(w io.Writer, expr ast.Expr) {
-	// A computed constant float expression is emitted as its value.
-	if g.emitFloatConst(w, expr) {
+	// A computed constant expression is emitted as its value.
+	if g.emitFloatConst(w, expr) || g.emitIntConst(w, expr) {
 		return
 	}
 	switch e := expr.(type) {

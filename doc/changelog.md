@@ -119,6 +119,24 @@ A constant that does not fit `uint64_t` either is rejected:
 const huge = 1 << 200 // rejected: constant huge does not fit in int64 or uint64
 ```
 
+**Integer constant expressions**. A constant integer expression is now emitted as its value when C cannot compute it step by step:
+
+```go
+var mask uint64 = 1<<64 - 1 // was ((int64_t)1 << 64) - 1, now 18446744073709551615u
+```
+
+Expressions that C computes correctly are unchanged:
+
+```go
+var flags int64 = 1<<20 | 1<<10 // (((int64_t)1 << 20) | ((int64_t)1 << 10))
+```
+
+**The smallest int64**. The value -9223372036854775808 is now emitted as `INT64_MIN`. C has no negative literals, so as a unary minus applied to a value that no signed C type can hold, it was read as unsigned:
+
+```go
+const minInt64 = -(1 << 63) // was -9223372036854775808, now INT64_MIN
+```
+
 **Float constant expressions**. A constant float expression is emitted as its value, not as the operators used to produce it:
 
 ```go

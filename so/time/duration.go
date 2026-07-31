@@ -13,8 +13,8 @@ type Duration int64
 const MaxDurationLen = 25 // -2562047h47m16.854775808s
 
 const (
-	minDuration Duration = Duration(^int64(^uint64(0) >> 1)) // -1 << 63
-	maxDuration Duration = Duration(int64(^uint64(0) >> 1))  // 1<<63 - 1
+	minDuration Duration = -(1 << 63)
+	maxDuration Duration = 1<<63 - 1
 )
 
 // Common durations. There is no definition for units of Day or larger

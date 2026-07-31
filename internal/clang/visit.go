@@ -292,10 +292,7 @@ func (g *Generator) emitConstVal(w io.Writer, node ast.Node, name *ast.Ident) {
 	case isFloatType(obj.Type()):
 		fmt.Fprint(w, g.floatLit(node, val, obj.Type()))
 	case val.Kind() == constant.Int:
-		fmt.Fprint(w, val.ExactString())
-		if exceedsInt64(val) {
-			fmt.Fprint(w, "u") // unsigned suffix for C
-		}
+		fmt.Fprint(w, intLit(val))
 	default:
 		g.fail(node, "unsupported iota constant kind: %s", val.Kind())
 	}

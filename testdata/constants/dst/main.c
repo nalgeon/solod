@@ -10,6 +10,12 @@ static const so_unused uint64_t halfUint64 = 9223372036854775808u;
 static const so_unused uint64_t bigIota = 9223372036854775808u;
 static const so_unused uint64_t bigIotaNext = 9223372036854775809u;
 
+// An integer constant expression is folded when C cannot compute it
+// step by step, and emitted as operators when it can.
+static const so_unused uint64_t bigMask = 18446744073709551615u;
+static const so_unused int64_t bigQuo = 6148914691236517205;
+static const so_unused int64_t smallMask = ((int64_t)1 << 20) - 1;
+
 // Float constant expressions are folded.
 static const so_unused double ln10 = 2.30258509299404568401799145468436420760110148862877297603332790;
 static const so_unused double log10E = 0.4342944819032518;
@@ -52,11 +58,11 @@ int main(void) {
     }
     {
         // Arithmetic on constants above math.MaxInt64 stays unsigned.
-        uint64_t third = main_MaxUint64 / 3;
+        uint64_t third = 6148914691236517205;
         if (third != 6148914691236517205) {
             so_panic("MaxUint64 / 3");
         }
-        uint64_t shifted = (main_MaxUint64 >> 1);
+        uint64_t shifted = 9223372036854775807;
         if (shifted != 9223372036854775807) {
             so_panic("MaxUint64 >> 1");
         }
@@ -71,6 +77,53 @@ int main(void) {
         uint64_t next = bigIotaNext;
         if (next != 9223372036854775809u) {
             so_panic("bigIotaNext");
+        }
+    }
+    {
+        // An intermediate value above int64 is folded away.
+        uint64_t mask = 18446744073709551615u;
+        if (mask != main_MaxUint64) {
+            so_panic("1<<64 - 1");
+        }
+        uint64_t wide = 9223372036854775808u;
+        if (wide != 9223372036854775808u) {
+            so_panic("1<<100 >> 37");
+        }
+        uint64_t sum = 9223372036854775809u;
+        if (sum != 9223372036854775809u) {
+            so_panic("1<<63 + 1");
+        }
+        int64_t neg = INT64_MIN;
+        if (neg != INT64_MIN) {
+            so_panic("-(1 << 63)");
+        }
+        uint64_t quo = bigQuo;
+        if (quo != 6148914691236517205) {
+            so_panic("bigMask / 3");
+        }
+        uint64_t mixed = 18446744073709551614u;
+        if (mixed != 18446744073709551614u) {
+            so_panic("MaxUint64 + (-1)");
+        }
+        // A shift count of 64 is undefined in C, even with a value in range.
+        uint64_t none = 0;
+        if (none != 0) {
+            so_panic("0 << 64");
+        }
+    }
+    {
+        // Expressions that C computes correctly are left as operators.
+        int32_t narrow = (((int64_t)1 << 40) >> 20);
+        if (narrow != 1048576) {
+            so_panic("1<<40 >> 20");
+        }
+        int64_t small = smallMask + 1;
+        if (small != 1048576) {
+            so_panic("smallMask + 1");
+        }
+        int64_t flags = (((int64_t)1 << 20) | ((int64_t)1 << 10));
+        if (flags != 1049600) {
+            so_panic("1<<20 | 1<<10");
         }
     }
     {
