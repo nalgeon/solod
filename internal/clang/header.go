@@ -132,7 +132,7 @@ func (g *Generator) emitHeaderGenDecl(w io.Writer, decl *ast.GenDecl, dirs direc
 				g.emitComments(w, decl)
 				emitted = true
 			}
-			typ := g.types.Defs[name].Type()
+			typ := g.constType(spec, g.types.Defs[name])
 			ct := g.mapTypeDecl(spec, typ)
 			cName := g.symbolName(g.types.Defs[name])
 

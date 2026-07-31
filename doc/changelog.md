@@ -106,6 +106,19 @@ if a == n { }    // not supported
 var n uint64 = 18446744073709551615 // -> 18446744073709551615u
 ```
 
+**Untyped integer constants above MaxInt64**. Such a constant is now declared as `uint64_t` instead of `int64_t`:
+
+```go
+const maxUint64 = 18446744073709551615
+var third uint64 = maxUint64 / 3 // was 0, now 6148914691236517205
+```
+
+A constant that does not fit `uint64_t` either is rejected:
+
+```go
+const huge = 1 << 200 // rejected: constant huge does not fit in int64 or uint64
+```
+
 ### Interop
 
 **C field name override**. A `c:"..."` struct tag sets the C name of a field, so an extern struct can match a C header field whose name is a Go keyword:

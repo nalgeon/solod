@@ -830,3 +830,12 @@ func exceedsInt64(val constant.Value) bool {
 	_, ok := constant.Int64Val(val)
 	return !ok
 }
+
+// exceedsUint64 reports whether an integer constant is too large for uint64.
+func exceedsUint64(val constant.Value) bool {
+	if val == nil || val.Kind() != constant.Int {
+		return false
+	}
+	_, ok := constant.Uint64Val(val)
+	return !ok
+}

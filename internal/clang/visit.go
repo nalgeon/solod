@@ -254,7 +254,7 @@ func (g *Generator) emitGenDecl(w io.Writer, decl *ast.GenDecl) {
 // emitConstSpec emits a single constant specification.
 func (g *Generator) emitConstSpec(w io.Writer, spec *ast.ValueSpec) {
 	for i, name := range spec.Names {
-		typ := g.types.Defs[name].Type()
+		typ := g.constType(spec, g.types.Defs[name])
 		cType := g.mapTypeName(spec, typ)
 
 		// Check if this is an iota-based constant (implicit value or explicit iota usage).

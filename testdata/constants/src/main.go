@@ -42,6 +42,15 @@ const (
 const Zero = 42
 const FortyTwo = Zero + 42
 
+// Untyped constants above math.MaxInt64 are declared as uint64.
+const MaxUint64 = 18446744073709551615
+const halfUint64 = 9223372036854775808
+
+const (
+	bigIota = 1<<63 + iota
+	bigIotaNext
+)
+
 type Point struct {
 	X int
 	Y int
@@ -75,6 +84,29 @@ func main() {
 		// Using iota constants.
 		day := Monday
 		_ = day == Sunday
+	}
+	{
+		// Arithmetic on constants above math.MaxInt64 stays unsigned.
+		var third uint64 = MaxUint64 / 3
+		if third != 6148914691236517205 {
+			panic("MaxUint64 / 3")
+		}
+		var shifted uint64 = MaxUint64 >> 1
+		if shifted != 9223372036854775807 {
+			panic("MaxUint64 >> 1")
+		}
+		var half uint64 = halfUint64
+		if half != 9223372036854775808 {
+			panic("halfUint64")
+		}
+		var first uint64 = bigIota
+		if first != 9223372036854775808 {
+			panic("bigIota")
+		}
+		var next uint64 = bigIotaNext
+		if next != 9223372036854775809 {
+			panic("bigIotaNext")
+		}
 	}
 	{
 		// Using _ on file level is not supported,

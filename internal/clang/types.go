@@ -347,6 +347,24 @@ func (g *Generator) isUnexportedType(typ types.Type) bool {
 	return !ast.IsExported(obj.Name()) && !g.promoted[obj]
 }
 
+// constType returns the type to declare a constant with. Untyped int normally
+// maps to int64_t; values larger than math.MaxInt64 map to uint64_t.
+func (g *Generator) constType(node ast.Node, obj types.Object) types.Type {
+	typ := obj.Type()
+	basic, ok := types.Unalias(typ).(*types.Basic)
+	if !ok || basic.Kind() != types.UntypedInt {
+		return typ
+	}
+	c, ok := obj.(*types.Const)
+	if !ok || !exceedsInt64(c.Val()) {
+		return typ
+	}
+	if exceedsUint64(c.Val()) {
+		g.fail(node, "constant %s does not fit in int64 or uint64", obj.Name())
+	}
+	return types.Typ[types.Uint64]
+}
+
 // isAnonStruct reports whether typ is an anonymous struct type.
 func isAnonStruct(typ types.Type) bool {
 	// Named struct types are *types.Named, not *types.Struct.

@@ -37,5 +37,8 @@ static const main_Day main_Tuesday = 2;
 // Using constants in other definitions.
 static const int64_t main_Zero = 42;
 static const int64_t main_FortyTwo = main_Zero + 42;
+
+// Untyped constants above math.MaxInt64 are declared as uint64.
+static const uint64_t main_MaxUint64 = 18446744073709551615u;
 extern main_Point main_PointZero;
 extern main_Point main_PointSubZero;

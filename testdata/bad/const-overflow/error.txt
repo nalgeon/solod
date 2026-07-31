@@ -1,0 +1,3 @@
+main.go:3:7: constant huge does not fit in int64 or uint64
+const huge = 1 << 200
+      ^here
