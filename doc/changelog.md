@@ -100,6 +100,12 @@ if a == n { }    // not supported
 '世'      ->  0x4e16
 ```
 
+**Integer literals above MaxInt64**. Such a literal now gets a `u` suffix in C. C gives an unsuffixed decimal literal a signed type, so without the suffix the compiler warned that the value does not fit:
+
+```go
+var n uint64 = 18446744073709551615 // -> 18446744073709551615u
+```
+
 ### Interop
 
 **C field name override**. A `c:"..."` struct tag sets the C name of a field, so an extern struct can match a C header field whose name is a Go keyword:

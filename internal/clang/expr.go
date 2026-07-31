@@ -3,6 +3,7 @@ package clang
 import (
 	"fmt"
 	"go/ast"
+	"go/constant"
 	"go/token"
 	"go/types"
 	"io"
@@ -61,6 +62,9 @@ func (g *Generator) emitNumericLit(w io.Writer, n *ast.BasicLit) {
 		val = "0" + val[2:]
 	}
 	fmt.Fprint(w, val)
+	if n.Kind == token.INT && exceedsInt64(g.types.Types[n].Value) {
+		fmt.Fprint(w, "u") // unsigned suffix for C
+	}
 }
 
 // emitBinaryExpr emits a binary expression.
@@ -816,4 +820,13 @@ func containsIota(expr ast.Expr) bool {
 		return !found
 	})
 	return found
+}
+
+// exceedsInt64 reports whether an integer constant is too large for int64.
+func exceedsInt64(val constant.Value) bool {
+	if val == nil || val.Kind() != constant.Int {
+		return false
+	}
+	_, ok := constant.Int64Val(val)
+	return !ok
 }

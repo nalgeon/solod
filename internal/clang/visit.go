@@ -289,11 +289,10 @@ func (g *Generator) emitConstVal(w io.Writer, node ast.Node, name *ast.Ident) {
 	val := obj.Val()
 	switch val.Kind() {
 	case constant.Int:
-		v, ok := constant.Int64Val(val)
-		if !ok {
-			g.fail(node, "iota value overflows int64")
+		fmt.Fprint(w, val.ExactString())
+		if exceedsInt64(val) {
+			fmt.Fprint(w, "u") // unsigned suffix for C
 		}
-		fmt.Fprintf(w, "%d", v)
 	default:
 		g.fail(node, "unsupported iota constant kind: %s", val.Kind())
 	}

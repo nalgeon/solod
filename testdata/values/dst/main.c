@@ -19,6 +19,21 @@ int main(void) {
         (void)d6;
     }
     {
+        // Integer literals above MaxInt64 are unsigned in C.
+        uint64_t u1 = 18446744073709551615u;
+        if (u1 + 1 != 0 || u1 / 2 != 9223372036854775807) {
+            so_panic("want MaxUint64");
+        }
+        so_uint u2 = 9223372036854775808u;
+        if (u2 - 1 != 9223372036854775807) {
+            so_panic("want MaxInt64+1");
+        }
+        const uint64_t u3 = 0xFFFFFFFFFFFFFFFFu;
+        if (u3 != u1) {
+            so_panic("want MaxUint64");
+        }
+    }
+    {
         // Floating-point literals.
         const double f1 = 3.14;
         (void)f1;

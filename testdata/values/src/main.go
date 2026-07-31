@@ -18,6 +18,22 @@ func main() {
 	}
 
 	{
+		// Integer literals above MaxInt64 are unsigned in C.
+		var u1 uint64 = 18446744073709551615
+		if u1+1 != 0 || u1/2 != 9223372036854775807 {
+			panic("want MaxUint64")
+		}
+		var u2 uint = 9223372036854775808
+		if u2-1 != 9223372036854775807 {
+			panic("want MaxInt64+1")
+		}
+		const u3 uint64 = 0xFFFFFFFFFFFFFFFF
+		if u3 != u1 {
+			panic("want MaxUint64")
+		}
+	}
+
+	{
 		// Floating-point literals.
 		const f1 = 3.14
 		_ = f1
