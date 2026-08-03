@@ -46,13 +46,13 @@ func (g *Generator) emitInterfaceLit(w io.Writer, ifaceType types.Type, expr ast
 		isPtr = true
 	}
 	concreteNamed := types.Unalias(concreteType).(*types.Named)
-	g.checkPointerReceivers(expr, iface, concreteNamed)
+	g.checkMethodReceivers(expr, iface, concreteNamed)
 
 	cIface := g.mapTypeName(expr, named)
 	cConcrete := g.mapTypeName(expr, concreteNamed)
 
 	if !isPtr {
-		// Unreachable: checkPointerReceivers rejects value receivers, and Go
+		// Unreachable: checkMethodReceivers rejects value receivers, and Go
 		// rejects a value whose methods have pointer receivers.
 		g.fail(expr, "cannot convert value of type %s to an interface", g.typeString(concreteNamed))
 	}
@@ -182,9 +182,9 @@ func (g *Generator) emitAnyValue(w io.Writer, node ast.Node, expr ast.Expr) {
 	fmt.Fprint(w, "}")
 }
 
-// checkPointerReceivers verifies that every interface method
-// is declared with a pointer receiver on the concrete type.
-func (g *Generator) checkPointerReceivers(node ast.Node, iface *types.Interface, concrete *types.Named) {
+// checkMethodReceivers rejects interface methods that are declared with
+// a value receiver on the concrete type instead of a pointer receiver.
+func (g *Generator) checkMethodReceivers(node ast.Node, iface *types.Interface, concrete *types.Named) {
 	ptr := types.NewPointer(concrete)
 	for m := range iface.Methods() {
 		obj, _, _ := types.LookupFieldOrMethod(ptr, true, m.Pkg(), m.Name())
@@ -200,6 +200,50 @@ func (g *Generator) checkPointerReceivers(node ast.Node, iface *types.Interface,
 			g.fail(node, "method %s.%s has a value receiver; interface methods must use pointer receivers", g.typeString(concrete), m.Name())
 		}
 	}
+}
+
+// checkEmbeddedIfaces rejects an interface embedded in another interface.
+func (g *Generator) checkEmbeddedIfaces(it *ast.InterfaceType) {
+	if isConstraintInterface(g.types.TypeOf(it)) {
+		// A constraint interface never reaches C,
+		// so what it embeds does not matter.
+		return
+	}
+	for _, elem := range it.Methods.List {
+		if _, isMethod := elem.Type.(*ast.FuncType); isMethod {
+			continue
+		}
+		typ := g.types.TypeOf(elem.Type)
+		if typ == nil {
+			continue
+		}
+		iface, ok := typ.Underlying().(*types.Interface)
+		if !ok || iface.NumMethods() == 0 {
+			continue
+		}
+		g.fail(elem, "embedded interface %s is not supported; declare its methods instead", g.typeString(typ))
+	}
+}
+
+// comparableInC reports whether == and != can compare the C representations
+// of x and y.
+func comparableInC(x, y types.Type) bool {
+	// A named interface is a struct with a pointer to the value, so
+	// it only compares with another named interface. An empty interface is a
+	// void*, so it compares with a pointer, but not with a value.
+	if isNamedNonEmptyInterface(x) || isNamedNonEmptyInterface(y) {
+		return isNamedNonEmptyInterface(x) && isNamedNonEmptyInterface(y)
+	}
+	if isEmptyInterface(x) || isEmptyInterface(y) {
+		return isVoidPtrOperand(x) && isVoidPtrOperand(y)
+	}
+	return true
+}
+
+// isVoidPtrOperand reports whether a value of type t can be compared
+// with a void*.
+func isVoidPtrOperand(t types.Type) bool {
+	return isPointerType(t) || isEmptyInterface(t)
 }
 
 // isNamedNonEmptyInterface reports whether t is a named non-empty interface.
@@ -245,24 +289,4 @@ func isConstraintInterface(t types.Type) bool {
 func isEmptyInterface(t types.Type) bool {
 	iface, ok := t.Underlying().(*types.Interface)
 	return ok && iface.Empty()
-}
-
-// comparableInC reports whether == and != can compare the C representations
-// of x and y. A named interface is a struct with a pointer to the value, so
-// it only compares with another named interface. An empty interface is a
-// void*, so it compares with a pointer, but not with a value.
-func comparableInC(x, y types.Type) bool {
-	if isNamedNonEmptyInterface(x) || isNamedNonEmptyInterface(y) {
-		return isNamedNonEmptyInterface(x) && isNamedNonEmptyInterface(y)
-	}
-	if isEmptyInterface(x) || isEmptyInterface(y) {
-		return isVoidPtrOperand(x) && isVoidPtrOperand(y)
-	}
-	return true
-}
-
-// isVoidPtrOperand reports whether a value of type t can be compared
-// with a void*.
-func isVoidPtrOperand(t types.Type) bool {
-	return isPointerType(t) || isEmptyInterface(t)
 }

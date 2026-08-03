@@ -67,18 +67,6 @@ func (g *Generator) hasStringType(expr ast.Expr) bool {
 	return ok && (basic.Kind() == types.String || basic.Kind() == types.UntypedString)
 }
 
-// isStringLit reports whether an expression is a string literal
-// or a chain of string literal additions.
-func isStringLit(expr ast.Expr) bool {
-	switch e := expr.(type) {
-	case *ast.BasicLit:
-		return e.Kind == token.STRING
-	case *ast.BinaryExpr:
-		return e.Op == token.ADD && isStringLit(e.X) && isStringLit(e.Y)
-	}
-	return false
-}
-
 // cStringLit returns the C string literal for a Go string literal, interpreted or
 // raw. The literal is decoded to its bytes and re-encoded, because Go escape rules
 // differ from C. Does not include the so_str() wrapper.
@@ -124,6 +112,18 @@ func (g *Generator) cStringLit(n *ast.BasicLit) string {
 	}
 	b.WriteByte('"')
 	return b.String()
+}
+
+// isStringLit reports whether an expression is a string literal
+// or a chain of string literal additions.
+func isStringLit(expr ast.Expr) bool {
+	switch e := expr.(type) {
+	case *ast.BasicLit:
+		return e.Kind == token.STRING
+	case *ast.BinaryExpr:
+		return e.Op == token.ADD && isStringLit(e.X) && isStringLit(e.Y)
+	}
+	return false
 }
 
 func stringCompareFunc(op token.Token) string {

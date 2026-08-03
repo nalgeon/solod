@@ -139,7 +139,7 @@ func (g *Generator) emitInlineFuncDecl(w io.Writer, decl *ast.FuncDecl) {
 // emitMacroFuncDecl emits a generic so:inline function as a #define macro.
 func (g *Generator) emitMacroFuncDecl(w io.Writer, decl *ast.FuncDecl) {
 	sig := g.funcSig(decl)
-	g.rejectNamedReturns(decl, sig)
+	g.checkNamedReturns(decl, sig)
 
 	// Build macro name.
 	name := g.symbolName(g.types.Defs[decl.Name])
@@ -218,7 +218,7 @@ func (g *Generator) emitMacroFuncDecl(w io.Writer, decl *ast.FuncDecl) {
 // emitFuncBody emits a function or method body. Shared by [Generator.emitFuncDecl]
 // and [Generator.emitInlineFuncDecl].
 func (g *Generator) emitFuncBody(w io.Writer, decl *ast.FuncDecl) {
-	g.rejectEscapes(decl)
+	g.checkEscapes(decl)
 	if decl.Recv != nil {
 		g.emitMethodDecl(w, decl)
 		return
@@ -226,7 +226,7 @@ func (g *Generator) emitFuncBody(w io.Writer, decl *ast.FuncDecl) {
 
 	// Init emission state.
 	sig := g.funcSig(decl)
-	g.rejectNamedReturns(decl, sig)
+	g.checkNamedReturns(decl, sig)
 	g.state.enterFunc(sig)
 	defer g.state.leaveFunc()
 
@@ -403,51 +403,17 @@ func (g *Generator) emitCArg(w io.Writer, arg ast.Expr) {
 	}
 }
 
-// isGenericFunc reports whether a function declaration is generic
-// (has type params on the function itself or on its receiver type).
-func isGenericFunc(decl *ast.FuncDecl) bool {
-	if decl.Type.TypeParams != nil && len(decl.Type.TypeParams.List) > 0 {
-		return true
-	}
+// funcSig extracts the function signature from a function or method declaration.
+func (g *Generator) funcSig(decl *ast.FuncDecl) *types.Signature {
 	if decl.Recv != nil {
-		recv := decl.Recv.List[0]
-		typ := recv.Type
-		if star, ok := typ.(*ast.StarExpr); ok {
-			typ = star.X
-		}
-		switch typ.(type) {
-		case *ast.IndexExpr, *ast.IndexListExpr:
-			return true
-		}
+		return g.types.ObjectOf(decl.Name).Type().(*types.Signature)
 	}
-	return false
+	return g.types.Defs[decl.Name].Type().(*types.Signature)
 }
 
-// isMainFunc reports whether a function declaration is the main function.
-func isMainFunc(decl *ast.FuncDecl) bool {
-	return decl.Name.Name == "main" && decl.Recv == nil
-}
-
-// isInitFunc reports whether a function declaration is the init function.
-func isInitFunc(decl *ast.FuncDecl) bool {
-	return decl.Name.Name == "init" && decl.Recv == nil
-}
-
-// hasUnexportedTypes reports whether a function declaration
-// references any unexported types from the current package.
-func (g *Generator) hasUnexportedTypes(decl *ast.FuncDecl) bool {
-	sig := g.funcSig(decl)
-	for p := range sig.Params().Variables() {
-		if g.isUnexportedType(p.Type()) {
-			return true
-		}
-	}
-	for r := range sig.Results().Variables() {
-		if g.isUnexportedType(r.Type()) {
-			return true
-		}
-	}
-	return false
+// callSig extracts the function signature from a call expression.
+func (g *Generator) callSig(call *ast.CallExpr) *types.Signature {
+	return g.types.TypeOf(call.Fun).Underlying().(*types.Signature)
 }
 
 // importsOS reports whether the current package imports "os",
@@ -457,23 +423,6 @@ func (g *Generator) importsOS() bool {
 	// a non-main package, the user will have to import "os" in main too
 	// to signal that they want argc/argv support.
 	_, ok := g.pkg.Imports["solod.dev/so/os"]
-	return ok
-}
-
-// funcSig returns the types.Signature for a function or method declaration.
-func (g *Generator) funcSig(decl *ast.FuncDecl) *types.Signature {
-	if decl.Recv != nil {
-		return g.types.ObjectOf(decl.Name).Type().(*types.Signature)
-	}
-	return g.types.Defs[decl.Name].Type().(*types.Signature)
-}
-
-// endsWithReturn reports whether a statement list ends with a return statement.
-func endsWithReturn(stmts []ast.Stmt) bool {
-	if len(stmts) == 0 {
-		return false
-	}
-	_, ok := stmts[len(stmts)-1].(*ast.ReturnStmt)
 	return ok
 }
 
@@ -544,6 +493,36 @@ func recvTypeParams(recv *ast.Field) []string {
 	return nil
 }
 
+// isGenericFunc reports whether a function declaration is generic
+// (has type params on the function itself or on its receiver type).
+func isGenericFunc(decl *ast.FuncDecl) bool {
+	if decl.Type.TypeParams != nil && len(decl.Type.TypeParams.List) > 0 {
+		return true
+	}
+	if decl.Recv != nil {
+		recv := decl.Recv.List[0]
+		typ := recv.Type
+		if star, ok := typ.(*ast.StarExpr); ok {
+			typ = star.X
+		}
+		switch typ.(type) {
+		case *ast.IndexExpr, *ast.IndexListExpr:
+			return true
+		}
+	}
+	return false
+}
+
+// isMainFunc reports whether a function declaration is the main function.
+func isMainFunc(decl *ast.FuncDecl) bool {
+	return decl.Name.Name == "main" && decl.Recv == nil
+}
+
+// isInitFunc reports whether a function declaration is the init function.
+func isInitFunc(decl *ast.FuncDecl) bool {
+	return decl.Name.Name == "init" && decl.Recv == nil
+}
+
 // funcParams formats a C function pointer parameter list.
 func funcParams(params []string) string {
 	// An empty list becomes "void", because C reads "()" as
@@ -552,4 +531,13 @@ func funcParams(params []string) string {
 		return "void"
 	}
 	return strings.Join(params, ", ")
+}
+
+// endsWithReturn reports whether a statement list ends with a return statement.
+func endsWithReturn(stmts []ast.Stmt) bool {
+	if len(stmts) == 0 {
+		return false
+	}
+	_, ok := stmts[len(stmts)-1].(*ast.ReturnStmt)
+	return ok
 }

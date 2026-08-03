@@ -56,10 +56,10 @@ import (
 // escapeMsg is the diagnostic reported for a return that escapes the frame.
 const escapeMsg = "stack-allocated value escapes function frame"
 
-// rejectEscapes fails the build on the first return that escapes the frame.
+// checkEscapes fails the build on the first return that escapes the frame.
 // Generic functions expand to macros inlined into the caller, so they never
 // reach here (see emitMacroFuncDecl).
-func (g *Generator) rejectEscapes(decl *ast.FuncDecl) {
+func (g *Generator) checkEscapes(decl *ast.FuncDecl) {
 	for _, node := range findReturnEscapes(g.types, decl) {
 		g.fail(node, "%s", escapeMsg)
 	}

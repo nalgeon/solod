@@ -3,7 +3,6 @@ package clang
 import (
 	"fmt"
 	"go/ast"
-	"go/constant"
 	"go/token"
 	"go/types"
 	"io"
@@ -187,12 +186,10 @@ func (g *Generator) emitEqual(w io.Writer, n *ast.BinaryExpr) {
 	rightType := g.types.TypeOf(right)
 	rightIsNil := isNilType(rightType)
 
-	// An interface holds a pointer to the value, so comparing it with a
-	// concrete value would compare an address with a value. Report the error
-	// at the concrete operand, which is the one to fix.
 	if !rightIsNil && !comparableInC(leftType, rightType) {
 		bad := right
 		if !isInterfaceType(leftType) {
+			// Report the error at the concrete operand, which is the one to fix.
 			bad = left
 		}
 		g.fail(bad, "cannot compare %s with %s", g.typeString(leftType), g.typeString(rightType))
@@ -625,7 +622,7 @@ func (g *Generator) emitUnaryExpr(w io.Writer, n *ast.UnaryExpr) {
 		// gives T** instead of T(*)[N]. Emit a cast instead.
 		if ident, ok := n.X.(*ast.Ident); ok {
 			if _, ok := g.types.TypeOf(n.X).Underlying().(*types.Array); ok {
-				if g.isArrayParam(ident) {
+				if g.isFuncParam(ident) {
 					ct := g.mapTypeDecl(n, g.types.TypeOf(n))
 					fmt.Fprintf(w, "(%s)", ct.Cast())
 					g.emitExpr(w, n.X)
@@ -768,8 +765,9 @@ func (g *Generator) needsIntDivGuard(x, y ast.Expr) bool {
 	return true
 }
 
-// isArrayParam reports whether ident refers to a function parameter.
-func (g *Generator) isArrayParam(ident *ast.Ident) bool {
+// isFuncParam reports whether ident refers to
+// a function parameter of the current function.
+func (g *Generator) isFuncParam(ident *ast.Ident) bool {
 	if g.state.funcSig == nil {
 		return false
 	}
@@ -829,22 +827,4 @@ func containsIota(expr ast.Expr) bool {
 		return !found
 	})
 	return found
-}
-
-// exceedsInt64 reports whether an integer constant is too large for int64.
-func exceedsInt64(val constant.Value) bool {
-	if val == nil || val.Kind() != constant.Int {
-		return false
-	}
-	_, ok := constant.Int64Val(val)
-	return !ok
-}
-
-// exceedsUint64 reports whether an integer constant is too large for uint64.
-func exceedsUint64(val constant.Value) bool {
-	if val == nil || val.Kind() != constant.Int {
-		return false
-	}
-	_, ok := constant.Uint64Val(val)
-	return !ok
 }

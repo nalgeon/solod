@@ -555,85 +555,6 @@ func (g *Generator) emitRangeStmt(w io.Writer, stmt *ast.RangeStmt) {
 	}
 }
 
-// emitReturnStmt emits a return statement, preceded by any deferred generic calls.
-func (g *Generator) emitReturnStmt(w io.Writer, stmt *ast.ReturnStmt) {
-	if g.state.inMacro {
-		// In macro mode: "return X" becomes just "X;", void return is a no-op.
-		if len(stmt.Results) > 0 {
-			fmt.Fprint(w, g.indent())
-			g.emitReturnExpr(w, stmt)
-			fmt.Fprint(w, ";\n")
-		}
-		return
-	}
-
-	// When defers are active and the return value is non-constant, evaluate it
-	// into a temp before running the deferred calls, so the value is captured
-	// before the defers (matching Go, which evaluates the return value first).
-	if len(stmt.Results) > 0 && len(g.state.defers) > 0 && g.returnIsNotConst(stmt) {
-		tmp := g.newTemp(stmt, tempResult)
-		retType := g.returnType(stmt, g.state.funcSig)
-		fmt.Fprintf(w, "%s%s %s = ", g.indent(), retType, tmp)
-		g.emitReturnExpr(w, stmt)
-		fmt.Fprint(w, ";\n")
-		g.emitDeferredCalls(w)
-		fmt.Fprintf(w, "%sreturn %s;\n", g.indent(), tmp)
-		return
-	}
-
-	g.emitDeferredCalls(w)
-
-	if len(stmt.Results) == 0 {
-		fmt.Fprintf(w, "%sreturn;\n", g.indent())
-		return
-	}
-
-	fmt.Fprintf(w, "%sreturn ", g.indent())
-	g.emitReturnExpr(w, stmt)
-	fmt.Fprint(w, ";\n")
-}
-
-// emitReturnExpr emits the return value expression (without "return" keyword or ";").
-// Handles single-return and multi-return compound literals.
-func (g *Generator) emitReturnExpr(w io.Writer, stmt *ast.ReturnStmt) {
-	// Single return value: emit directly.
-	if len(stmt.Results) == 1 {
-		// Forwarding a multi-value call ("return f()" where f returns a tuple):
-		// the call already yields the whole result struct, so emit it as-is
-		// without per-result type conversion.
-		if _, ok := g.types.TypeOf(stmt.Results[0]).(*types.Tuple); ok {
-			g.emitExpr(w, stmt.Results[0])
-			return
-		}
-		retType := g.state.funcSig.Results().At(0).Type()
-		g.emitExprAsType(w, stmt, stmt.Results[0], retType)
-		return
-	}
-
-	// Multi-return: emit compound literal with per-signature result fields.
-	info := g.multiReturnFields(stmt, g.state.funcSig)
-	if info.resultType != "" {
-		fmt.Fprintf(w, "(%s){.val = ", info.resultType)
-		g.emitExpr(w, stmt.Results[0])
-		fmt.Fprint(w, ", .err = ")
-		errType := g.state.funcSig.Results().At(1).Type()
-		g.emitExprAsType(w, stmt, stmt.Results[1], errType)
-		fmt.Fprint(w, "}")
-		return
-	}
-	fmt.Fprintf(w, "(%s){.val = ", info.typeName())
-	g.emitExpr(w, stmt.Results[0])
-	if info.hasError {
-		fmt.Fprint(w, ", .err = ")
-		errType := g.state.funcSig.Results().At(1).Type()
-		g.emitExprAsType(w, stmt, stmt.Results[1], errType)
-	} else {
-		fmt.Fprint(w, ", .val2 = ")
-		g.emitExpr(w, stmt.Results[1])
-	}
-	fmt.Fprint(w, "}")
-}
-
 // emitComments looks up comments for the given nodes from the CommentMap,
 // filters out directives, and emits them. Returns true if any were emitted.
 func (g *Generator) emitComments(w io.Writer, nodes ...ast.Node) bool {
@@ -687,18 +608,4 @@ func (g *Generator) walkStmts(w io.Writer, stmts []ast.Stmt) {
 		}
 		g.walkAST(w, stmt)
 	}
-}
-
-// isBlockTypeSpec returns true for type specs that emit multi-line blocks
-// (structs, non-empty interfaces, func types) and need a blank line separator.
-func isBlockTypeSpec(spec *ast.TypeSpec) bool {
-	switch spec.Type.(type) {
-	case *ast.StructType, *ast.FuncType:
-		return true
-	case *ast.InterfaceType:
-		// Non-empty interfaces are block types; empty ones are single-line typedefs.
-		iface := spec.Type.(*ast.InterfaceType)
-		return len(iface.Methods.List) > 0
-	}
-	return false
 }

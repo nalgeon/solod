@@ -333,20 +333,6 @@ func (g *Generator) symbolName(obj types.Object) string {
 	return name
 }
 
-// isUnexportedType reports whether a type lives only in the current package's
-// .c file. A promoted type is emitted in the header, so it does not count.
-func (g *Generator) isUnexportedType(typ types.Type) bool {
-	named, ok := types.Unalias(typ).(*types.Named)
-	if !ok {
-		return false
-	}
-	obj := named.Obj()
-	if obj.Pkg() != g.pkg.Types {
-		return false
-	}
-	return !ast.IsExported(obj.Name()) && !g.promoted[obj]
-}
-
 // constType returns the type to declare a constant with. Untyped int normally
 // maps to int64_t; values larger than math.MaxInt64 map to uint64_t.
 func (g *Generator) constType(node ast.Node, obj types.Object) types.Type {
@@ -363,13 +349,6 @@ func (g *Generator) constType(node ast.Node, obj types.Object) types.Type {
 		g.fail(node, "constant %s does not fit in int64 or uint64", obj.Name())
 	}
 	return types.Typ[types.Uint64]
-}
-
-// isAnonStruct reports whether typ is an anonymous struct type.
-func isAnonStruct(typ types.Type) bool {
-	// Named struct types are *types.Named, not *types.Struct.
-	_, ok := types.Unalias(typ).(*types.Struct)
-	return ok
 }
 
 // isErrorType checks if a type is the built-in error interface.
@@ -396,10 +375,4 @@ func isPointerType(t types.Type) bool {
 		return u.Kind() == types.UnsafePointer
 	}
 	return false
-}
-
-// isIntegerType reports whether t is an integer type (named or not).
-func isIntegerType(t types.Type) bool {
-	b, ok := t.Underlying().(*types.Basic)
-	return ok && b.Info()&types.IsInteger != 0
 }

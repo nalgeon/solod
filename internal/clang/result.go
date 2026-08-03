@@ -7,6 +7,138 @@ import (
 	"io"
 )
 
+// emitMultiReturnDefine emits a multi-return define: x, y := f()
+// Produces:
+//
+//	so_R_int_err _res1 = f();
+//	so_int x = _res1.val;
+//	so_Error y = _res1.err;           // (T, error)
+//	so_int y = _res1.val2;            // (T, T)
+func (g *Generator) emitMultiReturnDefine(w io.Writer, stmt *ast.AssignStmt, call *ast.CallExpr) {
+	sig := g.callSig(call)
+	multi := g.makeMultiReturn(stmt, sig)
+
+	// Emit temp variable with result of the call.
+	tmp := g.newTemp(stmt, tempResult)
+	fmt.Fprintf(w, "%s%s %s = ", g.indent(), multi.typeName(), tmp)
+	g.emitExpr(w, call)
+	fmt.Fprint(w, ";\n")
+
+	// Emit individual variable declarations from result fields.
+	for i, lhs := range stmt.Lhs {
+		ident := lhs.(*ast.Ident)
+		if ident.Name == "_" {
+			continue
+		}
+		accessor := multi.accessor(tmp, i)
+		def := g.types.Defs[ident]
+		if def == nil {
+			// Redeclared variable - plain assignment.
+			fmt.Fprintf(w, "%s%s = %s;\n", g.indent(), ident.Name, accessor)
+			continue
+		}
+		cType := g.mapTypeName(stmt, def.Type())
+		fmt.Fprintf(w, "%s%s %s = %s;\n", g.indent(), cType, ident.Name, accessor)
+	}
+}
+
+// emitMultiReturnAssign emits a multi-return assign: x, y = f()
+// Produces:
+//
+//	so_R_int_err _res1 = f();
+//	x = _res1.val;
+//	y = _res1.err;                    // (T, error)
+//	y = _res1.val2;                   // (T, T)
+func (g *Generator) emitMultiReturnAssign(w io.Writer, stmt *ast.AssignStmt, call *ast.CallExpr) {
+	sig := g.callSig(call)
+	multi := g.makeMultiReturn(stmt, sig)
+
+	// Emit temp variable with result of the call.
+	tmp := g.newTemp(stmt, tempResult)
+	fmt.Fprintf(w, "%s%s %s = ", g.indent(), multi.typeName(), tmp)
+	g.emitExpr(w, call)
+	fmt.Fprint(w, ";\n")
+
+	// Emit assignments from result fields.
+	for i, lhs := range stmt.Lhs {
+		if ident, ok := lhs.(*ast.Ident); ok && ident.Name == "_" {
+			continue
+		}
+		accessor := multi.accessor(tmp, i)
+		fmt.Fprint(w, g.indent())
+		g.emitExpr(w, lhs)
+		fmt.Fprintf(w, " = %s;\n", accessor)
+	}
+}
+
+// makeMultiReturn validates a multi-return signature and returns info
+// about both positions. The second type is either error or a supported type.
+func (g *Generator) makeMultiReturn(node ast.Node, sig *types.Signature) multiReturn {
+	if sig.Results().Len() != 2 {
+		g.fail(node, "multi-return must have exactly 2 values")
+	}
+	first := sig.Results().At(0).Type()
+	second := sig.Results().At(1).Type()
+	if isErrorType(first) {
+		g.fail(node, "error must be the second return value")
+	}
+
+	// Check for named struct result type: (T, error).
+	if isErrorType(second) {
+		if named, ok := types.Unalias(first).(*types.Named); ok {
+			if _, ok := named.Underlying().(*types.Struct); ok {
+				resultType := g.mapTypeName(node, named) + "Result"
+				return multiReturn{resultType: resultType, hasError: true}
+			}
+		}
+	}
+
+	s1 := resultTypeSuffix(g, node, first)
+	if isErrorType(second) {
+		return multiReturn{suffix1: s1, hasError: true}
+	}
+	s2 := resultTypeSuffix(g, node, second)
+	return multiReturn{suffix1: s1, suffix2: s2}
+}
+
+// multiReturn describes a two-value return: (T, error) or (T, T).
+type multiReturn struct {
+	suffix1    string // type suffix for first value (e.g. "int", "str")
+	suffix2    string // type suffix for second value (e.g. "int", "bool"), empty if hasError
+	hasError   bool   // true when second return is error
+	resultType string // C type name when using custom result struct (e.g. "main_FileResult")
+}
+
+// typeName returns the C type name for this multi-return.
+func (mr multiReturn) typeName() string {
+	if mr.resultType != "" {
+		return mr.resultType
+	}
+	if mr.hasError {
+		return "so_R_" + mr.suffix1 + "_err"
+	}
+	return "so_R_" + mr.suffix1 + "_" + mr.suffix2
+}
+
+// accessor returns the C accessor for position i of a multi-return.
+// Position 0 -> tmp.val
+// Position 1 -> tmp.err (T, error) or tmp.val2 (T, T)
+func (mr multiReturn) accessor(tmp string, i int) string {
+	if mr.resultType != "" {
+		if i == 0 {
+			return tmp + ".val"
+		}
+		return tmp + ".err"
+	}
+	if i == 0 {
+		return tmp + ".val"
+	}
+	if mr.hasError {
+		return tmp + ".err"
+	}
+	return tmp + ".val2"
+}
+
 // resultTypeInfo describes an auto-generated result struct for (T, error) returns.
 type resultTypeInfo struct {
 	cName    string // e.g. "main_FileResult"
@@ -74,133 +206,6 @@ func (g *Generator) emitResultTypes(w io.Writer, exported bool) {
 	}
 }
 
-// returnType returns the C return type for a function signature.
-// For multi-return (T, error) or (T, T), returns the per-signature result type.
-// For single return, maps the Go type to C. For no return, returns "void".
-func (g *Generator) returnType(node ast.Node, sig *types.Signature) string {
-	if sig.Results().Len() > 1 {
-		info := g.multiReturnFields(node, sig)
-		return info.typeName()
-	}
-	if sig.Results().Len() == 1 {
-		ret := sig.Results().At(0).Type()
-		if arr, ok := ret.Underlying().(*types.Array); ok {
-			if _, ok := arr.Elem().(*types.Array); ok {
-				g.fail(node, "returning multi-dimensional arrays is not supported")
-			}
-			return g.mapTypeName(node, arr) + "*"
-		}
-		return g.mapTypeName(node, ret)
-	}
-	return "void"
-}
-
-// emitMultiReturnDefine emits a multi-return define: x, y := f()
-// Produces:
-//
-//	so_R_int_err _res1 = f();
-//	so_int x = _res1.val;
-//	so_Error y = _res1.err;           // (T, error)
-//	so_int y = _res1.val2;            // (T, T)
-func (g *Generator) emitMultiReturnDefine(w io.Writer, stmt *ast.AssignStmt, call *ast.CallExpr) {
-	sig := g.callSig(call)
-	multi := g.multiReturnFields(stmt, sig)
-
-	// Emit temp variable with result of the call.
-	tmp := g.newTemp(stmt, tempResult)
-	fmt.Fprintf(w, "%s%s %s = ", g.indent(), multi.typeName(), tmp)
-	g.emitExpr(w, call)
-	fmt.Fprint(w, ";\n")
-
-	// Emit individual variable declarations from result fields.
-	for i, lhs := range stmt.Lhs {
-		ident := lhs.(*ast.Ident)
-		if ident.Name == "_" {
-			continue
-		}
-		accessor := multi.accessor(tmp, i)
-		def := g.types.Defs[ident]
-		if def == nil {
-			// Redeclared variable - plain assignment.
-			fmt.Fprintf(w, "%s%s = %s;\n", g.indent(), ident.Name, accessor)
-			continue
-		}
-		cType := g.mapTypeName(stmt, def.Type())
-		fmt.Fprintf(w, "%s%s %s = %s;\n", g.indent(), cType, ident.Name, accessor)
-	}
-}
-
-// emitMultiReturnAssign emits a multi-return assign: x, y = f()
-// Produces:
-//
-//	so_R_int_err _res1 = f();
-//	x = _res1.val;
-//	y = _res1.err;                    // (T, error)
-//	y = _res1.val2;                   // (T, T)
-func (g *Generator) emitMultiReturnAssign(w io.Writer, stmt *ast.AssignStmt, call *ast.CallExpr) {
-	sig := g.callSig(call)
-	multi := g.multiReturnFields(stmt, sig)
-
-	// Emit temp variable with result of the call.
-	tmp := g.newTemp(stmt, tempResult)
-	fmt.Fprintf(w, "%s%s %s = ", g.indent(), multi.typeName(), tmp)
-	g.emitExpr(w, call)
-	fmt.Fprint(w, ";\n")
-
-	// Emit assignments from result fields.
-	for i, lhs := range stmt.Lhs {
-		if ident, ok := lhs.(*ast.Ident); ok && ident.Name == "_" {
-			continue
-		}
-		accessor := multi.accessor(tmp, i)
-		fmt.Fprint(w, g.indent())
-		g.emitExpr(w, lhs)
-		fmt.Fprintf(w, " = %s;\n", accessor)
-	}
-}
-
-// multiReturnFields validates a multi-return signature and returns info
-// about both positions. The second type is either error or a supported type.
-func (g *Generator) multiReturnFields(node ast.Node, sig *types.Signature) multiReturn {
-	if sig.Results().Len() != 2 {
-		g.fail(node, "multi-return must have exactly 2 values")
-	}
-	first := sig.Results().At(0).Type()
-	second := sig.Results().At(1).Type()
-	if isErrorType(first) {
-		g.fail(node, "error must be the second return value")
-	}
-
-	// Check for named struct result type: (T, error).
-	if isErrorType(second) {
-		if named, ok := types.Unalias(first).(*types.Named); ok {
-			if _, ok := named.Underlying().(*types.Struct); ok {
-				resultType := g.mapTypeName(node, named) + "Result"
-				return multiReturn{resultType: resultType, hasError: true}
-			}
-		}
-	}
-
-	s1 := resultTypeSuffix(g, node, first)
-	if isErrorType(second) {
-		return multiReturn{suffix1: s1, hasError: true}
-	}
-	s2 := resultTypeSuffix(g, node, second)
-	return multiReturn{suffix1: s1, suffix2: s2}
-}
-
-// returnIsNotConst reports whether any return value
-// in the statement is not a compile-time constant.
-func (g *Generator) returnIsNotConst(stmt *ast.ReturnStmt) bool {
-	for _, r := range stmt.Results {
-		if tv, ok := g.types.Types[r]; ok && tv.Value != nil {
-			continue // compile-time constant
-		}
-		return true // non-constant
-	}
-	return false
-}
-
 // resultTypeSuffix maps a Go type to the corresponding result type suffix.
 func resultTypeSuffix(g *Generator, node ast.Node, typ types.Type) string {
 	typ = types.Unalias(typ)
@@ -258,56 +263,4 @@ func resultTypeSuffix(g *Generator, node ast.Node, typ types.Type) string {
 		g.fail(node, "unsupported multi-return type: %s", g.typeString(typ))
 		panic("unreachable")
 	}
-}
-
-// rejectNamedReturns fails if any return value has a name.
-func (g *Generator) rejectNamedReturns(node ast.Node, sig *types.Signature) {
-	for v := range sig.Results().Variables() {
-		if v.Name() != "" {
-			g.fail(node, "named return values are not supported")
-		}
-	}
-}
-
-// callSig extracts the function signature from a call expression.
-func (g *Generator) callSig(call *ast.CallExpr) *types.Signature {
-	return g.types.TypeOf(call.Fun).Underlying().(*types.Signature)
-}
-
-// multiReturn describes a two-value return: (T, error) or (T, T).
-type multiReturn struct {
-	suffix1    string // type suffix for first value (e.g. "int", "str")
-	suffix2    string // type suffix for second value (e.g. "int", "bool"), empty if hasError
-	hasError   bool   // true when second return is error
-	resultType string // C type name when using custom result struct (e.g. "main_FileResult")
-}
-
-// typeName returns the C type name for this multi-return.
-func (mr multiReturn) typeName() string {
-	if mr.resultType != "" {
-		return mr.resultType
-	}
-	if mr.hasError {
-		return "so_R_" + mr.suffix1 + "_err"
-	}
-	return "so_R_" + mr.suffix1 + "_" + mr.suffix2
-}
-
-// accessor returns the C accessor for position i of a multi-return.
-// Position 0 -> tmp.val
-// Position 1 -> tmp.err (T, error) or tmp.val2 (T, T)
-func (mr multiReturn) accessor(tmp string, i int) string {
-	if mr.resultType != "" {
-		if i == 0 {
-			return tmp + ".val"
-		}
-		return tmp + ".err"
-	}
-	if i == 0 {
-		return tmp + ".val"
-	}
-	if mr.hasError {
-		return tmp + ".err"
-	}
-	return tmp + ".val2"
 }

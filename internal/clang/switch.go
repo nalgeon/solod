@@ -13,7 +13,7 @@ import (
 func (g *Generator) emitSwitchStmt(w io.Writer, stmt *ast.SwitchStmt) {
 	cases, def := splitCases(stmt)
 	if stmt.Tag != nil {
-		g.checkTagType(stmt.Tag)
+		g.checkSwitchTag(stmt.Tag)
 	}
 	g.checkBreak(stmt)
 
@@ -33,51 +33,17 @@ func (g *Generator) emitSwitchStmt(w io.Writer, stmt *ast.SwitchStmt) {
 	}
 	var tagRef *ast.Ident
 	if hoist {
-		tagRef = g.emitTagTemp(w, stmt.Tag)
+		tagRef = g.emitSwitchTagTemp(w, stmt.Tag)
 	}
 	g.emitSwitchBody(w, stmt.Tag, tagRef, cases, def)
 	g.state.depth--
 	fmt.Fprintf(w, "%s}\n", g.indent())
 }
 
-// checkBreak rejects a break that leaves a case body. A switch becomes
-// an if/else chain, so emitting a break would lead to incorrect behavior
-// or a compilation error.
-func (g *Generator) checkBreak(stmt *ast.SwitchStmt) {
-	for _, clause := range stmt.Body.List {
-		for _, s := range clause.(*ast.CaseClause).Body {
-			ast.Inspect(s, func(node ast.Node) bool {
-				switch n := node.(type) {
-				case *ast.ForStmt, *ast.RangeStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt, *ast.SelectStmt:
-					// A break inside these leaves them, not the outer switch.
-					return false
-				case *ast.BranchStmt:
-					if n.Tok == token.BREAK && n.Label == nil {
-						g.fail(n, "break in a switch case is not supported, use a labeled break")
-					}
-				}
-				return true
-			})
-		}
-	}
-}
-
-// checkTagType rejects a switch tag whose type has no place to go.
-func (g *Generator) checkTagType(tag ast.Expr) {
-	switch types.Default(g.types.TypeOf(tag)).Underlying().(type) {
-	case *types.Array:
-		// C has no array assignment, so the value has nowhere to go.
-		g.fail(tag, "switch on an array is not supported")
-	case *types.Struct:
-		// Case comparisons follow the rules of ==, which rejects structs.
-		g.fail(tag, "switch on a struct is not supported")
-	}
-}
-
-// emitTagTemp declares a temporary holding the switch tag value and returns
+// emitSwitchTagTemp declares a temporary holding the switch tag value and returns
 // a reference to it. The reference carries the tag's type and position, so
 // comparisons and diagnostics treat it like the tag itself.
-func (g *Generator) emitTagTemp(w io.Writer, tag ast.Expr) *ast.Ident {
+func (g *Generator) emitSwitchTagTemp(w io.Writer, tag ast.Expr) *ast.Ident {
 	typ := types.Default(g.types.TypeOf(tag))
 	ref := &ast.Ident{NamePos: tag.Pos(), Name: g.newTemp(tag, tempSwitch)}
 	// The reference has no declaration to look up, so record its type directly.
@@ -142,6 +108,40 @@ func (g *Generator) emitSwitchBody(w io.Writer, tag ast.Expr, tagRef *ast.Ident,
 		g.state.depth--
 	}
 	fmt.Fprintf(w, "%s}\n", g.indent())
+}
+
+// checkBreak rejects a break that leaves a case body. A switch becomes
+// an if/else chain, so emitting a break would lead to incorrect behavior
+// or a compilation error.
+func (g *Generator) checkBreak(stmt *ast.SwitchStmt) {
+	for _, clause := range stmt.Body.List {
+		for _, s := range clause.(*ast.CaseClause).Body {
+			ast.Inspect(s, func(node ast.Node) bool {
+				switch n := node.(type) {
+				case *ast.ForStmt, *ast.RangeStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt, *ast.SelectStmt:
+					// A break inside these leaves them, not the outer switch.
+					return false
+				case *ast.BranchStmt:
+					if n.Tok == token.BREAK && n.Label == nil {
+						g.fail(n, "break in a switch case is not supported, use a labeled break")
+					}
+				}
+				return true
+			})
+		}
+	}
+}
+
+// checkSwitchTag rejects a switch tag whose type has no place to go.
+func (g *Generator) checkSwitchTag(tag ast.Expr) {
+	switch types.Default(g.types.TypeOf(tag)).Underlying().(type) {
+	case *types.Array:
+		// C has no array assignment, so the value has nowhere to go.
+		g.fail(tag, "switch on an array is not supported")
+	case *types.Struct:
+		// Case comparisons follow the rules of ==, which rejects structs.
+		g.fail(tag, "switch on a struct is not supported")
+	}
 }
 
 // groupCase parenthesizes a case expression so that comparing it to the tag

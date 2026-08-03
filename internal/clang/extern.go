@@ -148,51 +148,6 @@ func (g *Generator) getExtern(obj types.Object) (externInfo, bool) {
 	return info, ok
 }
 
-// directives holds parsed so-directive annotations from a comment group.
-type directives struct {
-	inline      bool
-	promote     bool
-	volatile    bool
-	threadLocal bool
-	attrs       []string
-}
-
-// attrString returns a combined __attribute__((...)) string,
-// or "" if no attrs are present.
-func (d directives) attrString() string {
-	if len(d.attrs) == 0 {
-		return ""
-	}
-	return "__attribute__((" + strings.Join(d.attrs, ", ") + "))"
-}
-
-// parseDirectives scans a comment group for so: directives.
-func parseDirectives(doc *ast.CommentGroup) directives {
-	var d directives
-	if doc == nil {
-		return d
-	}
-	for _, c := range doc.List {
-		text := strings.TrimSpace(c.Text)
-		switch {
-		case text == "//so:inline":
-			d.inline = true
-		case text == "//so:promote":
-			d.promote = true
-		case text == "//so:volatile":
-			d.volatile = true
-		case text == "//so:thread_local":
-			d.threadLocal = true
-		case strings.HasPrefix(text, "//so:attr "):
-			attr := strings.TrimSpace(strings.TrimPrefix(text, "//so:attr "))
-			if attr != "" {
-				d.attrs = append(d.attrs, attr)
-			}
-		}
-	}
-	return d
-}
-
 // cIntrinsic checks whether an expression is a c.Raw or c.Val call
 // and returns the raw string content. The argument must be a string literal.
 func (g *Generator) cIntrinsic(expr ast.Expr) (string, bool) {

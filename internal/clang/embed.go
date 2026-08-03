@@ -2,6 +2,8 @@ package clang
 
 import (
 	"go/ast"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -11,6 +13,16 @@ type embedFile struct {
 	content string
 }
 
+// loadEmbedFile reads the contents of an embedded file from disk.
+func loadEmbedFile(dir, filename string) (embedFile, error) {
+	content, err := os.ReadFile(filepath.Join(dir, filename))
+	if err != nil {
+		return embedFile{}, err
+	}
+	ef := embedFile{name: filename, content: string(content)}
+	return ef, nil
+}
+
 // Embeds holds the embedded .h and .c files.
 type Embeds struct {
 	header []embedFile     // .h contents to inline in header
@@ -18,8 +30,26 @@ type Embeds struct {
 	vars   map[string]bool // var names to skip during emission
 }
 
-// embedDirective extracts the filename from a so:embed directive.
-func embedDirective(doc *ast.CommentGroup) (string, bool) {
+// newEmbeds creates a new Embeds instance.
+func newEmbeds() Embeds {
+	return Embeds{
+		vars: make(map[string]bool),
+	}
+}
+
+// addFile adds an embedded file to the appropriate list
+// based on its extension.
+func (e *Embeds) addFile(ef embedFile) {
+	switch filepath.Ext(ef.name) {
+	case ".h":
+		e.header = append(e.header, ef)
+	case ".c":
+		e.impl = append(e.impl, ef)
+	}
+}
+
+// parseEmbed extracts the filename from a so:embed directive.
+func parseEmbed(doc *ast.CommentGroup) (string, bool) {
 	if doc == nil {
 		return "", false
 	}
