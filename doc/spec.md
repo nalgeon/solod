@@ -26,7 +26,6 @@ Solod (So) is a strict subset of Go that transpiles to regular C. This document 
 [Defer](#defer) •
 [C interop](#c-interop) •
 [Generics](#generics) •
-[Embeds](#embeds) •
 [Packages](#packages)
 
 ## Values
@@ -137,18 +136,6 @@ var vStruct person  // all fields are set to zero values
 var vPtr *person    // NULL
 var vNil any        // NULL
 ```
-
-### Reserved C names
-
-Go identifiers might conflict with C keywords or macros (`long`, `bool`, ...). So handles these automatically for local variables and parameters by appending an underscore in the generated C:
-
-```go
-func scale(long int, register int) int {
-	return long * register // -> long_ * register_
-}
-```
-
-Some cases are rejected during compilation instead of mangling the name. This happens if you use reserved words as struct fields or package-level declarations, or when the mangled name would conflict with an existing identifier (for example, a local `long` next to a local `long_`).
 
 ## Strings
 
@@ -1096,16 +1083,6 @@ In C, this is emitted as a macro call `so_panic(...)`.
 A panic prints its message with a source location, then terminates the program. How it terminates (the panic mode), how traces are symbolized, and how to report the original So source location are build options; see [Building](building.md).
 
 `recover` is not supported.
-
-### Assertions
-
-An assertion checks a precondition the caller is required to satisfy. Assertions panic on failure, so they report a source location and honor the panic mode. They cover slice and string bounds, index-out-of-range, slice-to-array length, zero map capacity, and integer division or modulo by a zero divisor. Since Go's syntax doesn't have a built-in `assert`, it's provided through the `c.Assert` function in the standard library.
-
-A build can remove assertions; see [Building](building.md#assertions) for details. A removed assertion doesn't evaluate its condition at all, so the condition must be free of side effects.
-
-Not every failure is an assertion. Other runtime checks, like calling `append` beyond capacity, always cause a panic and can't be turned off, because they report situations the caller can't always predict ahead of time.
-
-A nil pointer dereference (or other invalid memory access) is caught at runtime in POSIX hosted builds and reported as a panic that honors the panic mode: trace mode prints `panic: nil pointer dereference` and a backtrace, exit mode prints just the message, and abort mode leaves the fault untouched for a core dump. Unlike an explicit panic it carries no source line, so use the backtrace to locate it. Freestanding builds and Windows install no handler and fault like C.
 
 ## Defer
 
