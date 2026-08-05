@@ -56,9 +56,7 @@ func FuncFor[T any]() Func {
 			return cmp.Compare(s1, s2)
 		}
 	}
-	return func(a, b any) int {
-		return mem.Compare(a, b, c.Sizeof[T]())
-	}
+	return nil
 }
 
 // Compare returns
