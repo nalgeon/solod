@@ -1,4 +1,4 @@
-# Solod: Go can be a better C
+# ☀️ Solod: Go can be a better C
 
 Solod (**So**) is a strict subset of Go that translates to regular C.
 
