@@ -136,6 +136,12 @@ func main() {
 		if wide != 9223372036854775808 {
 			panic("1<<100 >> 37")
 		}
+		// An intermediate above uint64 reached without a shift. C would wrap
+		// it before the division brings it back into range.
+		var over uint64 = MaxUint64 * 3 / 3
+		if over != MaxUint64 {
+			panic("MaxUint64 * 3 / 3")
+		}
 		var sum uint64 = 1<<63 + 1
 		if sum != 9223372036854775809 {
 			panic("1<<63 + 1")
@@ -152,10 +158,20 @@ func main() {
 		if mixed != 18446744073709551614 {
 			panic("MaxUint64 + (-1)")
 		}
+		// Here the negative value never meets the one above int64, so C can
+		// compute the expression itself.
+		var apart uint64 = 1<<63 + (-1 + 2)
+		if apart != 9223372036854775809 {
+			panic("1<<63 + (-1 + 2)")
+		}
 		// A shift count of 64 is undefined in C, even with a value in range.
 		var none uint64 = 0 << 64
 		if none != 0 {
 			panic("0 << 64")
+		}
+		var gone int64 = 1 >> 64
+		if gone != 0 {
+			panic("1 >> 64")
 		}
 	}
 	{

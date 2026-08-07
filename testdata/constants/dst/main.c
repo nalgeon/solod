@@ -13,7 +13,7 @@ static const so_unused uint64_t bigIotaNext = 9223372036854775809u;
 // An integer constant expression is folded when C cannot compute it
 // step by step, and emitted as operators when it can.
 static const so_unused uint64_t bigMask = 18446744073709551615u;
-static const so_unused int64_t bigQuo = 6148914691236517205;
+static const so_unused int64_t bigQuo = bigMask / 3;
 static const so_unused int64_t smallMask = ((int64_t)1 << 20) - 1;
 
 // Float constant expressions are folded.
@@ -58,11 +58,11 @@ int main(void) {
     }
     {
         // Arithmetic on constants above math.MaxInt64 stays unsigned.
-        uint64_t third = 6148914691236517205;
+        uint64_t third = main_MaxUint64 / 3;
         if (third != 6148914691236517205) {
             so_panic("MaxUint64 / 3");
         }
-        uint64_t shifted = 9223372036854775807;
+        uint64_t shifted = (main_MaxUint64 >> 1);
         if (shifted != 9223372036854775807) {
             so_panic("MaxUint64 >> 1");
         }
@@ -89,7 +89,13 @@ int main(void) {
         if (wide != 9223372036854775808u) {
             so_panic("1<<100 >> 37");
         }
-        uint64_t sum = 9223372036854775809u;
+        // An intermediate above uint64 reached without a shift. C would wrap
+        // it before the division brings it back into range.
+        uint64_t over = 18446744073709551615u;
+        if (over != main_MaxUint64) {
+            so_panic("MaxUint64 * 3 / 3");
+        }
+        uint64_t sum = ((uint64_t)1 << 63) + 1;
         if (sum != 9223372036854775809u) {
             so_panic("1<<63 + 1");
         }
@@ -105,10 +111,20 @@ int main(void) {
         if (mixed != 18446744073709551614u) {
             so_panic("MaxUint64 + (-1)");
         }
+        // Here the negative value never meets the one above int64, so C can
+        // compute the expression itself.
+        uint64_t apart = ((uint64_t)1 << 63) + (-1 + 2);
+        if (apart != 9223372036854775809u) {
+            so_panic("1<<63 + (-1 + 2)");
+        }
         // A shift count of 64 is undefined in C, even with a value in range.
         uint64_t none = 0;
         if (none != 0) {
             so_panic("0 << 64");
+        }
+        int64_t gone = 0;
+        if (gone != 0) {
+            so_panic("1 >> 64");
         }
     }
     {

@@ -337,12 +337,8 @@ func (g *Generator) symbolName(obj types.Object) string {
 // maps to int64_t; values larger than math.MaxInt64 map to uint64_t.
 func (g *Generator) constType(node ast.Node, obj types.Object) types.Type {
 	typ := obj.Type()
-	basic, ok := types.Unalias(typ).(*types.Basic)
-	if !ok || basic.Kind() != types.UntypedInt {
-		return typ
-	}
 	c, ok := obj.(*types.Const)
-	if !ok || !exceedsInt64(c.Val()) {
+	if !ok || !emitsAsUint64(typ, c.Val()) {
 		return typ
 	}
 	if exceedsUint64(c.Val()) {

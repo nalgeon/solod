@@ -116,8 +116,7 @@ func (g *Generator) emitBinaryExpr(w io.Writer, n *ast.BinaryExpr) {
 	if n.Op == token.SHL || n.Op == token.SHR {
 		fmt.Fprint(w, "(")
 		if lit, ok := n.X.(*ast.BasicLit); ok && lit.Kind == token.INT {
-			cType := g.mapTypeName(n, g.types.TypeOf(n))
-			fmt.Fprintf(w, "(%s)", cType)
+			fmt.Fprintf(w, "(%s)", g.cIntType(n))
 		}
 		g.emitExpr(w, n.X)
 		fmt.Fprintf(w, " %s ", n.Op.String())
