@@ -10,7 +10,7 @@ package cmp
 
 import (
 	"cmp"
-	"unsafe"
+	"reflect"
 
 	"solod.dev/so/c"
 	"solod.dev/so/mem"
@@ -23,42 +23,50 @@ var cmp_h string
 // zero if a == b, and a positive value if a > b.
 type Func func(a, b any) int
 
-// FuncFor returns the appropriate comparison function for type T.
-// If T is not supported, returns nil.
+// FuncFor returns the comparison function for type T.
+// These types are supported:
+//
+//	int, int8, int16, int32 (rune), int64
+//	uint, uint8 (byte), uint16, uint32, uint64
+//	float32, float64
+//	string
+//
+// A named type is supported if its underlying type is in the list.
+// For any other type, FuncFor returns nil. Notably, uintptr, bool,
+// pointers, structs and arrays are not supported.
+//
+// Assign the result to a variable before a comparison with nil:
+// GCC rejects a direct comparison of a function address to nil.
 //
 //so:extern
 func FuncFor[T any]() Func {
-	var zero T
-	if _, ok := any(zero).(int); ok {
+	switch reflect.TypeFor[T]().Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return func(a, b any) int {
-			i1 := *c.PtrAs[int](a)
-			i2 := *c.PtrAs[int](b)
+			i1 := reflect.ValueOf(*c.PtrAs[T](a)).Int()
+			i2 := reflect.ValueOf(*c.PtrAs[T](b)).Int()
 			return cmp.Compare(i1, i2)
 		}
-	}
-	if _, ok := any(zero).(float64); ok {
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return func(a, b any) int {
-			f1 := *c.PtrAs[float64](a)
-			f2 := *c.PtrAs[float64](b)
+			u1 := reflect.ValueOf(*c.PtrAs[T](a)).Uint()
+			u2 := reflect.ValueOf(*c.PtrAs[T](b)).Uint()
+			return cmp.Compare(u1, u2)
+		}
+	case reflect.Float32, reflect.Float64:
+		return func(a, b any) int {
+			f1 := reflect.ValueOf(*c.PtrAs[T](a)).Float()
+			f2 := reflect.ValueOf(*c.PtrAs[T](b)).Float()
 			return cmp.Compare(f1, f2)
 		}
-	}
-	if _, ok := any(zero).(string); ok {
-		type header struct {
-			ptr *byte
-			len int
-		}
+	case reflect.String:
 		return func(a, b any) int {
-			h1 := c.PtrAs[header](a)
-			h2 := c.PtrAs[header](b)
-			s1 := unsafe.String(h1.ptr, h1.len)
-			s2 := unsafe.String(h2.ptr, h2.len)
+			s1 := reflect.ValueOf(*c.PtrAs[T](a)).String()
+			s2 := reflect.ValueOf(*c.PtrAs[T](b)).String()
 			return cmp.Compare(s1, s2)
 		}
 	}
-	return func(a, b any) int {
-		return mem.Compare(a, b, c.Sizeof[T]())
-	}
+	return nil
 }
 
 // Compare returns
@@ -70,25 +78,33 @@ func FuncFor[T any]() Func {
 // For floating-point types, a NaN is considered less than any non-NaN,
 // a NaN is considered equal to a NaN, and -0.0 is equal to 0.0.
 //
+// Panics for a type that [FuncFor] does not support.
+// The constraint accepts uintptr, but the implementation does not.
+//
 //so:inline
 func Compare[T cmp.Ordered](x, y T) int {
+	_x, _y := x, y
 	_fn := FuncFor[T]()
 	c.Assert(_fn != nil, "cmp: unsupported ordered type")
-	return _fn(&x, &y)
+	return _fn(&_x, &_y)
 }
 
 // Equal reports whether x and y are equal.
 // For floating-point types, a NaN is considered equal to a NaN, and -0.0 is equal to 0.0.
-// For non-ordered types, compares by raw byte value (memcmp).
+// For a type that [FuncFor] does not support, compares by raw byte value (memcmp).
+//
+// The constraint accepts an array, but the implementation does not:
+// Equal copies both arguments into local variables, and C cannot copy an array.
 //
 //so:inline
 func Equal[T comparable](x, y T) bool {
+	_x, _y := x, y
 	_fn := FuncFor[T]()
 	var _eq bool
 	if _fn != nil {
-		_eq = _fn(&x, &y) == 0
+		_eq = _fn(&_x, &_y) == 0
 	} else {
-		_eq = mem.Compare(&x, &y, c.Sizeof[T]()) == 0
+		_eq = mem.Compare(&_x, &_y, c.Sizeof[T]()) == 0
 	}
 	return _eq
 }
@@ -97,9 +113,13 @@ func Equal[T comparable](x, y T) bool {
 // For floating-point types, a NaN is considered less than any non-NaN,
 // and -0.0 is not less than (is equal to) 0.0.
 //
+// Panics for a type that [FuncFor] does not support.
+// The constraint accepts uintptr, but FuncFor does not support uintptr.
+//
 //so:inline
 func Less[T cmp.Ordered](x, y T) bool {
+	_x, _y := x, y
 	_fn := FuncFor[T]()
 	c.Assert(_fn != nil, "cmp: unsupported ordered type")
-	return _fn(&x, &y) < 0
+	return _fn(&_x, &_y) < 0
 }
