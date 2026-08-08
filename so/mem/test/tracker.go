@@ -182,6 +182,20 @@ func TestTrackerFree(t *testing.T) {
 	}
 }
 
+func TestTrackerFreeNil(t *testing.T) {
+	// Freeing a nil pointer does not change the statistics.
+	// Without this check the byte count wraps around.
+	tr := mem.Tracker{Allocator: mem.System}
+	tr.Free(nil, 16, 8)
+	stats := tr.Stats()
+	if stats.Alloc != 0 {
+		t.Error("FreeNil: Stats.Alloc != 0")
+	}
+	if stats.Frees != 0 {
+		t.Error("FreeNil: Stats.Frees != 0")
+	}
+}
+
 func TestTrackerLifecycle(t *testing.T) {
 	tr := mem.Tracker{Allocator: mem.System}
 

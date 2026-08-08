@@ -61,3 +61,173 @@ func TestArena(t *testing.T) {
 	p4.x = 77
 	p4.y = 88
 }
+
+func TestArena_OutOfMemory(t *testing.T) {
+	buf := make([]byte, 16)
+	arena := mem.NewArena(buf)
+	var a mem.Allocator = &arena
+
+	_, err := mem.TryAllocSlice[byte](a, 32, 32)
+	if err != mem.ErrOutOfMemory {
+		t.Error("want ErrOutOfMemory")
+	}
+
+	// A failed allocation does not consume space,
+	// so a block of the whole buffer still fits.
+	s, err := mem.TryAllocSlice[byte](a, 16, 16)
+	if err != nil {
+		t.Error("exact fit failed")
+		return
+	}
+	if len(s) != 16 {
+		t.Error("unexpected len after exact fit")
+	}
+
+	// The arena is full now.
+	_, err = mem.TryAllocSlice[byte](a, 1, 1)
+	if err != mem.ErrOutOfMemory {
+		t.Error("want ErrOutOfMemory when full")
+	}
+}
+
+func TestArena_Alignment(t *testing.T) {
+	buf := make([]byte, 64)
+	arena := mem.NewArena(buf)
+	var a mem.Allocator = &arena
+
+	// One byte first, so the next allocation needs alignment padding.
+	one := mem.AllocSlice[byte](a, 1, 1)
+	one[0] = 7
+
+	p, err := mem.TryAlloc[int64](a)
+	if err != nil {
+		t.Fatal("aligned allocation failed")
+		return
+	}
+	// A misaligned store traps under the sanitizers.
+	*p = 1234567890123
+	if *p != 1234567890123 {
+		t.Error("unexpected value after an aligned store")
+	}
+	if one[0] != 7 {
+		t.Error("the padded allocation overwrote the previous one")
+	}
+}
+
+func TestArena_ReallocGrow(t *testing.T) {
+	// The buffer holds the grown block, but not the old block plus a copy.
+	// A successful grow proves the arena resized the block in place.
+	buf := make([]byte, 8)
+	arena := mem.NewArena(buf)
+	var a mem.Allocator = &arena
+
+	s, err := mem.TryAllocSlice[byte](a, 4, 4)
+	if err != nil {
+		t.Fatal("initial allocation failed")
+		return
+	}
+	s[0] = 11
+	s[3] = 44
+
+	s, err = mem.TryReallocSlice(a, s, 8, 8)
+	if err != nil {
+		t.Fatal("grow failed")
+		return
+	}
+	if len(s) != 8 || cap(s) != 8 {
+		t.Error("grow: unexpected len/cap")
+	}
+	if s[0] != 11 || s[3] != 44 {
+		t.Error("grow: data not preserved")
+	}
+	if s[4] != 0 || s[7] != 0 {
+		t.Error("grow: new bytes not zeroed")
+	}
+}
+
+func TestArena_ReallocShrink(t *testing.T) {
+	buf := make([]byte, 16)
+	arena := mem.NewArena(buf)
+	var a mem.Allocator = &arena
+
+	s := mem.AllocSlice[byte](a, 16, 16)
+	s[0] = 11
+
+	// Shrinking the last block returns its space to the arena.
+	s = mem.ReallocSlice(a, s, 8, 8)
+	if len(s) != 8 || cap(s) != 8 {
+		t.Error("shrink: unexpected len/cap")
+	}
+	if s[0] != 11 {
+		t.Error("shrink: data not preserved")
+	}
+	_, err := mem.TryAllocSlice[byte](a, 8, 8)
+	if err != nil {
+		t.Error("shrink: space not reclaimed")
+	}
+}
+
+func TestArena_ReallocGrowNotLast(t *testing.T) {
+	buf := make([]byte, 64)
+	arena := mem.NewArena(buf)
+	var a mem.Allocator = &arena
+
+	s1 := mem.AllocSlice[byte](a, 4, 4)
+	s1[0] = 11
+	s1[3] = 44
+	s2 := mem.AllocSlice[byte](a, 4, 4) // s1 is not the last block now
+	s2[0] = 99
+
+	// Growing a block that is not the last one allocates
+	// a new block and copies the data.
+	s1 = mem.ReallocSlice(a, s1, 8, 8)
+	if s1[0] != 11 || s1[3] != 44 {
+		t.Error("grow not last: data not copied")
+	}
+	if s2[0] != 99 {
+		t.Error("grow not last: the other block changed")
+	}
+
+	// The new block does not overlap the other block.
+	s1[0] = 55
+	if s2[0] != 99 {
+		t.Error("grow not last: the blocks overlap")
+	}
+}
+
+func TestArena_ReallocShrinkNotLast(t *testing.T) {
+	buf := make([]byte, 16)
+	arena := mem.NewArena(buf)
+	var a mem.Allocator = &arena
+
+	s1 := mem.AllocSlice[byte](a, 8, 8)
+	s1[0] = 11
+	s2 := mem.AllocSlice[byte](a, 8, 8) // the arena is full now
+	s2[0] = 22
+
+	// Shrinking a block that is not the last one keeps the block
+	// in place and does not return space to the arena.
+	s1 = mem.ReallocSlice(a, s1, 4, 4)
+	if s1[0] != 11 {
+		t.Error("shrink not last: data not preserved")
+	}
+	if s2[0] != 22 {
+		t.Error("shrink not last: the other block changed")
+	}
+	_, err := mem.TryAllocSlice[byte](a, 1, 1)
+	if err != mem.ErrOutOfMemory {
+		t.Error("shrink not last: space unexpectedly reclaimed")
+	}
+}
+
+func TestArena_ReallocOutOfMemory(t *testing.T) {
+	buf := make([]byte, 16)
+	arena := mem.NewArena(buf)
+	var a mem.Allocator = &arena
+
+	s := mem.AllocSlice[byte](a, 8, 8)
+	_, err := mem.TryReallocSlice(a, s, 32, 32)
+	if err != mem.ErrOutOfMemory {
+		t.Error("want ErrOutOfMemory")
+	}
+}

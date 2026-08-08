@@ -7,7 +7,7 @@ import (
 )
 
 func TestArray(t *testing.T) {
-	arr := mem.NewArray(mem.System, c.Sizeof[Point](), 3)
+	arr := mem.NewArray(t.Allocator(), c.Sizeof[Point](), 3)
 	defer arr.Free()
 
 	if arr.Len() != 3 {

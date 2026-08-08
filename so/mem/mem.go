@@ -47,14 +47,18 @@ func TryAlloc[T any](a Allocator) (*T, error) {
 
 // Free frees a value previously allocated with [Alloc] or [TryAlloc].
 // If the allocator is nil, uses the system allocator.
+// Calling Free on a nil pointer is a no-op.
 //
 //so:inline
 func Free[T any](a Allocator, ptr *T) {
-	_a := a
-	if _a == nil {
-		_a = System
+	_ptr := ptr
+	if _ptr != nil {
+		_a := a
+		if _a == nil {
+			_a = System
+		}
+		_a.Free(_ptr, c.Sizeof[T](), c.Alignof[T]())
 	}
-	_a.Free(ptr, c.Sizeof[T](), c.Alignof[T]())
 }
 
 // AllocSlice allocates a slice of type T with given length

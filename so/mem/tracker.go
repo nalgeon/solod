@@ -58,7 +58,12 @@ func (t *Tracker) Realloc(ptr any, oldSize int, newSize int, align int) (any, er
 	return newPtr, nil
 }
 
+// Free frees a previously allocated block of memory.
+// Freeing a nil pointer does not change the statistics.
 func (t *Tracker) Free(ptr any, size int, align int) {
+	if ptr == nil {
+		return
+	}
 	t.Allocator.Free(ptr, size, align)
 	t.stats.alloc.Sub(uint64(size))
 	t.stats.frees.Add(1)
