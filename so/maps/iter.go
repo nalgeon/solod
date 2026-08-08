@@ -24,7 +24,9 @@ func (it *Iter[K, V]) Next() bool {
 	_hdib := unsafe.SliceData(it.hdib)
 	_n := len(it.hdib)
 	for it.i < _n {
-		if *c.PtrAt(_hdib, it.i)&0xFFFF != 0 {
+		_hd := c.PtrAt(_hdib, it.i)
+		c.Assert(_hd != nil, "maps: nil hdib pointer") /* for gcc analyzer */
+		if *_hd&0xFFFF != 0 {
 			it.i++
 			_found = true
 			break

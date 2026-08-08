@@ -13,6 +13,18 @@ var maps_h string
 
 // Map is a generic hashmap similar to Go's built-in map[K]V.
 // It automatically grows as needed, but does not shrink.
+//
+// The key type must be a number, a bool, a pointer, or a string.
+// The map does not support array and struct keys.
+//
+// The map compares float keys byte by byte, not with the == operator.
+// Negative zero and positive zero are different keys. A NaN key stays
+// reachable after Set.
+//
+// The zero Map is not usable. Use [New] to create a Map.
+//
+// A Map must have a single owner. Two copies of a Map share the same
+// buckets. If one copy grows, the other copy points to freed memory.
 type Map[K comparable, V any] struct {
 	rm rawMap
 }
