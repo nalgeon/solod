@@ -29,7 +29,8 @@ const O_TRUNC = 0x00000400 // truncate regular writable file when opened
 
 // File represents an open file descriptor.
 // A nil pointer and the zero File are invalid.
-// The methods return [ErrInvalid] for an invalid file.
+// The methods return [ErrInvalid] for an invalid file
+// and [ErrClosed] for a closed file.
 type File struct {
 	fd     *os_file
 	name   string
@@ -98,15 +99,16 @@ func (f *File) Name() string {
 // It returns the number of bytes read and any error encountered.
 // At end of file, Read returns 0, io.EOF.
 func (f *File) Read(b []byte) (int, error) {
-	if f == nil || f.fd == nil {
-		return 0, ErrInvalid
+	fd := f.stream()
+	if fd == nil {
+		return 0, f.invalidErr()
 	}
 	if len(b) == 0 {
 		return 0, nil
 	}
-	n := int(fread(unsafe.SliceData(b), 1, uintptr(len(b)), f.fd))
+	n := int(fread(unsafe.SliceData(b), 1, uintptr(len(b)), fd))
 	if n < len(b) {
-		if ferror(f.fd) {
+		if ferror(fd) {
 			return n, mapError()
 		}
 		if n == 0 {
@@ -120,13 +122,14 @@ func (f *File) Read(b []byte) (int, error) {
 // It returns the number of bytes written and an error, if any.
 // Write returns a non-nil error when n != len(b).
 func (f *File) Write(b []byte) (int, error) {
-	if f == nil || f.fd == nil {
-		return 0, ErrInvalid
+	fd := f.stream()
+	if fd == nil {
+		return 0, f.invalidErr()
 	}
 	if len(b) == 0 {
 		return 0, nil
 	}
-	n := int(fwrite(unsafe.SliceData(b), 1, uintptr(len(b)), f.fd))
+	n := int(fwrite(unsafe.SliceData(b), 1, uintptr(len(b)), fd))
 	if n < len(b) {
 		return n, mapError()
 	}
@@ -138,13 +141,14 @@ func (f *File) Write(b []byte) (int, error) {
 // the start of the file, [io.SeekCurrent] means relative to the current
 // offset, and [io.SeekEnd] means relative to the end.
 func (f *File) Seek(offset int64, whence int) (int64, error) {
-	if f == nil || f.fd == nil {
-		return 0, ErrInvalid
+	fd := f.stream()
+	if fd == nil {
+		return 0, f.invalidErr()
 	}
-	if fseeko(f.fd, offset, c.Int(whence)) != 0 {
+	if fseeko(fd, offset, c.Int(whence)) != 0 {
 		return 0, mapError()
 	}
-	pos := ftello(f.fd)
+	pos := ftello(fd)
 	if pos < 0 {
 		return 0, mapError()
 	}
@@ -155,21 +159,22 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 // It returns the number of bytes read and the error, if any.
 // ReadAt always returns a non-nil error when n < len(b).
 func (f *File) ReadAt(b []byte, off int64) (int, error) {
-	if f == nil || f.fd == nil {
-		return 0, ErrInvalid
+	fd := f.stream()
+	if fd == nil {
+		return 0, f.invalidErr()
 	}
 	if off < 0 {
 		return 0, io.ErrOffset
 	}
-	cur := ftello(f.fd)
+	cur := ftello(fd)
 	if cur < 0 {
 		return 0, mapError()
 	}
-	if fseeko(f.fd, off, io.SeekStart) != 0 {
+	if fseeko(fd, off, io.SeekStart) != 0 {
 		return 0, mapError()
 	}
 	n, err := f.Read(b)
-	if fseeko(f.fd, cur, io.SeekStart) != 0 && err == nil {
+	if fseeko(fd, cur, io.SeekStart) != 0 && err == nil {
 		return n, mapError()
 	}
 	if n < len(b) && err == nil {
@@ -181,21 +186,22 @@ func (f *File) ReadAt(b []byte, off int64) (int, error) {
 // WriteAt writes len(b) bytes to the file starting at byte offset off.
 // It returns the number of bytes written and an error, if any.
 func (f *File) WriteAt(b []byte, off int64) (int, error) {
-	if f == nil || f.fd == nil {
-		return 0, ErrInvalid
+	fd := f.stream()
+	if fd == nil {
+		return 0, f.invalidErr()
 	}
 	if off < 0 {
 		return 0, io.ErrOffset
 	}
-	cur := ftello(f.fd)
+	cur := ftello(fd)
 	if cur < 0 {
 		return 0, mapError()
 	}
-	if fseeko(f.fd, off, io.SeekStart) != 0 {
+	if fseeko(fd, off, io.SeekStart) != 0 {
 		return 0, mapError()
 	}
 	n, err := f.Write(b)
-	if fseeko(f.fd, cur, io.SeekStart) != 0 && err == nil {
+	if fseeko(fd, cur, io.SeekStart) != 0 && err == nil {
 		return n, mapError()
 	}
 	return n, err
@@ -210,17 +216,39 @@ func (f *File) WriteString(s string) (int, error) {
 // Close closes the file, rendering it unusable for I/O.
 // Close will return an error if it has already been called.
 func (f *File) Close() error {
-	if f == nil || f.fd == nil {
-		return ErrInvalid
+	fd := f.stream()
+	if fd == nil {
+		return f.invalidErr()
 	}
-	if f.closed {
-		return ErrClosed
-	}
-	if fclose(f.fd) != 0 {
+	// fclose destroys the stream whatever it returns. The file is marked
+	// closed before the result is checked, so that no later call can use
+	// the destroyed stream.
+	f.fd = nil
+	f.closed = true
+	if fclose(fd) != 0 {
 		return mapError()
 	}
-	f.closed = true
 	return nil
+}
+
+// stream returns the C stream of f, or nil if f is not usable for I/O.
+// A nil pointer, an unopened file, and a closed file all give nil.
+// Use [File.invalidErr] to report the reason.
+func (f *File) stream() *os_file {
+	if f == nil {
+		return nil
+	}
+	return f.fd
+}
+
+// invalidErr returns the reason f is not usable for I/O.
+// A closed file gives ErrClosed. A nil pointer or an unopened file
+// gives ErrInvalid.
+func (f *File) invalidErr() error {
+	if f != nil && f.closed {
+		return ErrClosed
+	}
+	return ErrInvalid
 }
 
 // ReadFile reads the named file and returns the contents.

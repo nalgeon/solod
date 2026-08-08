@@ -345,6 +345,51 @@ func TestFile_NilInvalid(t *testing.T) {
 	}
 }
 
+func TestFile_ClosedInvalid(t *testing.T) {
+	name := "test_closed_file.txt"
+	f, err := os.Create(name)
+	if err != nil {
+		t.Fatal("Create failed")
+		return
+	}
+	defer os.Remove(name)
+	if f.Close() != nil {
+		t.Fatal("Close failed")
+		return
+	}
+	buf := make([]byte, 8)
+
+	// Every method must report the closed file instead of
+	// using the stream that Close destroyed.
+	_, err = f.Read(buf)
+	if err != os.ErrClosed {
+		t.Error("Read on closed file: wrong error")
+	}
+	_, err = f.Write(buf)
+	if err != os.ErrClosed {
+		t.Error("Write on closed file: wrong error")
+	}
+	_, err = f.WriteString("data")
+	if err != os.ErrClosed {
+		t.Error("WriteString on closed file: wrong error")
+	}
+	_, err = f.Seek(0, io.SeekStart)
+	if err != os.ErrClosed {
+		t.Error("Seek on closed file: wrong error")
+	}
+	_, err = f.ReadAt(buf, 0)
+	if err != os.ErrClosed {
+		t.Error("ReadAt on closed file: wrong error")
+	}
+	_, err = f.WriteAt(buf, 0)
+	if err != os.ErrClosed {
+		t.Error("WriteAt on closed file: wrong error")
+	}
+	if f.Close() != os.ErrClosed {
+		t.Error("second Close: wrong error")
+	}
+}
+
 func TestFile_ZeroInvalid(t *testing.T) {
 	// Open returns the zero File when it fails.
 	// A caller that ignores the error gets an unopened file.
