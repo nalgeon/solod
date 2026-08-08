@@ -11,44 +11,58 @@ EMCC = emcc
 ZIG = zig cc
 
 mode =
-OUT_NAME = main
-RUN_CMD = ./build/main
+OUT_EXT =
+RUN_PREFIX =
+RUN_SUFFIX =
 
 # Set CC and CFLAGS based on the selected mode.
 ifeq ($(mode), clang)
     CC = $(CLANG)
 else ifeq ($(mode), gcc)
     CC = $(GCC_DOCKER) gcc
-    RUN_CMD = $(GCC_DOCKER) ./build/main
+    RUN_PREFIX = $(GCC_DOCKER)
 # The analyzer build drops the sanitizers on purpose. -fsanitize=nonnull-attribute
 # is the runtime twin of -Wanalyzer-null-argument, and GCC does not report
 # statically what it checks at run time.
 else ifeq ($(mode), analyze)
     CC = $(GCC_DOCKER) gcc
 	CFLAGS = $(CFLAGS_CORE) -fanalyzer -D_FORTIFY_SOURCE=2
-    RUN_CMD = $(GCC_DOCKER) ./build/main
+    RUN_PREFIX = $(GCC_DOCKER)
 else ifeq ($(mode), fast)
 	CFLAGS = $(CFLAGS_CORE)
 else ifeq ($(mode), bare)
 	CC = $(ZIG)
 	CFLAGS = $(CFLAGS_CORE) --target=wasm32-freestanding -nostdlib -Wl,--no-entry -Wl,--export=main -DSO_HEAP_SIZE=65536
 	LDLIBS =
-	OUT_NAME = main.wasm
-	RUN_CMD = wasmtime --invoke main ./build/main.wasm 0 0
+	OUT_EXT = .wasm
+	RUN_PREFIX = wasmtime --invoke main
+	RUN_SUFFIX = 0 0
 else ifeq ($(mode), riscv64)
 	CC = $(RISCV64) gcc
 	CFLAGS = $(CFLAGS_CORE)
-	RUN_CMD = $(RISCV64) ./build/main
+	RUN_PREFIX = $(RISCV64)
 else ifeq ($(mode), i386)
 	CC = $(I386) gcc
 	CFLAGS = $(CFLAGS_CORE)
-	RUN_CMD = $(I386) ./build/main
+	RUN_PREFIX = $(I386)
 else ifeq ($(mode), wasm)
 	CC = $(EMCC)
 	CFLAGS = $(CFLAGS_CORE) -sSTANDALONE_WASM
-	OUT_NAME = main.wasm
-	RUN_CMD = wasmtime ./build/main.wasm
+	OUT_EXT = .wasm
+	RUN_PREFIX = wasmtime
 endif
+
+# The name of the compiled binary. test-lang gives each case a name of its own,
+# because the cases build in parallel.
+bin = main$(OUT_EXT)
+RUN_CMD = $(RUN_PREFIX) ./build/$(bin) $(RUN_SUFFIX)
+
+# The transpiler command. test-lang overrides it with a prebuilt binary,
+# because `go run` links the transpiler on every call.
+SO = go run ./cmd/so
+
+# The number of cases that test-lang runs in parallel.
+jobs = $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || echo 8)
 
 # Preload mimalloc if available.
 UNAME_S := $(shell uname -s)
@@ -95,26 +109,30 @@ update-err:
 
 # Runs tests in every testdata/* subdirectory, except testdata/bad
 # (those cases must fail to translate, so there is nothing to run).
+# The cases run $(jobs) at a time. Each case gets a binary and a log of its own,
+# and all cases share the transpiler binary that this target builds one time.
 test-lang:
-	@mkdir -p generated
-	@failed=0; \
-	for dir in $$(ls -d testdata/*/); do \
-		name=$${dir#testdata/}; \
-		name=$${name%/}; \
-		if [ "$$name" = "bad" ]; then continue; fi; \
-		if make run-case name=$$name > generated/so_test_out.txt 2>&1; then \
-			echo "PASS $$name"; \
-		else \
-			echo "FAIL $$name"; \
-			cat generated/so_test_out.txt; \
-			failed=1; \
-		fi; \
-	done; \
-	rm -f generated/so_test_out.txt; \
-	if [ $$failed -eq 0 ]; then \
+	@rm -rf generated/lang
+	@mkdir -p generated/lang build
+	@go build -o build/so ./cmd/so
+	@if ls -d testdata/*/ | sed 's|testdata/||; s|/$$||' | grep -vx bad | \
+		xargs -P $(jobs) -I% make test-lang-case name=% SO=build/so; \
+	then \
 		echo "PASS"; \
 	else \
 		echo "FAIL"; \
+		exit 1; \
+	fi
+
+# Runs one test-lang case. Prints the result and keeps the output in a log.
+# The log makes the output of a failed case stay together, because the cases
+# run in parallel.
+test-lang-case:
+	@if make run-case name=$(name) bin=$(name)$(OUT_EXT) > generated/lang/$(name).txt 2>&1; then \
+		echo "PASS $(name)"; \
+	else \
+		echo "FAIL $(name)"; \
+		sed 's|^|$(name): |' generated/lang/$(name).txt; \
 		exit 1; \
 	fi
 
@@ -124,7 +142,7 @@ test-lang:
 test-std:
 	@rm -rf generated/std
 	@mkdir -p generated/std
-	@go run ./cmd/so translate -test -o generated/std ./so/...
+	@$(SO) translate -test -o generated/std ./so/...
 	@make run-c path=generated/std
 
 # Transpiles, compiles and runs a single test case in testdata/$(name),
@@ -133,7 +151,7 @@ run-case:
 	@rm -rf generated/$(name)
 	@mkdir -p generated/$(name)
 	@cp testdata/$(name)/dst/*.ext.[ch] generated/$(name)/ 2>/dev/null || true
-	@go run ./cmd/so translate -o generated/$(name) testdata/$(name)/src
+	@$(SO) translate -o generated/$(name) testdata/$(name)/src
 	@make run-c path=generated/$(name)
 
 # Transpiles, compiles and runs the tests in a package's "test" subdirectory
@@ -142,18 +160,18 @@ run-case:
 run-test:
 	@rm -rf generated/$(name)/test
 	@mkdir -p generated/$(name)/test
-	@go run ./cmd/so translate -test -o generated/$(name)/test ./$(name)
+	@$(SO) translate -test -o generated/$(name)/test ./$(name)
 	@make run-c path=generated/$(name)/test
 
 run-c:
 	@mkdir -p build
 	@$(CC) $(CFLAGS) \
 		-I$(path) \
-		-o build/$(OUT_NAME) \
+		-o build/$(bin) \
 		$(shell find $(path) -name "*.c") \
 		$(LDLIBS)
 	@$(RUN_CMD)
-	@rm -f build/$(OUT_NAME)
+	@rm -f build/$(bin)
 
 .PHONY: bench
 bench:
