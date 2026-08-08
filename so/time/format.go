@@ -28,7 +28,11 @@ const (
 // writing into buf. Returns the formatted string (a view into buf).
 // buf length must be large enough for the formatted output
 // (see [RFC3339Len], etc. for common layouts).
+// Returns "" for an empty buf.
 func (t Time) Format(buf []byte, layout string, offset Offset) string {
+	if len(buf) == 0 {
+		return ""
+	}
 	sec := t.absSec() + absSeconds(offset)
 	days := absSeconds_days(sec)
 	clock := absSeconds_clock(sec)
@@ -87,7 +91,9 @@ func (t Time) Format(buf []byte, layout string, offset Offset) string {
 	tm.tm_wday = c.Int(wday)
 	tm.tm_yday = c.Int(yday - 1)
 	tm.tm_isdst = 0
-	n := strftime((*c.Char)(unsafe.SliceData(buf)), uintptr(len(buf)), layout, &tm)
+
+	bufp := (*c.Char)(unsafe.SliceData(buf))
+	n := strftime(bufp, uintptr(len(buf)), layout, &tm)
 	return string(buf[:n])
 }
 

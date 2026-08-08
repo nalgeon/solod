@@ -16,6 +16,7 @@ func main() {
 		{Name: "TestFormat_TimeOnly", F: TestFormat_TimeOnly},
 		{Name: "TestFormat_Custom", F: TestFormat_Custom},
 		{Name: "TestString", F: TestString},
+		{Name: "TestFormat_EmptyBuf", F: TestFormat_EmptyBuf},
 		{Name: "TestParse_RFC3339", F: TestParse_RFC3339},
 		{Name: "TestParse_RFC3339Nano", F: TestParse_RFC3339Nano},
 		{Name: "TestParse_RFC3339PosOffset", F: TestParse_RFC3339PosOffset},

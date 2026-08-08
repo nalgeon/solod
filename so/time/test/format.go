@@ -67,3 +67,14 @@ func TestString(t *testing.T) {
 		t.Error("unexpected String format")
 	}
 }
+
+func TestFormat_EmptyBuf(t *testing.T) {
+	tm := time.Date(2024, time.March, 15, 14, 30, 45, 0, time.UTC)
+	var buf []byte
+	if tm.Format(buf, time.RFC3339, time.UTC) != "" {
+		t.Error("Format with nil buf: want empty")
+	}
+	if tm.Format(buf, "%Y", time.UTC) != "" {
+		t.Error("Format with nil buf and strftime layout: want empty")
+	}
+}
