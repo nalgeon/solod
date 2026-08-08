@@ -18,11 +18,14 @@ RUN_CMD = ./build/main
 ifeq ($(mode), clang)
     CC = $(CLANG)
 else ifeq ($(mode), gcc)
-    CC = $(GCC_NATIVE)
-	CFLAGS += -fanalyzer -D_FORTIFY_SOURCE=2
-else ifeq ($(mode), docker)
     CC = $(GCC_DOCKER) gcc
-	CFLAGS += -fanalyzer -D_FORTIFY_SOURCE=2
+    RUN_CMD = $(GCC_DOCKER) ./build/main
+# The analyzer build drops the sanitizers on purpose. -fsanitize=nonnull-attribute
+# is the runtime twin of -Wanalyzer-null-argument, and GCC does not report
+# statically what it checks at run time.
+else ifeq ($(mode), analyze)
+    CC = $(GCC_DOCKER) gcc
+	CFLAGS = $(CFLAGS_CORE) -fanalyzer -D_FORTIFY_SOURCE=2
     RUN_CMD = $(GCC_DOCKER) ./build/main
 else ifeq ($(mode), fast)
 	CFLAGS = $(CFLAGS_CORE)

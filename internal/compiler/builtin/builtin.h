@@ -173,9 +173,12 @@ typedef struct {
 #define so_str(s) ((so_String){s, (so_int)(sizeof(s) - 1)})
 
 // cstr returns a null-terminated C string copy on the stack.
+// alloca returns NULL for a zero size, but the size here is len + 1,
+// so the buffer is never NULL. The assume signals this to the compiler.
 #define so_cstr(s) ({                                     \
     so_String _s = (s);                                   \
     char* _buf = so_alloca(_s.len + 1);                   \
+    so_assume(_buf != NULL);                              \
     if (_s.len > 0) memcpy(_buf, _s.ptr, (size_t)_s.len); \
     _buf[_s.len] = '\0';                                  \
     _buf;                                                 \
@@ -318,6 +321,8 @@ typedef struct {
 
 // slice creates a slice from another slice
 // from index 'from' (inclusive) to index 'to' (exclusive).
+// A NULL source pointer means a zero capacity, so the bounds check
+// forces a zero length. The assume signals this to the compiler.
 #define so_slice(T, s, from, to) ({                        \
     so_Slice _s = (s);                                     \
     so_int _from = (so_int)(from);                         \
@@ -325,7 +330,9 @@ typedef struct {
     so_assert(0 <= _from && _from <= _to && _to <= _s.cap, \
               "slice bounds out of range");                \
     T* _ptr = _s.ptr == NULL ? NULL : (T*)_s.ptr + _from;  \
-    (so_Slice){_ptr, _to - _from, _s.cap - _from};         \
+    so_int _len = _to - _from;                             \
+    so_assume(_ptr != NULL || _len == 0);                  \
+    (so_Slice){_ptr, _len, _s.cap - _from};                \
 })
 
 // slice3 creates a slice from another slice with an explicit capacity.
@@ -495,6 +502,8 @@ static inline so_String so_error_error(void* self) {
 }
 
 // so_error_cstr returns the error message as a C string.
+// An error with a non-null self always carries a method pointer.
+// The assume signals this to the compiler.
 #define so_error_cstr(err) ({                          \
     so_Error _error = (err);                           \
     const char* _err_str;                              \
@@ -503,6 +512,7 @@ static inline so_String so_error_error(void* self) {
     } else if (_error.Error == so_error_error) {       \
         _err_str = (const char*)_error.self;           \
     } else {                                           \
+        so_assume(_error.Error != NULL);               \
         _err_str = so_cstr(_error.Error(_error.self)); \
     }                                                  \
     _err_str;                                          \
@@ -677,6 +687,8 @@ static inline so_Slice unsafe_Slice(void* ptr, so_int len) {
 }
 static inline void* unsafe_SliceData(so_Slice s) {
     if (s.cap == 0) {
+        // A slice length is never above the capacity.
+        so_assume(s.len == 0);
         return NULL;
     }
     return s.ptr;
