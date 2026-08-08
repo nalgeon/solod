@@ -1,4 +1,4 @@
-package main
+package sync_bench
 
 import (
 	"solod.dev/so/conc"

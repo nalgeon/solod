@@ -1,4 +1,4 @@
-package main
+package json_test
 
 import (
 	"solod.dev/so/bytes"

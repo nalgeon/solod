@@ -1,4 +1,4 @@
-package main
+package strconv_bench
 
 import (
 	"fmt"

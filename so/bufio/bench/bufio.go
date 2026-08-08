@@ -1,4 +1,4 @@
-package main
+package bufio_bench
 
 import (
 	"solod.dev/so/bufio"

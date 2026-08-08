@@ -1,4 +1,4 @@
-package main
+package rand_test
 
 import (
 	"solod.dev/so/math/rand"

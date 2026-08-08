@@ -1,4 +1,4 @@
-package main
+package maps_bench
 
 import (
 	"fmt"

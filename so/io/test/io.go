@@ -1,4 +1,4 @@
-package main
+package io_test
 
 import (
 	"solod.dev/so/io"

@@ -1,4 +1,4 @@
-package main
+package net_test
 
 import (
 	"solod.dev/so/io"

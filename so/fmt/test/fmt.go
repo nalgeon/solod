@@ -1,4 +1,4 @@
-package main
+package fmt_test
 
 import (
 	"solod.dev/so/fmt"

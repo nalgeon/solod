@@ -1,4 +1,4 @@
-package main
+package sync_test
 
 import (
 	"solod.dev/so/conc"

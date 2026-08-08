@@ -1,4 +1,4 @@
-package main
+package strings_test
 
 import (
 	"solod.dev/so/mem"

@@ -1,4 +1,4 @@
-package main
+package unicode_test
 
 import (
 	"solod.dev/so/unicode"

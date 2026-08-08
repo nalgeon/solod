@@ -1,4 +1,4 @@
-package main
+package binary_bench
 
 import (
 	"solod.dev/so/encoding/binary"

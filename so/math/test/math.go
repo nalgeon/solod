@@ -1,4 +1,4 @@
-package main
+package math_test
 
 import (
 	"solod.dev/so/math"

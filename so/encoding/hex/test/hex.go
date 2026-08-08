@@ -1,4 +1,4 @@
-package main
+package hex_test
 
 import (
 	"solod.dev/so/encoding/hex"

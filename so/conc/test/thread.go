@@ -1,4 +1,4 @@
-package main
+package conc_test
 
 import (
 	"solod.dev/so/conc"

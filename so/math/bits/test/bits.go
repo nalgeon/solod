@@ -1,4 +1,4 @@
-package main
+package bits_test
 
 import (
 	"solod.dev/so/math/bits"

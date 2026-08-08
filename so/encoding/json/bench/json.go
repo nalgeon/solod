@@ -1,4 +1,4 @@
-package main
+package json_bench
 
 import (
 	"solod.dev/so/encoding/json"

@@ -1,4 +1,4 @@
-package main
+package cmp_test
 
 import (
 	"solod.dev/so/cmp"

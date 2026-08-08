@@ -1,4 +1,4 @@
-package main
+package conc_bench
 
 import (
 	"sync"

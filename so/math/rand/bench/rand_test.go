@@ -1,4 +1,4 @@
-package main
+package rand_bench
 
 import (
 	"math/rand/v2"

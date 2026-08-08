@@ -1,4 +1,4 @@
-package main
+package bytealg_test
 
 import (
 	"solod.dev/so/bytealg"

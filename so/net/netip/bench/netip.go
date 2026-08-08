@@ -1,4 +1,4 @@
-package main
+package netip_bench
 
 import (
 	"solod.dev/so/net/netip"

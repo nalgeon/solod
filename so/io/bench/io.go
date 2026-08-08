@@ -1,4 +1,4 @@
-package main
+package io_bench
 
 import (
 	"solod.dev/so/bytes"

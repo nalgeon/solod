@@ -1,4 +1,4 @@
-package main
+package flag_test
 
 import (
 	"solod.dev/so/flag"

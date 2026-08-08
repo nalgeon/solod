@@ -1,4 +1,4 @@
-package main
+package path_test
 
 import (
 	"solod.dev/so/mem"

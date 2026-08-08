@@ -1,4 +1,4 @@
-package main
+package path_bench
 
 import (
 	"path"

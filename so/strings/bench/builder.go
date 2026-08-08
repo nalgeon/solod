@@ -1,4 +1,4 @@
-package main
+package strings_bench
 
 import (
 	"solod.dev/so/strings"

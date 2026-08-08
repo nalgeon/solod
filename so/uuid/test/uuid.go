@@ -1,4 +1,4 @@
-package main
+package uuid_test
 
 import (
 	"solod.dev/so/uuid"

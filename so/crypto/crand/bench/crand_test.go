@@ -1,4 +1,4 @@
-package main
+package crand_bench
 
 import (
 	"crypto/rand"

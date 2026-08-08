@@ -1,4 +1,4 @@
-package main
+package bytes_test
 
 import (
 	"solod.dev/so/bytes"

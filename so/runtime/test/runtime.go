@@ -1,4 +1,4 @@
-package main
+package runtime_test
 
 import (
 	"solod.dev/so/runtime"

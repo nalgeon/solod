@@ -1,4 +1,4 @@
-package main
+package slog_test
 
 import (
 	"solod.dev/so/conc"

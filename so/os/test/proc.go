@@ -1,4 +1,4 @@
-package main
+package os_test
 
 import (
 	"solod.dev/so/os"

@@ -1,4 +1,4 @@
-package main
+package atomic_bench
 
 import (
 	"sync/atomic"

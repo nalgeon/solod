@@ -1,4 +1,4 @@
-package main
+package mem_test
 
 import (
 	"solod.dev/so/mem"

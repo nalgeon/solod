@@ -1,12 +1,12 @@
-package main
+package c_test
 
 import (
 	"solod.dev/so/c"
 	"solod.dev/so/testing"
 )
 
-//so:embed main.h
-var main_h string
+//so:embed testc.h
+var testc_h string
 
 //so:extern
 func isalpha(ch int32) bool {

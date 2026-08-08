@@ -1,4 +1,4 @@
-package main
+package slices_test
 
 import (
 	"solod.dev/so/math"

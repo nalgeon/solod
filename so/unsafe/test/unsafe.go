@@ -1,4 +1,4 @@
-package main
+package unsafe_test
 
 import (
 	"unsafe"

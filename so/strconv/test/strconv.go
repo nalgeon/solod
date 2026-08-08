@@ -1,4 +1,4 @@
-package main
+package strconv_test
 
 import (
 	"solod.dev/so/strconv"

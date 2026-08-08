@@ -1,4 +1,4 @@
-package main
+package time_test
 
 import (
 	"solod.dev/so/testing"

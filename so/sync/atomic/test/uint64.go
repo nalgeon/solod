@@ -1,4 +1,4 @@
-package main
+package atomic_test
 
 import (
 	"solod.dev/so/sync/atomic"

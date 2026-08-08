@@ -1,4 +1,4 @@
-package main
+package slog_bench
 
 import (
 	"context"
