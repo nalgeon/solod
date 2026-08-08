@@ -21,7 +21,8 @@ var maps_h string
 // Negative zero and positive zero are different keys. A NaN key stays
 // reachable after Set.
 //
-// The zero Map is not usable. Use [New] to create a Map.
+// The zero Map is empty. The read methods return empty results for it,
+// and Set panics. Use [New] to create a Map instead.
 //
 // A Map must have a single owner. Two copies of a Map share the same
 // buckets. If one copy grows, the other copy points to freed memory.
@@ -101,12 +102,14 @@ func (m *Map[K, V]) Get(key K) V {
 
 // Set sets the value for the given key,
 // overwriting any existing value.
+// Panics if the map is not created with [New].
 //
 //so:inline
 func (m *Map[K, V]) Set(key K, value V) {
 	_key := key
 	_val := value
 	_m := &m.rm
+	c.Assert(len(_m.hdib) > 0, "maps: Set on the zero Map")
 	if _m.len >= _m.growAt {
 		_m.Resize(len(_m.hdib) * 2)
 	}

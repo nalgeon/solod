@@ -222,6 +222,28 @@ func TestClear(t *testing.T) {
 	}
 }
 
+func TestZeroMap(t *testing.T) {
+	// The read methods work on the zero Map. Set panics on it, so
+	// this test does not call Set.
+	var m maps.Map[string, int]
+	if m.Len() != 0 {
+		t.Error("want len = 0")
+	}
+	if m.Has("abc") {
+		t.Error("want has(abc) == false")
+	}
+	if m.Get("abc") != 0 {
+		t.Error("want abc = 0")
+	}
+	m.Delete("abc") // no-op, not a crash
+	it := m.Iter()
+	if it.Next() {
+		t.Error("want no iterations")
+	}
+	m.Clear() // no-op, not a crash
+	m.Free()  // no-op, not a crash
+}
+
 func TestDoubleFree(t *testing.T) {
 	m := maps.New[string, int](t.Allocator(), 0)
 	m.Free()
