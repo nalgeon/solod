@@ -124,7 +124,7 @@ func rehash(dst, src *rawMap) {
 	n := len(src.hdib)
 	for i := range n {
 		hdI := c.PtrAt(hdib, i)
-		c.Assert(hdI != nil, "maps: nil hdib pointer") // for gcc analyzer
+		c.Assume(hdI != nil)
 		if *hdI&0xFFFF > 0 {
 			insert(dst, int(*hdI>>16),
 				c.PtrAdd(keys, i*ksize),

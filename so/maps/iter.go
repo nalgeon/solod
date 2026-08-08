@@ -25,7 +25,7 @@ func (it *Iter[K, V]) Next() bool {
 	_n := len(it.hdib)
 	for it.i < _n {
 		_hd := c.PtrAt(_hdib, it.i)
-		c.Assert(_hd != nil, "maps: nil hdib pointer") /* for gcc analyzer */
+		c.Assume(_hd != nil)
 		if *_hd&0xFFFF != 0 {
 			it.i++
 			_found = true

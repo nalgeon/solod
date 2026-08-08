@@ -200,6 +200,18 @@ long double - c.LongDouble
 
 [c06b294](https://github.com/solod-dev/solod/commit/c06b29494cda8c822a4191843120fb6a6091a25d)
 
+**c.Assume states a fact for the C compiler**. It generates no code in any build, and `-assert` does not affect it:
+
+```go
+for i < len(hdib) {
+    elem := c.PtrAt(hdib, i)
+    c.Assume(elem != nil) // the loop runs only when hdib is non-nil
+    // ...
+}
+```
+
+The behavior is undefined if the condition is false. Use `c.Assume` only for conditions that are provably true, such as when a pointer is known to be non-null but the compiler cannot see it. Use `c.Assert` for all other conditions.
+
 ## Safety
 
 **Assertions are no longer tied to NDEBUG**. Assertions are on by default. The new `-assert` flag removes them:

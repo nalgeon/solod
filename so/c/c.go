@@ -126,6 +126,23 @@ func Assert(cond bool, msg string) {
 	}
 }
 
+// Assume tells the C compiler that cond is always true.
+// It generates no code in any build, and the -assert=off build flag
+// has no effect on it. The behavior is undefined if cond is false.
+//
+// Use Assume only for conditions that are provably true, such as when
+// a pointer is known to be non-null but the compiler cannot see it.
+// Use [Assert] for all other conditions.
+//
+//	so_assume(cond)
+//
+//so:extern so_assume
+func Assume(cond bool) {
+	if !cond {
+		panic("c: false assumption")
+	}
+}
+
 // Bytes wraps a raw byte pointer and length into a []byte without copying.
 // If ptr is nil, returns nil.
 //

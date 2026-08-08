@@ -573,6 +573,20 @@ void so_print_trace(void);
     } while (0)
 #endif
 
+// assume tells the C compiler that cond is always true. It generates no code
+// in any build, and SO_NO_ASSERT has no effect on it. The behavior is
+// undefined if cond is false.
+//
+// Use assume only for conditions that are provably true, such as when
+// a pointer is known to be non-null but the compiler cannot see it.
+// Use assert for all other conditions.
+#define so_assume(cond)       \
+    do {                      \
+        if (!(cond)) {        \
+            so_unreachable(); \
+        }                     \
+    } while (0)
+
 // --- Result types ---
 
 // clang-format off

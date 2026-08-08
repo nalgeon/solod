@@ -282,6 +282,7 @@ Functions:
 - `Alignof` and `Sizeof` return the alignment and size of type T.
 - `Alloca` allocates an array on the stack.
 - `Assert` panics with a message if a condition is false.
+- `Assume` tells the C compiler that a condition is always true.
 - `Bytes`, `Slice` and `String` wrap C pointers to So types.
 - `CString` converts a So string to a null-terminated C string.
 - `PtrAdd`, `PtrAs` and `PtrAt` manipulate pointers.
