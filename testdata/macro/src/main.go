@@ -13,10 +13,15 @@ func setPtr[T any](ptr *T, val T) {
 	*ptr = val
 }
 
+// increment adds two to n.
+//
 //so:inline
 func increment[T int](n T) T {
+	// A line comment in a macro becomes a block comment.
 	_n := n
+	// A */ in the text does not close the block comment.
 	_n = _n + 1
+	/* A block comment stays as it is. */
 	_n = _n + 1
 	return _n
 }

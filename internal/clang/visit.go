@@ -562,8 +562,8 @@ func (g *Generator) emitComments(w io.Writer, nodes ...ast.Node) bool {
 	for _, node := range nodes {
 		for _, cg := range g.comments[node] {
 			for _, c := range cg.List {
-				text := strings.TrimSpace(c.Text)
-				if strings.HasPrefix(text, "//so:") {
+				text, ok := g.commentText(c)
+				if !ok {
 					continue
 				}
 				lines = append(lines, text)
@@ -599,7 +599,9 @@ func (g *Generator) walkStmts(w io.Writer, stmts []ast.Stmt) {
 	for _, stmt := range stmts {
 		for _, cg := range g.comments[stmt] {
 			for _, c := range cg.List {
-				fmt.Fprintf(w, "%s%s\n", g.indent(), strings.TrimSpace(c.Text))
+				if text, ok := g.commentText(c); ok {
+					fmt.Fprintf(w, "%s%s\n", g.indent(), text)
+				}
 			}
 		}
 		if g.opts.TrackSource && !g.state.inMacro {
@@ -608,4 +610,22 @@ func (g *Generator) walkStmts(w io.Writer, stmts []ast.Stmt) {
 		}
 		g.walkAST(w, stmt)
 	}
+}
+
+// commentText returns the text of a comment for output.
+// It reports false for a directive, which emits nothing.
+func (g *Generator) commentText(c *ast.Comment) (string, bool) {
+	text := strings.TrimSpace(c.Text)
+	if strings.HasPrefix(text, "//so:") {
+		return "", false
+	}
+	if !g.state.inMacro || !strings.HasPrefix(text, "//") {
+		return text, true
+	}
+	// A macro body ends every line with a backslash-newline, and C removes
+	// the backslash-newline before it removes the comments. A line comment
+	// inside a macro deletes the rest of the macro, so the generator writes
+	// a block comment. A */ in the text closes the block comment too early.
+	body := strings.ReplaceAll(strings.TrimPrefix(text, "//"), "*/", "* /")
+	return "/*" + body + " */", true
 }

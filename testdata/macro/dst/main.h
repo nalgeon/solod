@@ -17,9 +17,14 @@ typedef struct {
     *ptr_ = val_; \
 } while (0)
 
+// increment adds two to n.
+//
 #define increment(T, n_) ({ \
+    /* A line comment in a macro becomes a block comment. */ \
     T _n = n_; \
+    /* A * / in the text does not close the block comment. */ \
     _n = _n + 1; \
+    /* A block comment stays as it is. */ \
     _n = _n + 1; \
     _n; \
 })
