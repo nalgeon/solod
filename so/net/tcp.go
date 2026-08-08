@@ -76,12 +76,14 @@ func ResolveTCPAddr(network, address string) (TCPAddr, error) {
 //
 // The zero value is not usable; obtain a TCPConn from [DialTCP] or
 // [TCPListener.Accept]. A TCPConn must not be copied after use
-// (copies share the underlying socket descriptor).
+// (copies share the underlying socket descriptor). The methods return
+// [ErrInvalid] for a nil pointer or an unopened connection, and
+// [ErrClosed] for a closed one.
 type TCPConn struct {
-	fd     c.Int
-	laddr  TCPAddr
-	raddr  TCPAddr
-	closed bool
+	fd    c.Int
+	laddr TCPAddr
+	raddr TCPAddr
+	state connState
 	// Read/write deadlines; the zero Time means no deadline (block forever).
 	rdeadline time.Time
 	wdeadline time.Time
@@ -142,7 +144,7 @@ func DialTCP(network string, laddr, raddr *TCPAddr) (TCPConn, error) {
 		return TCPConn{}, err
 	}
 
-	conn := TCPConn{fd: fd, raddr: *raddr}
+	conn := TCPConn{fd: fd, raddr: *raddr, state: stateOpen}
 	conn.laddr = tcpAddrOf(sockname(fd))
 	return conn, nil
 }
@@ -150,8 +152,8 @@ func DialTCP(network string, laddr, raddr *TCPAddr) (TCPConn, error) {
 // Read reads data from the connection into b.
 // At end of stream, Read returns 0, io.EOF.
 func (conn *TCPConn) Read(b []byte) (int, error) {
-	if conn.closed {
-		return 0, ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return 0, err
 	}
 	if len(b) == 0 {
 		return 0, nil
@@ -178,8 +180,8 @@ func (conn *TCPConn) Read(b []byte) (int, error) {
 // Write writes len(b) bytes from b to the connection.
 // Returns the number of bytes written and an error, if any.
 func (conn *TCPConn) Write(b []byte) (int, error) {
-	if conn.closed {
-		return 0, ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return 0, err
 	}
 	// Loop until all bytes are written: a single write may transfer fewer
 	// bytes than requested when the socket send buffer fills up. A write
@@ -205,10 +207,10 @@ func (conn *TCPConn) Write(b []byte) (int, error) {
 // Close closes the connection. Returns an error
 // if it has already been called.
 func (conn *TCPConn) Close() error {
-	if conn.closed {
-		return ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return err
 	}
-	conn.closed = true
+	conn.state = stateClosed
 	if fd_close(conn.fd) != 0 {
 		return mapError()
 	}
@@ -243,8 +245,8 @@ func (conn *TCPConn) RemoteAddr() TCPAddr {
 //
 // A zero value for t means I/O operations will not time out.
 func (conn *TCPConn) SetDeadline(t time.Time) error {
-	if conn.closed {
-		return ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return err
 	}
 	conn.rdeadline = t
 	conn.wdeadline = t
@@ -254,8 +256,8 @@ func (conn *TCPConn) SetDeadline(t time.Time) error {
 // SetReadDeadline sets the deadline for future Read calls.
 // A zero value for t means Read will not time out.
 func (conn *TCPConn) SetReadDeadline(t time.Time) error {
-	if conn.closed {
-		return ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return err
 	}
 	conn.rdeadline = t
 	return nil
@@ -264,19 +266,29 @@ func (conn *TCPConn) SetReadDeadline(t time.Time) error {
 // SetWriteDeadline sets the deadline for future Write calls.
 // A zero value for t means Write will not time out.
 func (conn *TCPConn) SetWriteDeadline(t time.Time) error {
-	if conn.closed {
-		return ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return err
 	}
 	conn.wdeadline = t
 	return nil
 }
 
+// checkValid returns an error if the connection is not usable for I/O.
+func (conn *TCPConn) checkValid() error {
+	if conn == nil {
+		return ErrInvalid
+	}
+	return checkState(conn.state)
+}
+
 // TCPListener is a TCP network listener. The zero value
-// is not usable; obtain one from [ListenTCP].
+// is not usable; obtain one from [ListenTCP]. The methods return
+// [ErrInvalid] for a nil pointer or an unopened listener, and
+// [ErrClosed] for a closed one.
 type TCPListener struct {
-	fd     c.Int
-	addr   TCPAddr
-	closed bool
+	fd    c.Int
+	addr  TCPAddr
+	state connState
 	// Accept deadline; the zero Time means no deadline (block forever).
 	deadline time.Time
 }
@@ -328,13 +340,13 @@ func ListenTCP(network string, laddr *TCPAddr) (TCPListener, error) {
 	}
 
 	// Report the bound address; with port 0 the system assigns the real port.
-	return TCPListener{fd: fd, addr: tcpAddrOf(sockname(fd))}, nil
+	return TCPListener{fd: fd, addr: tcpAddrOf(sockname(fd)), state: stateOpen}, nil
 }
 
 // Accept waits for and returns the next connection to the listener.
 func (l *TCPListener) Accept() (TCPConn, error) {
-	if l.closed {
-		return TCPConn{}, ErrClosed
+	if err := l.checkValid(); err != nil {
+		return TCPConn{}, err
 	}
 	// Restart on EINTR: an accept interrupted by a signal returns -1/EINTR,
 	// and is retried transparently. slen is in/out, so reset it each try.
@@ -349,7 +361,7 @@ func (l *TCPListener) Accept() (TCPConn, error) {
 			closeOnExec(fd)
 			// Report the accepted socket's real local address; for a wildcard
 			// listener this is the concrete interface, not l.addr's 0.0.0.0/::.
-			conn := TCPConn{fd: fd, laddr: tcpAddrOf(sockname(fd))}
+			conn := TCPConn{fd: fd, laddr: tcpAddrOf(sockname(fd)), state: stateOpen}
 			conn.raddr = tcpAddrOf(stor.addrPort())
 			return conn, nil
 		}
@@ -362,10 +374,10 @@ func (l *TCPListener) Accept() (TCPConn, error) {
 // Close stops listening on the TCP address.
 // Already accepted connections are not closed.
 func (l *TCPListener) Close() error {
-	if l.closed {
-		return ErrClosed
+	if err := l.checkValid(); err != nil {
+		return err
 	}
-	l.closed = true
+	l.state = stateClosed
 	if fd_close(l.fd) != 0 {
 		return mapError()
 	}
@@ -381,8 +393,8 @@ func (l *TCPListener) Addr() TCPAddr {
 // connection ready before t fails with [ErrTimeout]. The zero value for t
 // clears the deadline (Accept blocks until a connection arrives).
 func (l *TCPListener) SetDeadline(t time.Time) error {
-	if l.closed {
-		return ErrClosed
+	if err := l.checkValid(); err != nil {
+		return err
 	}
 	l.deadline = t
 	return nil
@@ -391,4 +403,12 @@ func (l *TCPListener) SetDeadline(t time.Time) error {
 // tcpAddrOf builds a TCPAddr from a netip.AddrPort.
 func tcpAddrOf(ap netip.AddrPort) TCPAddr {
 	return TCPAddr{IP: ap.Addr(), Port: int(ap.Port())}
+}
+
+// checkValid returns an error if the listener is not usable.
+func (l *TCPListener) checkValid() error {
+	if l == nil {
+		return ErrInvalid
+	}
+	return checkState(l.state)
 }

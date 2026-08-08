@@ -20,6 +20,9 @@ var (
 	ErrConnRefused = errors.New("net: connection refused")
 	// ErrConnReset indicates the connection was reset by the peer.
 	ErrConnReset = errors.New("net: connection reset by peer")
+	// ErrInvalid is returned by methods on a connection or listener that was
+	// never opened, for example the zero value or a nil pointer.
+	ErrInvalid = errors.New("net: invalid argument")
 	// ErrInvalidPort indicates the port is not a valid number in 0..65535.
 	ErrInvalidPort = errors.New("net: invalid port")
 	// ErrMissingBracket indicates an IPv6 literal is missing its closing ']'.

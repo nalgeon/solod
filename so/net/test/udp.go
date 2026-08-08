@@ -239,3 +239,43 @@ func TestUDP_CloseErrors(t *testing.T) {
 		t.Error("expected ErrClosed on WriteTo after close")
 	}
 }
+
+func TestUDP_InvalidConn(t *testing.T) {
+	// ListenUDP returns the zero UDPConn when it fails. A caller that ignores
+	// the error gets an unopened connection, whose descriptor is 0 (standard
+	// input). Every method must report the unopened connection.
+	conn, err := net.ListenUDP("bogus", nil)
+	if err != net.ErrUnknownNetwork {
+		t.Fatal("expected ErrUnknownNetwork from ListenUDP")
+		return
+	}
+	var buf [16]byte
+	var addr net.UDPAddr
+	var zero time.Time
+	if _, err := conn.Read(buf[:]); err != net.ErrInvalid {
+		t.Error("expected ErrInvalid on read from an unopened conn")
+	}
+	if _, err := conn.Write(buf[:]); err != net.ErrInvalid {
+		t.Error("expected ErrInvalid on write to an unopened conn")
+	}
+	if _, err := conn.ReadFrom(buf[:]); err != net.ErrInvalid {
+		t.Error("expected ErrInvalid on ReadFrom of an unopened conn")
+	}
+	if _, err := conn.WriteTo(buf[:], &addr); err != net.ErrInvalid {
+		t.Error("expected ErrInvalid on WriteTo of an unopened conn")
+	}
+	if conn.SetDeadline(zero) != net.ErrInvalid {
+		t.Error("expected ErrInvalid on SetDeadline of an unopened conn")
+	}
+	if conn.Close() != net.ErrInvalid {
+		t.Error("expected ErrInvalid on close of an unopened conn")
+	}
+
+	var nilConn *net.UDPConn
+	if _, err := nilConn.ReadFrom(buf[:]); err != net.ErrInvalid {
+		t.Error("expected ErrInvalid on ReadFrom of a nil conn")
+	}
+	if nilConn.Close() != net.ErrInvalid {
+		t.Error("expected ErrInvalid on close of a nil conn")
+	}
+}

@@ -8,6 +8,31 @@ import (
 	"solod.dev/so/time"
 )
 
+// connState tells whether a connection or listener is usable. A socket cannot
+// use its descriptor for this: descriptor 0 is standard input, so the zero
+// value of a connection would look like a socket that is ready for I/O.
+//
+//so:promote
+type connState uint8
+
+const (
+	stateUnopened connState = iota // the zero value: never opened
+	stateOpen                      // ready for I/O
+	stateClosed                    // closed by Close
+)
+
+// checkState returns an error if the socket state does not allow I/O.
+// A closed socket gives ErrClosed. An unopened socket gives ErrInvalid.
+func checkState(state connState) error {
+	if state == stateOpen {
+		return nil
+	}
+	if state == stateClosed {
+		return ErrClosed
+	}
+	return ErrInvalid
+}
+
 // resolveOpts holds the inputs for resolveAddrs.
 type resolveOpts struct {
 	network  string

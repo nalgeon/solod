@@ -23,12 +23,14 @@ func main() {
 		{Name: "TestTCP_ClearDeadline", F: TestTCP_ClearDeadline},
 		{Name: "TestTCP_AcceptDeadline", F: TestTCP_AcceptDeadline},
 		{Name: "TestTCP_CloseErrors", F: TestTCP_CloseErrors},
+		{Name: "TestTCP_InvalidConn", F: TestTCP_InvalidConn},
 		{Name: "TestUDP_ResolveAddr", F: TestUDP_ResolveAddr},
 		{Name: "TestUDP_Listen", F: TestUDP_Listen},
 		{Name: "TestUDP_Dial", F: TestUDP_Dial},
 		{Name: "TestUDP_ReadFromWriteTo", F: TestUDP_ReadFromWriteTo},
 		{Name: "TestUDP_ReadDeadline", F: TestUDP_ReadDeadline},
 		{Name: "TestUDP_CloseErrors", F: TestUDP_CloseErrors},
+		{Name: "TestUDP_InvalidConn", F: TestUDP_InvalidConn},
 		{Name: "TestUnix_Resolve", F: TestUnix_Resolve},
 		{Name: "TestUnix_StreamDial", F: TestUnix_StreamDial},
 		{Name: "TestUnix_StreamReadEOF", F: TestUnix_StreamReadEOF},
@@ -37,5 +39,6 @@ func main() {
 		{Name: "TestUnix_ReadDeadline", F: TestUnix_ReadDeadline},
 		{Name: "TestUnix_CloseErrors", F: TestUnix_CloseErrors},
 		{Name: "TestUnix_UnlinkOnClose", F: TestUnix_UnlinkOnClose},
+		{Name: "TestUnix_InvalidConn", F: TestUnix_InvalidConn},
 	})
 }

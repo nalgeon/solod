@@ -79,13 +79,15 @@ func ResolveUDPAddr(network, address string) (UDPAddr, error) {
 // arbitrary peers via [UDPConn.ReadFrom]/[UDPConn.WriteTo]).
 //
 // The zero value is not usable. A UDPConn must not be copied after use
-// (copies share the underlying socket descriptor).
+// (copies share the underlying socket descriptor). The methods return
+// [ErrInvalid] for a nil pointer or an unopened connection, and
+// [ErrClosed] for a closed one.
 type UDPConn struct {
 	fd        c.Int
 	laddr     UDPAddr
 	raddr     UDPAddr // valid only when connected
 	connected bool
-	closed    bool
+	state     connState
 	// Read/write deadlines; the zero Time means no deadline (block forever).
 	rdeadline time.Time
 	wdeadline time.Time
@@ -153,7 +155,7 @@ func DialUDP(network string, laddr, raddr *UDPAddr) (UDPConn, error) {
 		return UDPConn{}, err
 	}
 
-	conn := UDPConn{fd: fd, raddr: *raddr, connected: true}
+	conn := UDPConn{fd: fd, raddr: *raddr, connected: true, state: stateOpen}
 	conn.laddr = udpAddrOf(sockname(fd))
 	return conn, nil
 }
@@ -206,7 +208,7 @@ func ListenUDP(network string, laddr *UDPAddr) (UDPConn, error) {
 	}
 
 	// Report the bound address; with port 0 the system assigns the real port.
-	return UDPConn{fd: fd, laddr: udpAddrOf(sockname(fd))}, nil
+	return UDPConn{fd: fd, laddr: udpAddrOf(sockname(fd)), state: stateOpen}, nil
 }
 
 // Read reads a datagram from a connected connection into b.
@@ -215,8 +217,8 @@ func ListenUDP(network string, laddr *UDPAddr) (UDPConn, error) {
 // returns [ErrAddrNotAvail] (use [UDPConn.ReadFrom] instead). A zero-length
 // datagram is valid and returns (0, nil); Read never returns io.EOF.
 func (conn *UDPConn) Read(b []byte) (int, error) {
-	if conn.closed {
-		return 0, ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return 0, err
 	}
 	if !conn.connected {
 		return 0, ErrAddrNotAvail
@@ -246,8 +248,8 @@ func (conn *UDPConn) Read(b []byte) (int, error) {
 // Write requires a connection from [DialUDP]; on an unconnected socket it
 // returns [ErrAddrNotAvail] (use [UDPConn.WriteTo] instead).
 func (conn *UDPConn) Write(b []byte) (int, error) {
-	if conn.closed {
-		return 0, ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return 0, err
 	}
 	if !conn.connected {
 		return 0, ErrAddrNotAvail
@@ -281,8 +283,8 @@ func (conn *UDPConn) Write(b []byte) (int, error) {
 // zero-length datagram is valid and reported as N == 0; ReadFrom never
 // returns io.EOF.
 func (conn *UDPConn) ReadFrom(b []byte) (UDPRead, error) {
-	if conn.closed {
-		return UDPRead{}, ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return UDPRead{}, err
 	}
 	if conn.connected {
 		return UDPRead{}, ErrAddrNotAvail
@@ -312,8 +314,8 @@ func (conn *UDPConn) ReadFrom(b []byte) (UDPRead, error) {
 // WriteTo requires an unconnected socket from [ListenUDP]; on a connected
 // socket it returns [ErrAddrNotAvail] (use [UDPConn.Write] instead).
 func (conn *UDPConn) WriteTo(b []byte, addr *UDPAddr) (int, error) {
-	if conn.closed {
-		return 0, ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return 0, err
 	}
 	if conn.connected {
 		return 0, ErrAddrNotAvail
@@ -348,10 +350,10 @@ func (conn *UDPConn) WriteTo(b []byte, addr *UDPAddr) (int, error) {
 // Close closes the connection. Returns an error
 // if it has already been called.
 func (conn *UDPConn) Close() error {
-	if conn.closed {
-		return ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return err
 	}
-	conn.closed = true
+	conn.state = stateClosed
 	if fd_close(conn.fd) != 0 {
 		return mapError()
 	}
@@ -385,8 +387,8 @@ func (conn *UDPConn) RemoteAddr() UDPAddr {
 //
 // A zero value for t means I/O operations will not time out.
 func (conn *UDPConn) SetDeadline(t time.Time) error {
-	if conn.closed {
-		return ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return err
 	}
 	conn.rdeadline = t
 	conn.wdeadline = t
@@ -396,8 +398,8 @@ func (conn *UDPConn) SetDeadline(t time.Time) error {
 // SetReadDeadline sets the deadline for future read calls.
 // A zero value for t means reads will not time out.
 func (conn *UDPConn) SetReadDeadline(t time.Time) error {
-	if conn.closed {
-		return ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return err
 	}
 	conn.rdeadline = t
 	return nil
@@ -406,9 +408,17 @@ func (conn *UDPConn) SetReadDeadline(t time.Time) error {
 // SetWriteDeadline sets the deadline for future write calls.
 // A zero value for t means writes will not time out.
 func (conn *UDPConn) SetWriteDeadline(t time.Time) error {
-	if conn.closed {
-		return ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return err
 	}
 	conn.wdeadline = t
 	return nil
+}
+
+// checkValid returns an error if the connection is not usable for I/O.
+func (conn *UDPConn) checkValid() error {
+	if conn == nil {
+		return ErrInvalid
+	}
+	return checkState(conn.state)
 }

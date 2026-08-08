@@ -51,13 +51,15 @@ func ResolveUnixAddr(network, address string) (UnixAddr, error) {
 //
 // The zero value is not usable. A UnixConn must not be copied after use
 // (copies share the underlying socket descriptor and the source-address buffer).
+// The methods return [ErrInvalid] for a nil pointer or an unopened connection,
+// and [ErrClosed] for a closed one.
 type UnixConn struct {
 	fd        c.Int
 	laddr     UnixAddr
 	raddr     UnixAddr // valid only when connected
 	connected bool
 	stream    bool // true for "unix" (stream), false for "unixgram" (datagram)
-	closed    bool
+	state     connState
 	path      string // bound socket file to unlink on Close; "" if none
 	// rnamebuf backs the source path reported by ReadFrom; see that method.
 	rnamebuf  [maxUnixPath]byte
@@ -120,7 +122,7 @@ func DialUnix(network string, laddr, raddr *UnixAddr) (UnixConn, error) {
 		return UnixConn{}, err
 	}
 
-	conn := UnixConn{fd: fd, connected: true, stream: network == "unix", path: path}
+	conn := UnixConn{fd: fd, connected: true, stream: network == "unix", path: path, state: stateOpen}
 	conn.raddr = UnixAddr{Name: raddr.Name, Net: network}
 	conn.laddr = UnixAddr{Net: network}
 	if laddr != nil {
@@ -162,7 +164,7 @@ func ListenUnixgram(network string, laddr *UnixAddr) (UnixConn, error) {
 		return UnixConn{}, err
 	}
 
-	conn := UnixConn{fd: fd, path: laddr.Name}
+	conn := UnixConn{fd: fd, path: laddr.Name, state: stateOpen}
 	conn.laddr = UnixAddr{Name: laddr.Name, Net: "unixgram"}
 	return conn, nil
 }
@@ -174,8 +176,8 @@ func ListenUnixgram(network string, laddr *UnixAddr) (UnixConn, error) {
 // For a stream connection, Read returns 0, io.EOF at end of stream; for a
 // connected datagram socket a zero-length datagram is valid and returns (0, nil).
 func (conn *UnixConn) Read(b []byte) (int, error) {
-	if conn.closed {
-		return 0, ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return 0, err
 	}
 	if !conn.connected {
 		return 0, ErrAddrNotAvail
@@ -214,8 +216,8 @@ func (conn *UnixConn) Read(b []byte) (int, error) {
 // A stream connection writes all of b, looping as the send buffer drains; a
 // connected datagram socket sends b as a single datagram.
 func (conn *UnixConn) Write(b []byte) (int, error) {
-	if conn.closed {
-		return 0, ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return 0, err
 	}
 	if !conn.connected {
 		return 0, ErrAddrNotAvail
@@ -273,8 +275,8 @@ func (conn *UnixConn) Write(b []byte) (int, error) {
 // only until the next ReadFrom on this connection. An anonymous (unbound) peer
 // has an empty Name.
 func (conn *UnixConn) ReadFrom(b []byte) (UnixRead, error) {
-	if conn.closed {
-		return UnixRead{}, ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return UnixRead{}, err
 	}
 	if conn.connected {
 		return UnixRead{}, ErrAddrNotAvail
@@ -308,8 +310,8 @@ func (conn *UnixConn) ReadFrom(b []byte) (UnixRead, error) {
 // WriteTo requires an unconnected socket from [ListenUnixgram]; on a connected
 // socket it returns [ErrAddrNotAvail] (use [UnixConn.Write] instead).
 func (conn *UnixConn) WriteTo(b []byte, addr *UnixAddr) (int, error) {
-	if conn.closed {
-		return 0, ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return 0, err
 	}
 	if conn.connected {
 		return 0, ErrAddrNotAvail
@@ -346,10 +348,10 @@ func (conn *UnixConn) WriteTo(b []byte, addr *UnixAddr) (int, error) {
 // address). Returns an error if it has already been called. An unlink failure
 // after a successful close is not surfaced; the close error takes precedence.
 func (conn *UnixConn) Close() error {
-	if conn.closed {
-		return ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return err
 	}
-	conn.closed = true
+	conn.state = stateClosed
 	var err error
 	if fd_close(conn.fd) != 0 {
 		err = mapError()
@@ -379,8 +381,8 @@ func (conn *UnixConn) RemoteAddr() UnixAddr {
 // [ErrTimeout] instead of blocking. A zero value for t means I/O operations
 // will not time out.
 func (conn *UnixConn) SetDeadline(t time.Time) error {
-	if conn.closed {
-		return ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return err
 	}
 	conn.rdeadline = t
 	conn.wdeadline = t
@@ -390,8 +392,8 @@ func (conn *UnixConn) SetDeadline(t time.Time) error {
 // SetReadDeadline sets the deadline for future read calls.
 // A zero value for t means reads will not time out.
 func (conn *UnixConn) SetReadDeadline(t time.Time) error {
-	if conn.closed {
-		return ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return err
 	}
 	conn.rdeadline = t
 	return nil
@@ -400,20 +402,30 @@ func (conn *UnixConn) SetReadDeadline(t time.Time) error {
 // SetWriteDeadline sets the deadline for future write calls.
 // A zero value for t means writes will not time out.
 func (conn *UnixConn) SetWriteDeadline(t time.Time) error {
-	if conn.closed {
-		return ErrClosed
+	if err := conn.checkValid(); err != nil {
+		return err
 	}
 	conn.wdeadline = t
 	return nil
 }
 
+// checkValid returns an error if the connection is not usable for I/O.
+func (conn *UnixConn) checkValid() error {
+	if conn == nil {
+		return ErrInvalid
+	}
+	return checkState(conn.state)
+}
+
 // UnixListener is a Unix domain stream listener. The zero value
-// is not usable; obtain one from [ListenUnix].
+// is not usable; obtain one from [ListenUnix]. The methods return
+// [ErrInvalid] for a nil pointer or an unopened listener, and
+// [ErrClosed] for a closed one.
 type UnixListener struct {
-	fd     c.Int
-	addr   UnixAddr
-	path   string // bound socket file to unlink on Close
-	closed bool
+	fd    c.Int
+	addr  UnixAddr
+	path  string // bound socket file to unlink on Close
+	state connState
 	// Accept deadline; the zero Time means no deadline (block forever).
 	deadline time.Time
 }
@@ -452,13 +464,13 @@ func ListenUnix(network string, laddr *UnixAddr) (UnixListener, error) {
 	}
 
 	addr := UnixAddr{Name: laddr.Name, Net: "unix"}
-	return UnixListener{fd: fd, addr: addr, path: laddr.Name}, nil
+	return UnixListener{fd: fd, addr: addr, path: laddr.Name, state: stateOpen}, nil
 }
 
 // Accept waits for and returns the next connection to the listener.
 func (l *UnixListener) Accept() (UnixConn, error) {
-	if l.closed {
-		return UnixConn{}, ErrClosed
+	if err := l.checkValid(); err != nil {
+		return UnixConn{}, err
 	}
 	// Restart on EINTR: an accept interrupted by a signal returns -1/EINTR,
 	// and is retried transparently. slen is in/out, so reset it each try.
@@ -473,7 +485,7 @@ func (l *UnixListener) Accept() (UnixConn, error) {
 			closeOnExec(fd)
 			// The accepted socket has no bound socket file of its own (so it does
 			// not unlink on Close), and the peer is typically anonymous.
-			conn := UnixConn{fd: fd, connected: true, stream: true}
+			conn := UnixConn{fd: fd, connected: true, stream: true, state: stateOpen}
 			conn.laddr = UnixAddr{Name: l.addr.Name, Net: "unix"}
 			conn.raddr = UnixAddr{Net: "unix"}
 			return conn, nil
@@ -488,10 +500,10 @@ func (l *UnixListener) Accept() (UnixConn, error) {
 // Already accepted connections are not closed. An unlink failure after a
 // successful close is not surfaced; the close error takes precedence.
 func (l *UnixListener) Close() error {
-	if l.closed {
-		return ErrClosed
+	if err := l.checkValid(); err != nil {
+		return err
 	}
-	l.closed = true
+	l.state = stateClosed
 	var err error
 	if fd_close(l.fd) != 0 {
 		err = mapError()
@@ -511,11 +523,19 @@ func (l *UnixListener) Addr() UnixAddr {
 // connection ready before t fails with [ErrTimeout]. The zero value for t
 // clears the deadline (Accept blocks until a connection arrives).
 func (l *UnixListener) SetDeadline(t time.Time) error {
-	if l.closed {
-		return ErrClosed
+	if err := l.checkValid(); err != nil {
+		return err
 	}
 	l.deadline = t
 	return nil
+}
+
+// checkValid returns an error if the listener is not usable.
+func (l *UnixListener) checkValid() error {
+	if l == nil {
+		return ErrInvalid
+	}
+	return checkState(l.state)
 }
 
 // unixSocktype maps a Unix network name to a socket type (c_SOCK_STREAM for

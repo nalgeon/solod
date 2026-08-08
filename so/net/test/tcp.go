@@ -404,3 +404,60 @@ func TestTCP_CloseErrors(t *testing.T) {
 
 	server.Close()
 }
+
+func TestTCP_InvalidConn(t *testing.T) {
+	// DialTCP returns the zero TCPConn when it fails. A caller that ignores
+	// the error gets an unopened connection, whose descriptor is 0 (standard
+	// input). Every method must report the unopened connection.
+	conn, err := net.DialTCP("bogus", nil, nil)
+	if err != net.ErrUnknownNetwork {
+		t.Fatal("expected ErrUnknownNetwork from DialTCP")
+		return
+	}
+	var buf [16]byte
+	var zero time.Time
+	if _, err := conn.Read(buf[:]); err != net.ErrInvalid {
+		t.Error("expected ErrInvalid on read from an unopened conn")
+	}
+	if _, err := conn.Write(buf[:]); err != net.ErrInvalid {
+		t.Error("expected ErrInvalid on write to an unopened conn")
+	}
+	if conn.SetDeadline(zero) != net.ErrInvalid {
+		t.Error("expected ErrInvalid on SetDeadline of an unopened conn")
+	}
+	if conn.Close() != net.ErrInvalid {
+		t.Error("expected ErrInvalid on close of an unopened conn")
+	}
+
+	var nilConn *net.TCPConn
+	if _, err := nilConn.Read(buf[:]); err != net.ErrInvalid {
+		t.Error("expected ErrInvalid on read from a nil conn")
+	}
+	if nilConn.Close() != net.ErrInvalid {
+		t.Error("expected ErrInvalid on close of a nil conn")
+	}
+
+	// The same holds for a listener.
+	ln, err := net.ListenTCP("bogus", nil)
+	if err != net.ErrUnknownNetwork {
+		t.Fatal("expected ErrUnknownNetwork from ListenTCP")
+		return
+	}
+	if _, err := ln.Accept(); err != net.ErrInvalid {
+		t.Error("expected ErrInvalid on accept from an unopened listener")
+	}
+	if ln.SetDeadline(zero) != net.ErrInvalid {
+		t.Error("expected ErrInvalid on SetDeadline of an unopened listener")
+	}
+	if ln.Close() != net.ErrInvalid {
+		t.Error("expected ErrInvalid on close of an unopened listener")
+	}
+
+	var nilLn *net.TCPListener
+	if _, err := nilLn.Accept(); err != net.ErrInvalid {
+		t.Error("expected ErrInvalid on accept from a nil listener")
+	}
+	if nilLn.Close() != net.ErrInvalid {
+		t.Error("expected ErrInvalid on close of a nil listener")
+	}
+}

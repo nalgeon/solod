@@ -376,3 +376,67 @@ func TestUnix_UnlinkOnClose(t *testing.T) {
 		t.Error("socket file should have been unlinked on Close")
 	}
 }
+
+func TestUnix_InvalidConn(t *testing.T) {
+	// DialUnix returns the zero UnixConn when it fails. A caller that ignores
+	// the error gets an unopened connection, whose descriptor is 0 (standard
+	// input). Every method must report the unopened connection.
+	conn, err := net.DialUnix("bogus", nil, nil)
+	if err != net.ErrUnknownNetwork {
+		t.Fatal("expected ErrUnknownNetwork from DialUnix")
+		return
+	}
+	var buf [16]byte
+	var addr net.UnixAddr
+	var zero time.Time
+	if _, err := conn.Read(buf[:]); err != net.ErrInvalid {
+		t.Error("expected ErrInvalid on read from an unopened conn")
+	}
+	if _, err := conn.Write(buf[:]); err != net.ErrInvalid {
+		t.Error("expected ErrInvalid on write to an unopened conn")
+	}
+	if _, err := conn.ReadFrom(buf[:]); err != net.ErrInvalid {
+		t.Error("expected ErrInvalid on ReadFrom of an unopened conn")
+	}
+	if _, err := conn.WriteTo(buf[:], &addr); err != net.ErrInvalid {
+		t.Error("expected ErrInvalid on WriteTo of an unopened conn")
+	}
+	if conn.SetDeadline(zero) != net.ErrInvalid {
+		t.Error("expected ErrInvalid on SetDeadline of an unopened conn")
+	}
+	if conn.Close() != net.ErrInvalid {
+		t.Error("expected ErrInvalid on close of an unopened conn")
+	}
+
+	var nilConn *net.UnixConn
+	if _, err := nilConn.Read(buf[:]); err != net.ErrInvalid {
+		t.Error("expected ErrInvalid on read from a nil conn")
+	}
+	if nilConn.Close() != net.ErrInvalid {
+		t.Error("expected ErrInvalid on close of a nil conn")
+	}
+
+	// The same holds for a listener.
+	ln, err := net.ListenUnix("bogus", nil)
+	if err != net.ErrUnknownNetwork {
+		t.Fatal("expected ErrUnknownNetwork from ListenUnix")
+		return
+	}
+	if _, err := ln.Accept(); err != net.ErrInvalid {
+		t.Error("expected ErrInvalid on accept from an unopened listener")
+	}
+	if ln.SetDeadline(zero) != net.ErrInvalid {
+		t.Error("expected ErrInvalid on SetDeadline of an unopened listener")
+	}
+	if ln.Close() != net.ErrInvalid {
+		t.Error("expected ErrInvalid on close of an unopened listener")
+	}
+
+	var nilLn *net.UnixListener
+	if _, err := nilLn.Accept(); err != net.ErrInvalid {
+		t.Error("expected ErrInvalid on accept from a nil listener")
+	}
+	if nilLn.Close() != net.ErrInvalid {
+		t.Error("expected ErrInvalid on close of a nil listener")
+	}
+}
