@@ -1,6 +1,7 @@
 package main
 
 import (
+	"solod.dev/so/io"
 	"solod.dev/so/mem"
 	"solod.dev/so/os"
 	"solod.dev/so/testing"
@@ -308,5 +309,68 @@ func TestOpenFile_ErrNotExist(t *testing.T) {
 	_, err := os.OpenFile("nonexistent_open.txt", os.O_RDONLY, 0)
 	if err != os.ErrNotExist {
 		t.Error("OpenFile nonexistent: wrong error")
+	}
+}
+
+func TestFile_NilInvalid(t *testing.T) {
+	var f *os.File
+	buf := make([]byte, 8)
+
+	_, err := f.Read(buf)
+	if err != os.ErrInvalid {
+		t.Error("Read on nil file: wrong error")
+	}
+	_, err = f.Write(buf)
+	if err != os.ErrInvalid {
+		t.Error("Write on nil file: wrong error")
+	}
+	_, err = f.WriteString("data")
+	if err != os.ErrInvalid {
+		t.Error("WriteString on nil file: wrong error")
+	}
+	_, err = f.Seek(0, io.SeekStart)
+	if err != os.ErrInvalid {
+		t.Error("Seek on nil file: wrong error")
+	}
+	_, err = f.ReadAt(buf, 0)
+	if err != os.ErrInvalid {
+		t.Error("ReadAt on nil file: wrong error")
+	}
+	_, err = f.WriteAt(buf, 0)
+	if err != os.ErrInvalid {
+		t.Error("WriteAt on nil file: wrong error")
+	}
+	if f.Close() != os.ErrInvalid {
+		t.Error("Close on nil file: wrong error")
+	}
+}
+
+func TestFile_ZeroInvalid(t *testing.T) {
+	// Open returns the zero File when it fails.
+	// A caller that ignores the error gets an unopened file.
+	f, err := os.Open("nonexistent_zero_file.txt")
+	if err != os.ErrNotExist {
+		t.Fatal("Open nonexistent: wrong error")
+		return
+	}
+	buf := make([]byte, 8)
+
+	_, err = f.Read(buf)
+	if err != os.ErrInvalid {
+		t.Error("Read on zero file: wrong error")
+	}
+	_, err = f.Write(buf)
+	if err != os.ErrInvalid {
+		t.Error("Write on zero file: wrong error")
+	}
+	_, err = f.Seek(0, io.SeekStart)
+	if err != os.ErrInvalid {
+		t.Error("Seek on zero file: wrong error")
+	}
+	if f.Close() != os.ErrInvalid {
+		t.Error("Close on zero file: wrong error")
+	}
+	if f.Name() != "" {
+		t.Error("Name on zero file: want empty")
 	}
 }

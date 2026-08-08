@@ -20,6 +20,7 @@ const MaxNameLen = 256
 // IO-related errors that can be returned by functions in this package.
 var ErrClosed = errors.New("os: file already closed")
 var ErrExist = errors.New("os: file already exists")
+var ErrInvalid = errors.New("os: invalid argument")
 var ErrIsDir = errors.New("os: is a directory")
 var ErrNotDir = errors.New("os: not a directory")
 var ErrNotExist = errors.New("os: no such file or directory")

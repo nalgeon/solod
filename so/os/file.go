@@ -28,6 +28,8 @@ const O_SYNC = 0x0080 // synchronous writes
 const O_TRUNC = 0x00000400 // truncate regular writable file when opened
 
 // File represents an open file descriptor.
+// A nil pointer and the zero File are invalid.
+// The methods return [ErrInvalid] for an invalid file.
 type File struct {
 	fd     *os_file
 	name   string
@@ -96,6 +98,9 @@ func (f *File) Name() string {
 // It returns the number of bytes read and any error encountered.
 // At end of file, Read returns 0, io.EOF.
 func (f *File) Read(b []byte) (int, error) {
+	if f == nil || f.fd == nil {
+		return 0, ErrInvalid
+	}
 	if len(b) == 0 {
 		return 0, nil
 	}
@@ -115,6 +120,9 @@ func (f *File) Read(b []byte) (int, error) {
 // It returns the number of bytes written and an error, if any.
 // Write returns a non-nil error when n != len(b).
 func (f *File) Write(b []byte) (int, error) {
+	if f == nil || f.fd == nil {
+		return 0, ErrInvalid
+	}
 	if len(b) == 0 {
 		return 0, nil
 	}
@@ -130,6 +138,9 @@ func (f *File) Write(b []byte) (int, error) {
 // the start of the file, [io.SeekCurrent] means relative to the current
 // offset, and [io.SeekEnd] means relative to the end.
 func (f *File) Seek(offset int64, whence int) (int64, error) {
+	if f == nil || f.fd == nil {
+		return 0, ErrInvalid
+	}
 	if fseeko(f.fd, offset, c.Int(whence)) != 0 {
 		return 0, mapError()
 	}
@@ -144,6 +155,9 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 // It returns the number of bytes read and the error, if any.
 // ReadAt always returns a non-nil error when n < len(b).
 func (f *File) ReadAt(b []byte, off int64) (int, error) {
+	if f == nil || f.fd == nil {
+		return 0, ErrInvalid
+	}
 	if off < 0 {
 		return 0, io.ErrOffset
 	}
@@ -167,6 +181,9 @@ func (f *File) ReadAt(b []byte, off int64) (int, error) {
 // WriteAt writes len(b) bytes to the file starting at byte offset off.
 // It returns the number of bytes written and an error, if any.
 func (f *File) WriteAt(b []byte, off int64) (int, error) {
+	if f == nil || f.fd == nil {
+		return 0, ErrInvalid
+	}
 	if off < 0 {
 		return 0, io.ErrOffset
 	}
@@ -193,6 +210,9 @@ func (f *File) WriteString(s string) (int, error) {
 // Close closes the file, rendering it unusable for I/O.
 // Close will return an error if it has already been called.
 func (f *File) Close() error {
+	if f == nil || f.fd == nil {
+		return ErrInvalid
+	}
 	if f.closed {
 		return ErrClosed
 	}

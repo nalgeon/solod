@@ -38,6 +38,8 @@ func main() {
 		{Name: "TestMkdir_ErrExist", F: TestMkdir_ErrExist},
 		{Name: "TestOpen_ErrNotExist", F: TestOpen_ErrNotExist},
 		{Name: "TestOpenFile_ErrNotExist", F: TestOpenFile_ErrNotExist},
+		{Name: "TestFile_NilInvalid", F: TestFile_NilInvalid},
+		{Name: "TestFile_ZeroInvalid", F: TestFile_ZeroInvalid},
 		{Name: "TestGetpid", F: TestGetpid},
 		{Name: "TestGetppid", F: TestGetppid},
 		{Name: "TestGetuid", F: TestGetuid},
