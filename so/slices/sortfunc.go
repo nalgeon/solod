@@ -225,7 +225,7 @@ func partialInsertionSort_func(data Sorter, a, b int) bool {
 		shortestShifting = 50 // don't shift any elements on short arrays
 	)
 	i := a + 1
-	for j := 0; j < maxSteps; j++ {
+	for range maxSteps {
 		for i < b && !data.Less(i, i-1) {
 			i++
 		}
@@ -356,7 +356,7 @@ func reverseRange_func(data Sorter, a, b int) {
 }
 
 func swapRange_func(data Sorter, a, b, n int) {
-	for i := 0; i < n; i++ {
+	for i := range n {
 		data.Swap(a+i, b+i)
 	}
 }

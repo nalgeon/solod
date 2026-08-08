@@ -91,7 +91,10 @@ func slices_tryExtend(a mem.Allocator, s Slice, other Slice, elemSize, elemAlign
 		return res
 	}
 	s = res.val
-	mem.Copy(c.PtrAdd(s.ptr, s.len*elemSize), other.ptr, other.len*elemSize)
+	// An empty slice has a nil data pointer, and mem.Copy rejects one.
+	if other.len > 0 {
+		mem.Copy(c.PtrAdd(s.ptr, s.len*elemSize), other.ptr, other.len*elemSize)
+	}
 	s.len += other.len
 	return sliceResult{val: s, err: nil}
 }

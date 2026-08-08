@@ -71,12 +71,16 @@ func Free[T any](a mem.Allocator, s []T) {
 // If the allocator is nil, uses the system allocator.
 // The returned slice is allocated; the caller owns it.
 //
+// Clone skips the copy for an empty or nil slice.
+//
 //so:inline
 func Clone[T any](a mem.Allocator, s []T) []T {
 	_s, _slen := s, len(s)
 	_elemSize := c.Sizeof[T]()
 	_newSlice := mem.AllocSlice[T](a, _slen, _slen)
-	mem.Copy(unsafe.SliceData(_newSlice), unsafe.SliceData(_s), _slen*_elemSize)
+	if _slen > 0 {
+		mem.Copy(unsafe.SliceData(_newSlice), unsafe.SliceData(_s), _slen*_elemSize)
+	}
 	return _newSlice
 }
 
