@@ -39,6 +39,12 @@ func write_acc(acc *Account, format string, args ...any)
 //so:extern unsigned char
 type uchar uint8
 
+// An extern type uchar comes from C header, so an exported function
+// can name it even when it is unexported.
+func FirstChar(buf *uchar) uchar {
+	return *buf
+}
+
 func main() {
 	{
 		// Passing values between So and C and vice versa.
@@ -110,6 +116,9 @@ func main() {
 		var ch uchar = uchar(b)
 		if byte(ch) != b {
 			panic("unexpected uchar value")
+		}
+		if FirstChar(&ch) != ch {
+			panic("unexpected FirstChar value")
 		}
 	}
 }

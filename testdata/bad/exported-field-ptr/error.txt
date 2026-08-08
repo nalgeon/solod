@@ -1,0 +1,3 @@
+main.go:7:6: exported type Node uses unexported type link
+type Node struct {
+     ^here

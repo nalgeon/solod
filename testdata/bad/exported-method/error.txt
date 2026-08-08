@@ -1,0 +1,3 @@
+main.go:11:17: exported method Take uses unexported type link
+func (s *Store) Take(p *link) int {
+                ^here

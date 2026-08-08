@@ -90,7 +90,8 @@ func (g *Generator) collect() {
 	g.collectPromoted()
 	g.collectResultTypes()
 
-	g.checkExported()
+	g.checkExportedFuncs()
+	g.checkExportedDecls()
 	g.checkPromoted()
 	g.checkEmbeddedTypes()
 }

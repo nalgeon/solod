@@ -1,0 +1,3 @@
+main.go:7:6: exported type Point uses unexported type coord
+type Point struct {
+     ^here

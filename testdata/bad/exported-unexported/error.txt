@@ -1,3 +1,3 @@
-main.go:8:6: exported function Origin uses unexported types
+main.go:8:6: exported function Origin uses unexported type point
 func Origin() point {
      ^here

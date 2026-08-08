@@ -2,6 +2,12 @@
 
 // -- Implementation --
 
+// An extern type uchar comes from C header, so an exported function
+// can name it even when it is unexported.
+unsigned char main_FirstChar(unsigned char* buf) {
+    return *buf;
+}
+
 int main(void) {
     {
         // Passing values between So and C and vice versa.
@@ -63,6 +69,9 @@ int main(void) {
         unsigned char ch = (unsigned char)(b);
         if ((so_byte)(ch) != b) {
             so_panic("unexpected uchar value");
+        }
+        if (main_FirstChar(&ch) != ch) {
+            so_panic("unexpected FirstChar value");
         }
     }
     return 0;

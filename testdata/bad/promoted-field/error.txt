@@ -1,0 +1,3 @@
+main.go:8:6: promoted type shown uses unexported type hidden
+type shown struct {
+     ^here

@@ -68,45 +68,163 @@ func (g *Generator) checkPromoted() {
 	}
 }
 
-// checkExported rejects exported functions and methods that use
-// unexported types, which would leak a .c-only type into the header.
-func (g *Generator) checkExported() {
+// checkExportedFuncs rejects a header function or method declaration
+// that names an unexported type.
+func (g *Generator) checkExportedFuncs() {
 	for _, sym := range g.symbols {
-		if (sym.kind != symbolFunc && sym.kind != symbolMethod) || !sym.exported {
+		if sym.kind != symbolFunc && sym.kind != symbolMethod {
 			continue
 		}
-		decl := sym.funcDecl
-		if g.hasUnexportedTypes(decl) {
-			g.fail(decl.Name, "exported function %s uses unexported types", decl.Name.Name)
+		// The header holds the prototype of an exported or so:promote function,
+		// and the body of an so:inline function.
+		if !sym.exported && !sym.dirs.inline && !sym.dirs.promote {
+			continue
+		}
+		kind := "function"
+		if sym.kind == symbolMethod {
+			kind = "method"
+		}
+		// The receiver becomes a void* self parameter, so only the
+		// signature can name an unexported type.
+		sig := g.funcSig(sym.funcDecl)
+		obj := g.unexportedRefSig(sig)
+		if obj == nil {
+			continue
+		}
+		g.fail(sym.funcDecl.Name, "%s %s %s uses unexported type %s",
+			headerWord(sym.exported, sym.dirs), kind, sym.funcDecl.Name.Name, obj.Name())
+	}
+}
+
+// checkExportedDecls rejects a header type, var or const declaration
+// that names an unexported type.
+func (g *Generator) checkExportedDecls() {
+	for _, sym := range g.symbols {
+		if !sym.exported && !sym.dirs.promote {
+			continue
+		}
+		switch sym.kind {
+		case symbolType:
+			// A constraint interface is never emitted, so it can name any type.
+			if isConstraintInterface(g.types.Defs[sym.typeSpec.Name].Type()) {
+				continue
+			}
+			// Walk the declared type rather than the underlying type:
+			// the typedef for `type E P` names P itself.
+			obj := g.unexportedRef(g.types.TypeOf(sym.typeSpec.Type))
+			if obj == nil {
+				continue
+			}
+			g.fail(sym.typeSpec.Name, "%s type %s uses unexported type %s",
+				headerWord(sym.exported, sym.dirs), sym.typeSpec.Name.Name, obj.Name())
+		case symbolVar, symbolConst:
+			g.checkExportedValues(sym)
 		}
 	}
 }
 
-// hasUnexportedTypes reports whether a function declaration
-// references any unexported types from the current package.
-func (g *Generator) hasUnexportedTypes(decl *ast.FuncDecl) bool {
-	sig := g.funcSig(decl)
+// checkExportedValues rejects a header var or const declaration
+// that names an unexported type.
+func (g *Generator) checkExportedValues(sym symbol) {
+	kind := "variable"
+	if sym.kind == symbolConst {
+		kind = "constant"
+	}
+	for _, spec := range sym.genDecl.Specs {
+		vs, ok := spec.(*ast.ValueSpec)
+		if !ok {
+			continue
+		}
+		// A var or const group can mix exported and unexported names,
+		// so select the names the header holds (see [Generator.emitHeaderGenDecl]).
+		for _, name := range vs.Names {
+			exported := ast.IsExported(name.Name)
+			def := g.types.Defs[name]
+			if def == nil || (!exported && !sym.dirs.promote) {
+				continue
+			}
+			obj := g.unexportedRef(def.Type())
+			if obj == nil {
+				continue
+			}
+			g.fail(name, "%s %s %s uses unexported type %s",
+				headerWord(exported, sym.dirs), kind, name.Name, obj.Name())
+		}
+	}
+}
+
+// headerWord names the reason a declaration goes in the header.
+func headerWord(exported bool, dirs directives) string {
+	switch {
+	case exported:
+		return "exported"
+	case dirs.inline:
+		return "inline"
+	default:
+		return "promoted"
+	}
+}
+
+// unexportedRef returns the first unexported type that the C declaration of typ
+// names, or nil. A slice, a map and a channel map to opaque builtins that do not
+// name their element type, so the walk stops there. A named type also stops the
+// walk: its own declaration carries the check.
+func (g *Generator) unexportedRef(typ types.Type) types.Object {
+	switch t := types.Unalias(typ).(type) {
+	case *types.Named:
+		if g.isUnexportedType(t) {
+			return t.Obj()
+		}
+	case *types.Pointer:
+		return g.unexportedRef(t.Elem())
+	case *types.Array:
+		return g.unexportedRef(t.Elem())
+	case *types.Struct:
+		for f := range t.Fields() {
+			if obj := g.unexportedRef(f.Type()); obj != nil {
+				return obj
+			}
+		}
+	case *types.Signature:
+		return g.unexportedRefSig(t)
+	case *types.Interface:
+		for m := range t.Methods() {
+			if obj := g.unexportedRef(m.Type()); obj != nil {
+				return obj
+			}
+		}
+	}
+	return nil
+}
+
+// unexportedRefSig returns the first unexported type that the parameters
+// or the results of sig name, or nil.
+func (g *Generator) unexportedRefSig(sig *types.Signature) types.Object {
 	for p := range sig.Params().Variables() {
-		if g.isUnexportedType(p.Type()) {
-			return true
+		if obj := g.unexportedRef(p.Type()); obj != nil {
+			return obj
 		}
 	}
 	for r := range sig.Results().Variables() {
-		if g.isUnexportedType(r.Type()) {
-			return true
+		if obj := g.unexportedRef(r.Type()); obj != nil {
+			return obj
 		}
 	}
-	return false
+	return nil
 }
 
 // isUnexportedType reports whether a type lives only in the current package's
 // .c file. A promoted type is emitted in the header, so it does not count.
+// An extern type comes from a C header, so it does not count either.
 func (g *Generator) isUnexportedType(typ types.Type) bool {
 	named, ok := types.Unalias(typ).(*types.Named)
 	if !ok {
 		return false
 	}
 	obj := named.Obj()
+	if g.hasExtern(obj) {
+		return false
+	}
 	if obj.Pkg() != g.pkg.Types {
 		return false
 	}

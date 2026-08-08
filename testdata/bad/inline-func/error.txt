@@ -1,0 +1,3 @@
+main.go:8:6: inline function inl uses unexported type cfg
+func inl(c cfg) int {
+     ^here

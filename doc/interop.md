@@ -176,7 +176,7 @@ func NewStats() Stats {
 }
 ```
 
-Without `so:promote`, the header would reference a name it never declares. The alternative (exporting the helper) pollutes the public API; `so:promote` keeps it out of the Go API while still making the C declaration visible.
+Without `so:promote`, the header would reference a name it never declares, so the compiler rejects the declaration. The alternative (exporting the helper) pollutes the public API; `so:promote` keeps it out of the Go API while still making the C declaration visible.
 
 `so:promote` works on types, functions, methods, vars, and consts. It is rejected on exported declarations (already in the header, so redundant) and cannot combine with `so:inline` (which already emits the body in the header).
 

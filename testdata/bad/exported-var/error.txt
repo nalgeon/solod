@@ -1,0 +1,3 @@
+main.go:7:5: exported variable Config uses unexported type config
+var Config config
+    ^here

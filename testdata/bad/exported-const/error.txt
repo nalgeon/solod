@@ -1,0 +1,3 @@
+main.go:5:7: exported constant Max uses unexported type level
+const Max level = 3
+      ^here
