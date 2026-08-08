@@ -78,6 +78,14 @@ func ferror(stream *os_file) bool {
 	return false
 }
 
+// int fflush(FILE* stream);
+//
+//so:extern
+func fflush(stream *os_file) c.Int {
+	_ = stream
+	return 0
+}
+
 // int fseeko(FILE* stream, off_t offset, int whence);
 //
 //so:extern

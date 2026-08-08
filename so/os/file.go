@@ -213,6 +213,24 @@ func (f *File) WriteString(s string) (int, error) {
 	return f.Write([]byte(s))
 }
 
+// Sync writes the buffered data of the file to the operating system.
+// The data can still wait in an operating system cache, so Sync does not
+// guarantee that the data reached the storage device.
+//
+// A File writes through a buffered C stream. A program that ends abnormally
+// loses the buffered data. Call Sync to keep the output that a later crash
+// must not hide.
+func (f *File) Sync() error {
+	fd := f.stream()
+	if fd == nil {
+		return f.invalidErr()
+	}
+	if fflush(fd) != 0 {
+		return mapError()
+	}
+	return nil
+}
+
 // Close closes the file, rendering it unusable for I/O.
 // Close will return an error if it has already been called.
 func (f *File) Close() error {

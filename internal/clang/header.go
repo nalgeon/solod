@@ -185,8 +185,10 @@ func (g *Generator) resolveIncludePath(spec *ast.ImportSpec) string {
 	}
 	// Strip the imported package's own module prefix.
 	path = strings.TrimPrefix(path, imp.Module.Path+"/")
-	// Add the package.h file (e.g. package -> package/package.h).
+	// Add the header of the package. The header is named after the package,
+	// which is not always the last element of the import path
+	// (e.g. sync/test -> sync/test/sync_test.h).
 	parts := strings.Split(path, "/")
-	parts = append(parts, parts[len(parts)-1]+".h")
+	parts = append(parts, imp.Name+".h")
 	return strings.Join(parts, "/")
 }

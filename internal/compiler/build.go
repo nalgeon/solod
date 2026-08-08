@@ -12,6 +12,11 @@ import (
 // Build translates the Go package in srcDir to C and compiles it into outFile.
 // Uses CC (default "cc"), CFLAGS, and LDFLAGS environment variables.
 func Build(srcDir, outFile string, opts Options) error {
+	return build(dirSource(srcDir), outFile, opts)
+}
+
+// build is Build for an arbitrary source.
+func build(src source, outFile string, opts Options) error {
 	copts, err := newCompileOptions(opts)
 	if err != nil {
 		return err
@@ -23,7 +28,7 @@ func Build(srcDir, outFile string, opts Options) error {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	libs, err := Translate(srcDir, tmpDir, opts)
+	libs, err := translate(src, tmpDir, opts)
 	if err != nil {
 		return err
 	}
@@ -40,6 +45,11 @@ func Build(srcDir, outFile string, opts Options) error {
 // Run translates and compiles the Go package in srcDir, then executes it.
 // Returns an *exec.ExitError if the program exits with a non-zero status.
 func Run(srcDir string, args []string, opts Options) error {
+	return run(dirSource(srcDir), args, opts)
+}
+
+// run is Run for an arbitrary source.
+func run(src source, args []string, opts Options) error {
 	tmpFile, err := os.CreateTemp("", "solod_run")
 	if err != nil {
 		return fmt.Errorf("create temp file: %w", err)
@@ -47,7 +57,7 @@ func Run(srcDir string, args []string, opts Options) error {
 	tmpFile.Close()
 	defer os.Remove(tmpFile.Name())
 
-	if err := Build(srcDir, tmpFile.Name(), opts); err != nil {
+	if err := build(src, tmpFile.Name(), opts); err != nil {
 		return err
 	}
 

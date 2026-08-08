@@ -79,6 +79,7 @@ const (
 func translate(args []string) error {
 	flags := flag.NewFlagSet("translate", flag.ContinueOnError)
 	outDir := flags.String("o", "", "output directory (default: current directory)")
+	tests := flags.Bool("test", false, "translate the test subpackages")
 	trackSource := flags.Bool("track-source", false, trackSourceUsage)
 	if err := flags.Parse(args); err != nil {
 		return err
@@ -96,6 +97,10 @@ func translate(args []string) error {
 
 	opts := compiler.Options{
 		TrackSource: *trackSource,
+	}
+	if *tests {
+		_, err := compiler.TranslateTests(pkg, out, opts)
+		return err
 	}
 	_, err := compiler.Translate(pkg, out, opts)
 	return err

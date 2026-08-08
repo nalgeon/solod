@@ -21,12 +21,31 @@ type Options struct {
 	TrackSource bool   // track source locations for panics
 }
 
+// source locates the entry package to translate. Most callers name a directory
+// on disk. The test runner has no file on disk, so it comes as an overlay:
+// a package pattern plus the contents of the file in memory.
+type source struct {
+	dir     string            // directory to load the pattern from
+	pattern string            // package pattern to load, e.g. "." or "./.sotest"
+	overlay map[string][]byte // in-memory files, keyed by absolute path
+}
+
+// dirSource returns the source for the package in dir.
+func dirSource(dir string) source {
+	return source{dir: dir, pattern: "."}
+}
+
 // Translate loads all Go packages from srcDir (including So stdlib dependencies),
 // translates them to C, and writes the output to outDir. It returns the C
 // libraries the transpiled packages must link against, deduplicated and sorted,
 // without the -l prefix.
 func Translate(srcDir, outDir string, opts Options) ([]string, error) {
-	pkgs, err := loadPackages(srcDir)
+	return translate(dirSource(srcDir), outDir, opts)
+}
+
+// translate is Translate for an arbitrary source.
+func translate(src source, outDir string, opts Options) ([]string, error) {
+	pkgs, err := loadPackages(src)
 	if err != nil {
 		return nil, err
 	}
@@ -68,15 +87,16 @@ func Translate(srcDir, outDir string, opts Options) ([]string, error) {
 }
 
 // loadPackages uses go/packages to load the entry package and all dependencies.
-func loadPackages(dir string) ([]*packages.Package, error) {
+func loadPackages(src source) ([]*packages.Package, error) {
 	cfg := &packages.Config{
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedSyntax |
 			packages.NeedTypes | packages.NeedImports | packages.NeedDeps |
 			packages.NeedModule | packages.NeedTypesInfo,
-		Dir: dir,
+		Dir:     src.dir,
+		Overlay: src.overlay,
 	}
 
-	pkgs, err := packages.Load(cfg, ".")
+	pkgs, err := packages.Load(cfg, src.pattern)
 	if err != nil {
 		return nil, fmt.Errorf("load packages: %w", err)
 	}

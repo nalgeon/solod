@@ -223,3 +223,34 @@ so build -assert=off .
 `NDEBUG` removed these checks before. A C project that defined `NDEBUG` would turn the So safety checks off by accident.
 
 [f67d8ca](https://github.com/solod-dev/solod/commit/f67d8ca3660437d6f648dd905d7784a5fbb180fa)
+
+## Standard library
+
+**os.File.Sync**. A `File` writes through a buffered C stream, so a program that ends abnormally loses the buffered data. `Sync` flushes the stream:
+
+```go
+f.WriteString("progress\n")
+f.Sync() // the line is out of the buffer now
+```
+
+The data can still wait in an operating system cache, so `Sync` does not guarantee that the data reached the storage device.
+
+## Tooling
+
+**Multi-package so test**. A pattern that ends with `...` selects every package with a `test` subdirectory below its base directory:
+
+```sh
+so test ./so/...
+```
+
+The whole run costs one translate, one compile and one execution, which is much faster than one run per package. Narrow the pattern to select a group of packages: `so test ./so/net/...` runs the tests of `so/net` and `so/net/netip`.
+
+The packages share a process, so a hard crash in one package stops the packages after it.
+
+**Test and bench package naming**. A test or bench directory declared `package main` before. The generated runner must import the package now, so `package main` is rejected. Two test packages of one run must also have distinct names, because the So compiler prefixes an exported C name with the package name.
+
+A common convention is to name a test package after the package under test, with a `_test` or `_bench` suffix: `so/sync/test` declares `package sync_test`, and `so/sync/bench` declares `package sync_bench`.
+
+The runner is no longer written to disk. `so test` and `so bench` pass the generated runner to the Go loader as an in-memory overlay, so the committed `test/main.go` and `bench/main.go` files are gone. Adding, renaming or removing a `TestXxx` or `BenchmarkXxx` needs no other step.
+
+⚠️ This is a breaking change. If you have test or benchmark subpackages, rename them from `main` to `{package}_test` or `{package}_bench`, and remove the `main.go` files.

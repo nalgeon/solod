@@ -116,10 +116,29 @@ type Test struct {
 	F    func(t *T)
 }
 
+// Suite holds the tests of a single package. The test runner of a program
+// that tests many packages passes one Suite per package to [RunSuites].
+type Suite struct {
+	Pkg   string
+	Tests []Test
+}
+
 // RunTests runs the given tests for package pkg, prints per-test results
 // to stdout, and exits with a non-zero status if any test failed.
 // args is the runner's os.Args; RunTests parses flags from it.
 func RunTests(pkg string, args []string, tests []Test) {
+	suite := Suite{Pkg: pkg, Tests: tests}
+	suites := []Suite{suite}
+	RunSuites(args, suites)
+}
+
+// RunSuites runs the tests of every suite, prints per-test results to stdout,
+// and exits with a non-zero status if any test failed. It runs every suite
+// before it reports the status, so one failed package does not hide the
+// results of the packages after it.
+//
+// args is the runner's os.Args; RunSuites parses flags from it.
+func RunSuites(args []string, suites []Suite) {
 	var run string
 	fs := flag.NewFlagSet("so test", flag.ContinueOnError)
 	fs.StringVar(&run, "run", "", "run only tests whose names start with this prefix")
@@ -127,10 +146,26 @@ func RunTests(pkg string, args []string, tests []Test) {
 		os.Exit(2)
 	}
 
+	ok := true
+	for _, suite := range suites {
+		if !runSuite(suite, run) {
+			ok = false
+		}
+	}
+	if !ok {
+		os.Exit(1)
+	}
+}
+
+// runSuite runs the tests of one suite whose names start with run,
+// prints the results, and reports whether every test passed.
+func runSuite(suite Suite, run string) bool {
 	failed := 0
 	skipped := 0
 	total := 0
-	for _, tc := range tests {
+	fmt.Fprintf(os.Stdout, "%s\n", suite.Pkg)
+
+	for _, tc := range suite.Tests {
 		if !strings.HasPrefix(tc.Name, run) {
 			continue
 		}
@@ -139,6 +174,9 @@ func RunTests(pkg string, args []string, tests []Test) {
 		t := &T{name: tc.Name, w: os.Stdout}
 		t.alloc.Allocator = mem.System
 		fmt.Fprintf(t.w, "=== RUN   %s\n", t.name)
+		// A test that crashes takes the whole program down. The name of the
+		// test must reach the output before the test runs.
+		os.Stdout.Sync()
 		tc.F(t)
 
 		// Fail a passing test that leaked memory allocated through t.Allocator().
@@ -165,16 +203,17 @@ func RunTests(pkg string, args []string, tests []Test) {
 	}
 
 	if total == 0 {
-		fmt.Fprintf(os.Stdout, "ok\t%s\t%d tests [no tests to run]\n", pkg, total)
-		return
+		fmt.Fprintf(os.Stdout, "ok\t%s\t%d tests [no tests to run]\n", suite.Pkg, total)
+		return true
 	}
 	if failed > 0 {
-		fmt.Fprintf(os.Stdout, "FAIL\t%s\t%d of %d failed\n", pkg, failed, total)
-		os.Exit(1)
+		fmt.Fprintf(os.Stdout, "FAIL\t%s\t%d of %d failed\n", suite.Pkg, failed, total)
+		return false
 	}
 	if skipped > 0 {
-		fmt.Fprintf(os.Stdout, "ok\t%s\t%d tests (%d skipped)\n", pkg, total, skipped)
-		return
+		fmt.Fprintf(os.Stdout, "ok\t%s\t%d tests (%d skipped)\n", suite.Pkg, total, skipped)
+		return true
 	}
-	fmt.Fprintf(os.Stdout, "ok\t%s\t%d tests\n", pkg, total)
+	fmt.Fprintf(os.Stdout, "ok\t%s\t%d tests\n", suite.Pkg, total)
+	return true
 }

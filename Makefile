@@ -118,27 +118,14 @@ test-lang:
 		exit 1; \
 	fi
 
-# Runs tests in every stdlib package's "test" subdirectory.
+# Runs the tests of every stdlib package with a "test" subdirectory. `so test`
+# joins them into one program, so this is one translate, one compile and one
+# run. The generated C stays in generated/std for inspection.
 test-std:
-	@mkdir -p generated
-	@failed=0; \
-	for dir in $$(find so -type d -name test | sort); do \
-		name=$${dir%/test}; \
-		if make run-test name=$$name > generated/so_test_out.txt 2>&1; then \
-			echo "PASS $$name"; \
-		else \
-			echo "FAIL $$name"; \
-			cat generated/so_test_out.txt; \
-			failed=1; \
-		fi; \
-	done; \
-	rm -f generated/so_test_out.txt; \
-	if [ $$failed -eq 0 ]; then \
-		echo "PASS"; \
-	else \
-		echo "FAIL"; \
-		exit 1; \
-	fi
+	@rm -rf generated/std
+	@mkdir -p generated/std
+	@go run ./cmd/so translate -test -o generated/std ./so/...
+	@make run-c path=generated/std
 
 # Transpiles, compiles and runs a single test case in testdata/$(name),
 # leaving the generated C in generated/$(name) for inspection.
@@ -151,12 +138,11 @@ run-case:
 
 # Transpiles, compiles and runs the tests in a package's "test" subdirectory
 # (e.g. name=so/sync runs so/sync/test), leaving the generated C in
-# generated/$(name)/test for inspection. It relies on the committed test
-# runner (test/main.go); regenerate that with `so test` when tests change.
+# generated/$(name)/test for inspection.
 run-test:
 	@rm -rf generated/$(name)/test
 	@mkdir -p generated/$(name)/test
-	@go run ./cmd/so translate -o generated/$(name)/test $(name)/test
+	@go run ./cmd/so translate -test -o generated/$(name)/test ./$(name)
 	@make run-c path=generated/$(name)/test
 
 run-c:
