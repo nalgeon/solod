@@ -128,6 +128,21 @@ So sees the field as `etype`; the generated C uses `type` everywhere, including 
 
 The tag is honored only on the fields of a named struct type, not on anonymous or function-local structs. It works on any named struct, not just extern ones, but its main use is matching an external C layout.
 
+### Generating declarations
+
+Writing extern declarations by hand is slow for a large C library. [sobind](https://github.com/solod-dev/sobind) reads `.h` files and writes a Go source file with `so:extern` stubs for structs, unions, constants, function pointer typedefs, and function declarations:
+
+```
+go install solod.dev/sobind@latest
+
+sobind -pkg main -o sqlite3.go sqlite3.h
+sobind -I . -o sdl3.go SDL3
+```
+
+Given a directory, sobind processes every `.h` file in it. Use `-I` to add an include search directory.
+
+sobind might map some declarations incorrectly. Treat the generated file as a starting point, not as the final binding: read it, and correct the types that sobind could not map.
+
 ## Inlining
 
 Force a function to be emitted as `static inline` in the header file using `//so:inline`. This is useful for small, frequently used functions when the compiler won't inline them automatically:
