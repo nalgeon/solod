@@ -1,7 +1,9 @@
 package main
 
-import "solod.dev/so/math"
+import "example/link/src/sub"
+
+//so:link m
 
 func main() {
-	_ = math.Sqrt(2)
+	sub.Nop()
 }

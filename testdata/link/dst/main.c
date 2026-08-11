@@ -3,6 +3,6 @@
 // -- Implementation --
 
 int main(void) {
-    (void)math_Sqrt(2.0);
+    sub_Nop();
     return 0;
 }
