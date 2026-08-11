@@ -107,15 +107,17 @@ update-err:
 	go test -run 'TestTranslateBad/$(name)' ./internal/compiler -update
 	go test -run 'TestTranslateBad/$(name)' ./internal/compiler
 
-# Runs tests in every testdata/* subdirectory, except testdata/bad
-# (those cases must fail to translate, so there is nothing to run).
+# Runs tests in every testdata/* subdirectory, except two:
+# - testdata/bad, because those cases must fail to translate.
+# - testdata/freestanding, because it imports the stdlib.
+#   (run with `make run-case name=freestanding mode=bare` instead)
 # The cases run $(jobs) at a time. Each case gets a binary and a log of its own,
 # and all cases share the transpiler binary that this target builds one time.
 test-lang:
 	@rm -rf generated/lang
 	@mkdir -p generated/lang build
 	@go build -o build/so ./cmd/so
-	@if ls -d testdata/*/ | sed 's|testdata/||; s|/$$||' | grep -vx bad | \
+	@if ls -d testdata/*/ | sed 's|testdata/||; s|/$$||' | grep -Evx 'bad|freestanding' | \
 		xargs -P $(jobs) -I% make test-lang-case name=% SO=build/so; \
 	then \
 		echo "PASS"; \
