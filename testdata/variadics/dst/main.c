@@ -38,7 +38,7 @@ int main(void) {
     }
     {
         // Variadic method call.
-        main_Sum s = {0};
+        main_Sum s = {};
         main_Sum_Add(&s, (so_Slice){(so_int[2]){1, 2}, 2, 2});
         main_Sum_Add(&s, (so_Slice){(so_int[3]){1, 2, 3}, 3, 3});
         if (s.v != 9) {

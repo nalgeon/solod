@@ -1,5 +1,12 @@
 #include "main.h"
 
+// -- Types --
+
+typedef struct empty empty;
+
+typedef struct empty {
+} empty;
+
 // -- Implementation --
 
 int main(void) {
@@ -19,8 +26,8 @@ int main(void) {
     {
         // Append values.
         so_Slice nums = so_make_slice(so_int, 0, 3);
-        nums = so_append(so_int, nums, 1);
-        nums = so_append(so_int, nums, 2, 3);
+        nums = so_append(so_int, nums, 1, 1);
+        nums = so_append(so_int, nums, 2, 2, 3);
         // 3
         so_int l = so_len(nums);
         // 3
@@ -43,6 +50,16 @@ int main(void) {
         }
         if (so_at(so_int, nums, 3) != 4) {
             so_panic("want nums[3] = 4");
+        }
+    }
+    {
+        // Append elements with no fields.
+        so_Slice es = so_make_slice(empty, 1, 4);
+        so_at(empty, es, 0) = (empty){};
+        es = so_append(empty, es, 1, ((empty){}));
+        es = so_append(empty, es, 2, ((empty){}), ((empty){}));
+        if (so_len(es) != 4) {
+            so_panic("want len(es) = 4");
         }
     }
     return 0;

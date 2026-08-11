@@ -104,9 +104,9 @@ int main(void) {
         (void)vRune;
         so_String vString = so_str("");
         (void)vString;
-        so_Slice vSlice = {0};
+        so_Slice vSlice = {};
         (void)vSlice;
-        person vStruct = {0};
+        person vStruct = {};
         (void)vStruct;
         person* vPtr = NULL;
         (void)vPtr;

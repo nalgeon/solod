@@ -308,12 +308,16 @@ typedef struct {
 
 // make_slice creates a zero-initialized slice on the stack.
 // Allocates memory on the stack until the calling function returns.
-#define so_make_slice(T, len, cap) ({     \
-    so_int _cap = (so_int)(cap);          \
-    size_t _n = sizeof(T) * (size_t)_cap; \
-    void* _p = _n ? so_alloca(_n) : NULL; \
-    if (_n) memset(_p, 0, _n);            \
-    (so_Slice){_p, (len), _cap};          \
+//
+// n is 0 for an element type with size 0 (struct{}). The macro still
+// allocates one byte because so_at_ptr requires a non-NULL pointer for
+// any slice with a capacity greater than 0.
+#define so_make_slice(T, len, cap) ({                \
+    so_int _cap = (so_int)(cap);                     \
+    size_t _n = sizeof(T) * (size_t)_cap;            \
+    void* _p = _cap ? so_alloca(_n ? _n : 1) : NULL; \
+    if (_n) memset(_p, 0, _n);                       \
+    (so_Slice){_p, (len), _cap};                     \
 })
 
 // slice creates a slice from another slice
@@ -348,13 +352,16 @@ typedef struct {
 // Returns NULL for empty/nil slices.
 #define so_decay(s) ({ so_Slice _s = (s); _s.cap ? _s.ptr : NULL; })
 
-// append appends elements to a slice without resizing.
+// append appends n elements to a slice without resizing.
 // Returns the new slice with updated length.
 // Panics if the new length exceeds the capacity.
-#define so_append(T, s, ...) ({                        \
+//
+// The generator passes n. The macro cannot calculate n with sizeof(T),
+// because sizeof(T) is 0 for a struct type with no fields.
+#define so_append(T, s, n, ...) ({                     \
     so_Slice _s = (s);                                 \
     T _vals[] = {__VA_ARGS__};                         \
-    so_int _n = (so_int)(sizeof(_vals) / sizeof(T));   \
+    so_int _n = (so_int)(n);                           \
     if (_s.len + _n > _s.cap)                          \
         so_panic("append: out of capacity");           \
     memcpy((T*)_s.ptr + _s.len, _vals, sizeof(_vals)); \
@@ -666,7 +673,7 @@ static inline void* unsafe_Add(void* ptr, size_t offset) {
 }
 static inline so_String unsafe_String(void* ptr, so_int len) {
     if (ptr == NULL) {
-        return (so_String){0};
+        return (so_String){};
     }
     return (so_String){(char*)ptr, len};
 }
@@ -678,7 +685,7 @@ static inline so_byte* unsafe_StringData(so_String s) {
 }
 static inline so_Slice unsafe_Slice(void* ptr, so_int len) {
     if (ptr == NULL) {
-        return (so_Slice){0};
+        return (so_Slice){};
     }
     return (so_Slice){ptr, len, len};
 }
@@ -780,8 +787,8 @@ static inline so_int so_map_cap(so_int n) {
     size_t _ksz = sizeof(K) * (size_t)_cap;       \
     size_t _vsz = sizeof(V) * (size_t)_cap;       \
     size_t _usz = sizeof(uint8_t) * (size_t)_cap; \
-    void* _kp = so_alloca(_ksz);                  \
-    void* _vp = so_alloca(_vsz);                  \
+    void* _kp = so_alloca(_ksz ? _ksz : 1);       \
+    void* _vp = so_alloca(_vsz ? _vsz : 1);       \
     uint8_t* _up = so_alloca(_usz);               \
     if (_kp) memset(_kp, 0, _ksz);                \
     if (_vp) memset(_vp, 0, _vsz);                \
@@ -807,7 +814,7 @@ static inline so_int so_map_cap(so_int n) {
 #define so_map_get(K, V, m, key) ({                          \
     const so_Map* _m = (m);                                  \
     K _k = (key);                                            \
-    V _v = {0};                                              \
+    V _v = {};                                               \
     bool _found = false;                                     \
     uint64_t _seed = so_map_seed(_m);                        \
     uint64_t _hash = so_key_hash(_k)(&_k, sizeof(K), _seed); \

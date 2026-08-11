@@ -243,10 +243,15 @@ func (g *Generator) mapTypeName(node ast.Node, typ types.Type) string {
 }
 
 // zeroValue returns the C zero value for a Go type.
+//
+// Aggregates use the empty initializer {}, defined in C23 and accepted
+// by GCC and Clang with -std=gnu11. The generator does not use {0}, because
+// a struct{} type has no member to set, so {0} is not valid for struct{},
+// for an array of struct{}, or for a struct with a struct{} first field.
 func (g *Generator) zeroValue(node ast.Node, typ types.Type) string {
 	// Arrays.
 	if _, ok := typ.Underlying().(*types.Array); ok {
-		return "{0}"
+		return "{}"
 	}
 
 	// Pointers.
@@ -256,7 +261,7 @@ func (g *Generator) zeroValue(node ast.Node, typ types.Type) string {
 
 	// Slices.
 	if _, ok := typ.Underlying().(*types.Slice); ok {
-		return "{0}"
+		return "{}"
 	}
 
 	// Maps.
@@ -271,12 +276,12 @@ func (g *Generator) zeroValue(node ast.Node, typ types.Type) string {
 
 	// Structs.
 	if _, ok := typ.Underlying().(*types.Struct); ok {
-		return "{0}"
+		return "{}"
 	}
 
 	// Error type.
 	if isErrorType(typ) {
-		return "{0}"
+		return "{}"
 	}
 
 	// Interfaces.
@@ -286,8 +291,8 @@ func (g *Generator) zeroValue(node ast.Node, typ types.Type) string {
 			return "NULL"
 		}
 		if _, ok := types.Unalias(typ).(*types.Named); ok {
-			// Named interfaces map to structs, so zero value is {0}.
-			return "{0}"
+			// Named interfaces map to structs, so zero value is {}.
+			return "{}"
 		}
 		g.fail(node, "unsupported non-empty anonymous interface")
 	}

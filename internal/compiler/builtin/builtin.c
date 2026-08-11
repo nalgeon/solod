@@ -66,7 +66,7 @@ static void so_fault_handler(int sig, siginfo_t* info, void* ctx) {
 // backtrace() cannot unwind from an alternate stack on macOS. This means a
 // stack overflow, which exhausts that stack, cannot be reported.
 __attribute__((constructor)) static void so_install_fault_handler(void) {
-    struct sigaction sa = {0};
+    struct sigaction sa = {};
     sa.sa_sigaction = so_fault_handler;
     sa.sa_flags = SA_SIGINFO;
     sigemptyset(&sa.sa_mask);
@@ -76,7 +76,7 @@ __attribute__((constructor)) static void so_install_fault_handler(void) {
 #endif
 
 // Command-line arguments, populated by main().
-so_Slice os_Args = {0};
+so_Slice os_Args = {};
 
 // utf8_decode decodes one UTF-8 rune from string s at byte offset i.
 // Stores the byte width in *w.

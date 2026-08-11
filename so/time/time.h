@@ -70,7 +70,7 @@ static inline char* strptime(const char* str, const char* format, time_tm* tm) {
 
 static inline so_R_i64_i32 time_wall() {
     so_panic("time: wall clock time requires a hosted environment");
-    return (so_R_i64_i32){0};
+    return (so_R_i64_i32){};
 }
 
 static inline int64_t time_mono() {

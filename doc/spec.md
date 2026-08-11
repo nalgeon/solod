@@ -287,7 +287,7 @@ twoD := [][]int{{1, 2, 3}, {4, 5, 6}}
 Unlike in Go, a nil slice and an empty slice are the same thing:
 
 ```go
-// Both emit `(so_Slice){0}`.
+// Both emit `(so_Slice){}`.
 var nils []int = nil
 var empty []int = []int{}
 ```
@@ -772,6 +772,8 @@ b := Benchmark{name: "Test", loop: struct{ n, i int }{n: 200, i: 10}}
 b.loop.n = 100
 ```
 
+Structs without fields (`type T struct{}`) are supported.
+
 Anonymous structs are only supported as local variables (the `dog` example) and as inner struct fields (the `Benchmark` example). In other cases — slice/array elements, params, returns — use a named type instead.
 
 Embedded fields are not supported; declare named fields instead.
@@ -1064,7 +1066,7 @@ Errors are compared using `==`. This is an O(1) operation (compares `.self` poin
 
 Dynamic errors (`fmt.Errorf`), local error variables (`errors.New` inside functions), and error wrapping are not supported.
 
-The zero value of `error` is `nil` (`{0}` in C).
+The zero value of `error` is `nil` (`{}` in C).
 
 ## Panic
 

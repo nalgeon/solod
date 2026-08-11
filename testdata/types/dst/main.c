@@ -3,12 +3,23 @@
 // -- Types --
 
 typedef struct point point;
+typedef struct empty empty;
+typedef struct tagged tagged;
 
 // Unexported struct type.
 typedef struct point {
     so_int x;
     so_int y;
 } point;
+
+typedef struct empty {
+} empty;
+
+// Struct with an empty first field.
+typedef struct tagged {
+    empty e;
+    so_int n;
+} tagged;
 
 // -- Forward declarations --
 static main_Person newPerson(so_String name);
@@ -68,12 +79,26 @@ int main(void) {
         main_Person* ann = &(main_Person){.name = so_str("Ann"), .age = 40};
         *ann = newPerson(so_str("Jon"));
         (void)ann;
-        main_Person sean = {0};
+        main_Person sean = {};
         sean.name = so_str("Sean");
         sean.age = 50;
         main_Person* sp = &sean;
         sp->age = 51;
         (void)sean;
+    }
+    {
+        // Empty struct types.
+        empty e = {};
+        (void)e;
+        empty* ep = &(empty){};
+        (void)ep;
+        empty earr[3] = {};
+        (void)earr;
+        tagged tag = {};
+        tag.n = 60;
+        if (tag.n != 60) {
+            so_panic("tag.n != 60");
+        }
     }
     {
         // Anonymous struct type.
@@ -110,7 +135,7 @@ int main(void) {
         if (b3.loop.n != 300) {
             so_panic("b3.loop.n != 300");
         }
-        main_Benchmark b4 = {0};
+        main_Benchmark b4 = {};
         if (b4.loop.n != 0) {
             so_panic("b4.loop.n != 0");
         }

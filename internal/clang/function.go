@@ -330,7 +330,7 @@ func (g *Generator) emitFuncVarArgs(w io.Writer, call *ast.CallExpr, sig *types.
 
 	if count == 0 {
 		// No variadic args: emit a nil slice.
-		fmt.Fprint(w, "(so_Slice){0}")
+		fmt.Fprint(w, "(so_Slice){}")
 		return
 	}
 

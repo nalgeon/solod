@@ -1,5 +1,7 @@
 package main
 
+type empty struct{}
+
 func main() {
 	{
 		// make, len, cap.
@@ -39,6 +41,17 @@ func main() {
 		}
 		if nums[3] != 4 {
 			panic("want nums[3] = 4")
+		}
+	}
+
+	{
+		// Append elements with no fields.
+		es := make([]empty, 1, 4)
+		es[0] = empty{}
+		es = append(es, empty{})
+		es = append(es, empty{}, empty{})
+		if len(es) != 4 {
+			panic("want len(es) = 4")
 		}
 	}
 }

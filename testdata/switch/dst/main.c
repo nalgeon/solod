@@ -362,7 +362,7 @@ int main(void) {
     }
     {
         // Switch on a slice compares to nil.
-        so_Slice s = {0};
+        so_Slice s = {};
         {
             so_Slice _sw21 = s;
             if (_sw21.ptr == NULL) {

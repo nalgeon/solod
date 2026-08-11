@@ -98,6 +98,7 @@ func (g *Generator) emitAppendCall(w io.Writer, call *ast.CallExpr) {
 		// Appending individual values (e.g. append(dst, v1, v2, v3)).
 		fmt.Fprintf(w, "so_append(%s, ", elemType)
 		g.emitMacroArg(w, call.Args[0])
+		fmt.Fprintf(w, ", %d", len(call.Args)-1)
 		for _, arg := range call.Args[1:] {
 			fmt.Fprint(w, ", ")
 			g.emitMacroArg(w, arg)
@@ -215,7 +216,7 @@ func (g *Generator) emitNewCall(w io.Writer, call *ast.CallExpr) {
 	if tv.IsType() {
 		// new(T) - zero-initialized compound literal.
 		cType := g.mapTypeName(call, tv.Type)
-		fmt.Fprintf(w, "&(%s){0}", cType)
+		fmt.Fprintf(w, "&(%s){}", cType)
 		return
 	}
 	if _, ok := call.Args[0].(*ast.CompositeLit); ok {

@@ -658,7 +658,7 @@ func (g *Generator) emitExprAsType(w io.Writer, node ast.Node, expr ast.Expr, ta
 		valType := g.types.TypeOf(expr)
 		if isNilType(valType) {
 			cType := g.mapTypeName(node, targetType)
-			fmt.Fprintf(w, "(%s){0}", cType)
+			fmt.Fprintf(w, "(%s){}", cType)
 			return
 		}
 		if isConcreteNamedType(valType) {
@@ -668,7 +668,7 @@ func (g *Generator) emitExprAsType(w io.Writer, node ast.Node, expr ast.Expr, ta
 	}
 	// Slice nil assignment: emit zero-initialized struct instead of NULL.
 	if _, ok := targetType.Underlying().(*types.Slice); ok && isNilType(g.types.TypeOf(expr)) {
-		fmt.Fprint(w, "(so_Slice){0}")
+		fmt.Fprint(w, "(so_Slice){}")
 		return
 	}
 	// Map nil assignment: emit NULL.

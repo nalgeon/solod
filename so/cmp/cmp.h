@@ -5,7 +5,7 @@
 // A typedef of a supported type is also supported.
 // For any other type, FuncFor returns NULL.
 #define cmp_FuncFor(T)         \
-    _Generic((T){0},           \
+    _Generic((T){},            \
         uint8_t: cmp_u8,       \
         uint16_t: cmp_u16,     \
         uint32_t: cmp_u32,     \

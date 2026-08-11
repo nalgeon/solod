@@ -56,6 +56,14 @@ type Benchmark struct {
 	}
 }
 
+type empty struct{}
+
+// Struct with an empty first field.
+type tagged struct {
+	e empty
+	n int
+}
+
 func main() {
 	{
 		// Primitive types.
@@ -103,6 +111,23 @@ func main() {
 		sp := &sean
 		sp.age = 51
 		_ = sean
+	}
+	{
+		// Empty struct types.
+		var e empty
+		_ = e
+
+		ep := new(empty)
+		_ = ep
+
+		var earr [3]empty
+		_ = earr
+
+		var tag tagged
+		tag.n = 60
+		if tag.n != 60 {
+			panic("tag.n != 60")
+		}
 	}
 	{
 		// Anonymous struct type.

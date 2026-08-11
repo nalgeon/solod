@@ -61,7 +61,7 @@ func (g *Generator) emitSliceLit(w io.Writer, n *ast.CompositeLit) {
 	elemType := g.mapTypeName(n, sl.Elem())
 	size := len(n.Elts)
 	if size == 0 {
-		fmt.Fprint(w, "(so_Slice){0}")
+		fmt.Fprint(w, "(so_Slice){}")
 		return
 	}
 	fmt.Fprintf(w, "(so_Slice){(%s[%d]){", elemType, size)

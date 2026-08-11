@@ -39,7 +39,7 @@ int main(void) {
     }
     {
         so_print("%s", "lang/macro: Generic method");
-        main_Box b = {0};
+        main_Box b = {};
         main_Box_set(so_int, (&b), (42));
         if (b.val != 42) {
             so_panic("b.val != 42");

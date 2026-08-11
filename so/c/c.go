@@ -242,7 +242,7 @@ func Val[T any](expr string) T {
 
 // Zero returns the zero value of type T.
 //
-//	{0}
+//	{}
 //
 //so:extern
 func Zero[T any]() T {

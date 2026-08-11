@@ -28,7 +28,7 @@ int main(void) {
         check(err.self == NULL, so_str("bufio: read failed"));
         check(b == 'h', so_str("bufio: wrong byte"));
         bufio_Reader_Free(&br);
-        bytes_Buffer w = bytes_NewBuffer(alloc, (so_Slice){0});
+        bytes_Buffer w = bytes_NewBuffer(alloc, (so_Slice){});
         so_R_int_err _res2 = io_WriteString((io_Writer){.self = &w, .Write = bytes_Buffer_Write}, so_str("hello"));
         so_int n = _res2.val;
         err = _res2.err;
@@ -60,7 +60,7 @@ int main(void) {
     }
     {
         // encoding/binary, encoding/hex
-        binary_LE le = {0};
+        binary_LE le = {};
         so_Slice word = (so_Slice){(so_byte[4]){0, 0, 0, 0}, 4, 4};
         binary_LE_PutUint32(le, word, 0x01020304);
         check(binary_LE_Uint32(le, word) == 0x01020304, so_str("binary: wrong value"));

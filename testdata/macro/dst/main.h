@@ -51,7 +51,7 @@ typedef struct {
 })
 
 #define work(T, v_) ({ \
-    (so_R_ptr_err){.val = v_, .err = (so_Error){0}}; \
+    (so_R_ptr_err){.val = v_, .err = (so_Error){}}; \
 })
 
 #define main_Box_set(T, b_, val_) do { \

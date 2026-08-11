@@ -13,14 +13,14 @@ static so_Error makeTea(so_int arg) {
     if (arg == 42) {
         return main_ErrOutOfTea;
     }
-    return (so_Error){0};
+    return (so_Error){};
 }
 
 static so_R_int_err work(so_int n) {
     if (n == 42) {
         return (so_R_int_err){.val = 0, .err = main_ErrOutOfTea};
     }
-    return (so_R_int_err){.val = n, .err = (so_Error){0}};
+    return (so_R_int_err){.val = n, .err = (so_Error){}};
 }
 
 int main(void) {
@@ -40,7 +40,7 @@ int main(void) {
     }
     {
         // Variable of type error.
-        so_Error err = {0};
+        so_Error err = {};
         if (err.self != NULL) {
             so_panic("err != nil");
         }
@@ -77,7 +77,7 @@ int main(void) {
         so_Error err = makeTea(42);
         so_println("%s %s", "err =", so_error_cstr(err));
         so_println("%s %.*s", "err text =", err.Error(err.self).len, err.Error(err.self).ptr);
-        so_Error nilErr = {0};
+        so_Error nilErr = {};
         so_println("%s %s", "err =", so_error_cstr(nilErr));
     }
     return 0;

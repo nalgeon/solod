@@ -7,6 +7,8 @@ type Pair struct {
 
 type IntFunc func() int
 
+type empty struct{}
+
 type StrMap map[string]int
 
 func takeMap(m map[string]int) int {
@@ -547,6 +549,19 @@ func main() {
 		m := map[string]int{"a": 1}
 		if _, ok := m["missing"]; ok {
 			panic("if-init miss")
+		}
+	}
+	{
+		// Map with a value type with no fields.
+		set := make(map[string]empty, 4)
+		set["a"] = empty{}
+		v := set["a"]
+		_ = v
+		if _, ok := set["b"]; ok {
+			panic("empty value miss")
+		}
+		if len(set) != 1 {
+			panic("empty value len")
 		}
 	}
 	{

@@ -22,7 +22,7 @@ func (g *Generator) emitMapLit(w io.Writer, n *ast.CompositeLit) {
 	size := len(n.Elts)
 
 	if size == 0 {
-		fmt.Fprint(w, "&(so_Map){0}")
+		fmt.Fprint(w, "&(so_Map){}")
 		return
 	}
 

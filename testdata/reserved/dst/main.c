@@ -87,8 +87,8 @@ int main(void) {
         (void)b;
     }
     // Reference the reserved-parameter types so they are emitted.
-    movie m = {0};
-    rater r = {0};
+    movie m = {};
+    rater r = {};
     (void)m;
     (void)r;
     return 0;

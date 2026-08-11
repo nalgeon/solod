@@ -23,7 +23,7 @@ int main(void) {
     }
     {
         // Extern nodecay functions.
-        Account acc = {0};
+        Account acc = {};
         so_String name = so_str("Alice");
         account_set_name(&acc, name);
         if (so_string_ne(acc.name, so_str("Alice"))) {
@@ -59,7 +59,7 @@ int main(void) {
     }
     {
         // Extern function pointer from a different package.
-        Stream s = {0};
+        Stream s = {};
         s.Write = Discard;
         s.Write("Hello, %s!", "world");
     }

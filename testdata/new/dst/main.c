@@ -14,11 +14,11 @@ typedef struct point {
 int main(void) {
     {
         // new with type
-        so_int* n = &(so_int){0};
+        so_int* n = &(so_int){};
         if (n == NULL || *n != 0) {
             so_panic("expected n == 0");
         }
-        point* p = &(point){0};
+        point* p = &(point){};
         if (p == NULL || p->x != 0 || p->y != 0) {
             so_panic("expected p.x == 0 && p.y == 0");
         }

@@ -44,58 +44,58 @@ static void testStructUnexported(void);
 static void testStructOtherPackage(void);
 
 // -- Variables and constants --
-static main_File file = {0};
+static main_File file = {};
 
 // -- Implementation --
 
 static main_FileResult makeFile(so_int size) {
-    return (main_FileResult){.val = (main_File){.size = size}, .err = (so_Error){0}};
+    return (main_FileResult){.val = (main_File){.size = size}, .err = (so_Error){}};
 }
 
 so_R_int_err main_File_Read(void* self, so_int buf) {
     main_File* f = self;
     (void)buf;
-    return (so_R_int_err){.val = f->size, .err = (so_Error){0}};
+    return (so_R_int_err){.val = f->size, .err = (so_Error){}};
 }
 
 static pointResult makePoint(so_int x, so_int y) {
-    return (pointResult){.val = (point){.x = x, .y = y}, .err = (so_Error){0}};
+    return (pointResult){.val = (point){.x = x, .y = y}, .err = (so_Error){}};
 }
 
 static sub_PointResult makeSubPoint(so_int x, so_int y) {
-    return (sub_PointResult){.val = (sub_Point){.X = x, .Y = y}, .err = (so_Error){0}};
+    return (sub_PointResult){.val = (sub_Point){.X = x, .Y = y}, .err = (so_Error){}};
 }
 
 static so_R_int_err divide(so_int a, so_int b) {
-    return (so_R_int_err){.val = so_div(a, b), .err = (so_Error){0}};
+    return (so_R_int_err){.val = so_div(a, b), .err = (so_Error){}};
 }
 
 static so_R_int_err returnInt(void) {
-    return (so_R_int_err){.val = 42, .err = (so_Error){0}};
+    return (so_R_int_err){.val = 42, .err = (so_Error){}};
 }
 
 static so_R_rune_err returnRune(void) {
-    return (so_R_rune_err){.val = 'x', .err = (so_Error){0}};
+    return (so_R_rune_err){.val = 'x', .err = (so_Error){}};
 }
 
 static so_R_str_err returnString(void) {
-    return (so_R_str_err){.val = so_str("hello"), .err = (so_Error){0}};
+    return (so_R_str_err){.val = so_str("hello"), .err = (so_Error){}};
 }
 
 static so_R_slice_err returnSlice(so_Slice s) {
-    return (so_R_slice_err){.val = s, .err = (so_Error){0}};
+    return (so_R_slice_err){.val = s, .err = (so_Error){}};
 }
 
 static main_FileResult returnStruct(void) {
-    return (main_FileResult){.val = (main_File){.size = 42}, .err = (so_Error){0}};
+    return (main_FileResult){.val = (main_File){.size = 42}, .err = (so_Error){}};
 }
 
 static so_R_ptr_err returnAny(void) {
-    return (so_R_ptr_err){.val = &file, .err = (so_Error){0}};
+    return (so_R_ptr_err){.val = &file, .err = (so_Error){}};
 }
 
 static so_R_ptr_err returnPtr(void) {
-    return (so_R_ptr_err){.val = &file, .err = (so_Error){0}};
+    return (so_R_ptr_err){.val = &file, .err = (so_Error){}};
 }
 
 // func returnIface() (Reader, error)  { return &file, nil }
@@ -148,7 +148,7 @@ static void testBasic(void) {
     (void)r4;
     // Assign to existing variables.
     q = 0;
-    err = (so_Error){0};
+    err = (so_Error){};
     so_R_int_err _res5 = divide(20, 7);
     q = _res5.val;
     err = _res5.err;
@@ -166,7 +166,7 @@ static void testIf(void) {
 }
 
 static void testReturnTypes(void) {
-    so_Error err = {0};
+    so_Error err = {};
     (void)err;
     so_R_int_err _res1 = returnInt();
     so_int i = _res1.val;
@@ -180,7 +180,7 @@ static void testReturnTypes(void) {
     so_String str = _res3.val;
     err = _res3.err;
     (void)str;
-    so_R_slice_err _res4 = returnSlice((so_Slice){0});
+    so_R_slice_err _res4 = returnSlice((so_Slice){});
     so_Slice slice = _res4.val;
     err = _res4.err;
     (void)slice;
@@ -201,7 +201,7 @@ static void testReturnTypes(void) {
 }
 
 static void testForwarding(void) {
-    so_Error err = {0};
+    so_Error err = {};
     (void)err;
     so_R_int_err _res1 = forwardInt();
     so_int i = _res1.val;
@@ -215,7 +215,7 @@ static void testForwarding(void) {
     so_String str = _res3.val;
     err = _res3.err;
     (void)str;
-    so_R_slice_err _res4 = forwardSlice((so_Slice){0});
+    so_R_slice_err _res4 = forwardSlice((so_Slice){});
     so_Slice slice = _res4.val;
     err = _res4.err;
     (void)slice;

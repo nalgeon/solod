@@ -7,7 +7,7 @@ so_Error fmt_ErrSize = errors_New("buffer size exceeded");
 
 so_R_int_err fmt_print(int newline, ...) {
     int total = 0;
-    so_Error err = {0};
+    so_Error err = {};
     va_list args;
 
     va_start(args, newline);
@@ -38,7 +38,7 @@ so_R_int_err fmt_Printf(const char* format, ...) {
     va_start(args, format);
     int n = vprintf(format, args);
     va_end(args);
-    so_Error err = n < 0 ? fmt_ErrPrint : (so_Error){0};
+    so_Error err = n < 0 ? fmt_ErrPrint : (so_Error){};
     return (so_R_int_err){.val = n, .err = err};
 }
 
@@ -83,7 +83,7 @@ so_R_int_err fmt_Scanf(const char* format, ...) {
     va_start(args, format);
     int n = vscanf(format, args);
     va_end(args);
-    so_Error err = n < 0 ? fmt_ErrScan : (so_Error){0};
+    so_Error err = n < 0 ? fmt_ErrScan : (so_Error){};
     return (so_R_int_err){.val = n, .err = err};
 }
 
@@ -92,7 +92,7 @@ so_R_int_err fmt_Sscanf(const char* str, const char* format, ...) {
     va_start(args, format);
     int n = vsscanf(str, format, args);
     va_end(args);
-    so_Error err = n < 0 ? fmt_ErrScan : (so_Error){0};
+    so_Error err = n < 0 ? fmt_ErrScan : (so_Error){};
     return (so_R_int_err){.val = n, .err = err};
 }
 
@@ -111,6 +111,6 @@ so_R_int_err fmt_Fscanf(io_Reader r, const char* format, ...) {
     int n = vsscanf(buf, format, args);
     va_end(args);
 
-    so_Error err = n < 0 ? fmt_ErrScan : (so_Error){0};
+    so_Error err = n < 0 ? fmt_ErrScan : (so_Error){};
     return (so_R_int_err){.val = n, .err = err};
 }

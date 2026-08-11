@@ -175,6 +175,27 @@ Without the suffix the literal was a `double`. C then promoted the other operand
 
 [0d81c8b](https://github.com/solod-dev/solod/commit/0d81c8b88c96d569f0e1428ed0ef9c1d5a22d4ce)
 
+**Empty struct**. A struct with no fields now works as a value, as a slice element, and as a map value:
+
+```go
+type empty struct{}
+
+var e empty   // was invalid C, now empty e = {};
+p := new(empty)
+
+set := make(map[string]empty, 4)
+set["a"] = empty{}
+v := set["a"]
+
+es := make([]empty, 1, 4)
+es[0] = empty{}
+es = append(es, empty{})
+```
+
+The zero value of an aggregate is now the empty initializer `{}`. It used to be `{0}`, which sets the first member of the aggregate. A struct with no fields has no member to set, so C rejected `{0}` for an `empty` value, an `[N]empty` array, and any struct with an `empty` first field.
+
+A struct with no fields has a size of zero, like in Go.
+
 ## Interop
 
 **C field name override**. A `c:"..."` struct tag sets the C name of a field. An extern struct can then match a C header field with a Go keyword as the name:

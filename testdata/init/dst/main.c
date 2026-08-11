@@ -31,7 +31,7 @@ int main(void) {
     }
     {
         // Method named init (just a regular method).
-        value v = {0};
+        value v = {};
         value_init(&v, 123);
         if (v.x != 123) {
             so_panic("v.x != 123");

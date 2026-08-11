@@ -60,7 +60,7 @@ static so_R_int_err funcCalc(void) {
     if (state != 1) {
         so_panic("unexpected state");
     }
-    return (so_R_int_err){.val = 42, .err = (so_Error){0}};
+    return (so_R_int_err){.val = 42, .err = (so_Error){}};
 }
 
 int main(void) {

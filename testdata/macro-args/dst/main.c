@@ -14,7 +14,7 @@ typedef struct point {
 int main(void) {
     // append a composite-literal value.
     so_Slice pts = so_make_slice(point, 0, 2);
-    pts = so_append(point, pts, ((point){1, 2}));
+    pts = so_append(point, pts, 1, ((point){1, 2}));
     if (so_at(point, pts, 0).y != 2) {
         so_panic("append value");
     }

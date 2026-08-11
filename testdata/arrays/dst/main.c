@@ -58,7 +58,7 @@ static so_int box_sum(box b, so_int a[3]) {
 int main(void) {
     {
         // Array literals.
-        so_int a[5] = {0};
+        so_int a[5] = {};
         (void)a;
         a[4] = 100;
         so_int x = a[4];
@@ -74,8 +74,8 @@ int main(void) {
     }
     {
         // Multi-variable array declaration.
-        so_byte a1[2] = {0};
-        so_byte a2[2] = {0};
+        so_byte a1[2] = {};
+        so_byte a2[2] = {};
         (void)a1;
         (void)a2;
         so_byte b1[2] = {'1', '2'};
@@ -144,12 +144,12 @@ int main(void) {
         if (b1.nums[1] != 22) {
             so_panic("want b1.nums[1] == 22");
         }
-        box b2 = {0};
+        box b2 = {};
         memcpy(b2.nums, (so_int[3]){1, 2, 3}, sizeof(b2.nums));
         if (b2.nums[1] != 2) {
             so_panic("want b2.nums[1] == 2");
         }
-        box b3 = {0};
+        box b3 = {};
         so_int arr[3] = {1, 2, 3};
         memcpy(b3.nums, arr, sizeof(b3.nums));
         if (b3.nums[1] != 2) {
@@ -164,7 +164,7 @@ int main(void) {
         if (b[0] != 1 || b[2] != 3) {
             so_panic("want b == {1, 2, 3}");
         }
-        so_int c[3] = {0};
+        so_int c[3] = {};
         memcpy(c, (so_int[3]){1, 2, 3}, sizeof(c));
         if (c[0] != 1 || c[2] != 3) {
             so_panic("want c == {1, 2, 3}");
@@ -177,7 +177,7 @@ int main(void) {
     }
     {
         // Arrays can be named types.
-        array a = {0};
+        array a = {};
         a[1] = 42;
         if (a[1] != 42) {
             so_panic("want a[1] == 42");
@@ -235,7 +235,7 @@ int main(void) {
     }
     {
         // Multi-dimensional arrays.
-        int32_t twoD[2][3] = {0};
+        int32_t twoD[2][3] = {};
         for (so_int i = 0; i < 2; i++) {
             for (so_int j = 0; j < 3; j++) {
                 twoD[i][j] = (int32_t)(i * 10 + j + 1);
@@ -282,7 +282,7 @@ int main(void) {
     {
         // Array comparisons.
         so_int a[3] = {1, 2, 3};
-        so_int b[3] = {0};
+        so_int b[3] = {};
         b[0] = 1;
         b[1] = 2;
         b[2] = 3;

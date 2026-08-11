@@ -357,7 +357,7 @@ func (c *escapeChecker) isFrameComposite(x *ast.CompositeLit) bool {
 		return true
 	case *types.Map:
 		// A map literal translates to so_map_lit, which calls so_make_map;
-		// an empty one translates to a &(so_Map){0} compound literal. Both
+		// an empty one translates to a &(so_Map){} compound literal. Both
 		// live in the frame.
 		return true
 	case *types.Slice:

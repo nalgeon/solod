@@ -51,7 +51,7 @@ static bool shapeCheckAssign(main_Shape s) {
 }
 
 static main_Shape nilShape(void) {
-    return (main_Shape){0};
+    return (main_Shape){};
 }
 
 int main(void) {
@@ -79,14 +79,14 @@ int main(void) {
     }
     {
         // Nil interface. Nil works on either side.
-        main_Shape s1 = {0};
+        main_Shape s1 = {};
         if (s1.self != NULL) {
             so_panic("want nil interface");
         }
         if (s1.self != NULL) {
             so_panic("want nil interface");
         }
-        main_Shape s2 = (main_Shape){0};
+        main_Shape s2 = (main_Shape){};
         if (s2.self != NULL) {
             so_panic("want nil interface");
         }
@@ -94,11 +94,11 @@ int main(void) {
         if (s3.self != NULL) {
             so_panic("want nil interface");
         }
-        bool isRect = shapeIsRect((main_Shape){0});
+        bool isRect = shapeIsRect((main_Shape){});
         if (isRect) {
             so_panic("want isRect == false");
         }
-        main_Rect r = {0};
+        main_Rect r = {};
         main_Shape s4 = (main_Shape){.self = &r, .Area = main_Rect_Area, .Perim = main_Rect_Perim};
         if (s4.self == NULL) {
             so_panic("want non-nil interface");
@@ -117,14 +117,14 @@ int main(void) {
         if (c2.shape.Area(c2.shape.self) != 20) {
             so_panic("c2.shape.Area() != 20");
         }
-        main_Canvas c3 = (main_Canvas){.name = so_str("c3"), .shape = (main_Shape){0}};
+        main_Canvas c3 = (main_Canvas){.name = so_str("c3"), .shape = (main_Shape){}};
         if (c3.shape.self != NULL) {
             so_panic("c3.shape != nil");
         }
     }
     {
         // Interface field assignment.
-        main_Canvas c = {0};
+        main_Canvas c = {};
         c.shape = (main_Shape){.self = &r, .Area = main_Rect_Area, .Perim = main_Rect_Perim};
         if (c.shape.Area(c.shape.self) != 50) {
             so_panic("c.shape.Area() != 50");
@@ -151,7 +151,7 @@ int main(void) {
     }
     {
         // Redeclared interface variable.
-        main_Shape s = {0};
+        main_Shape s = {};
         s = (main_Shape){.self = &r, .Area = main_Rect_Area, .Perim = main_Rect_Perim};
         so_int n = 42;
         (void)n;

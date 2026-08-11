@@ -194,7 +194,7 @@ func (g *Generator) emitMethodVarArgs(w io.Writer, sel *ast.SelectorExpr, call *
 	targetType := variadicParam.Type().(*types.Slice).Elem()
 	if count == 0 {
 		// No variadic args: emit a nil slice.
-		fmt.Fprintf(w, ", %s(so_Slice){0}%s", lparen, rparen)
+		fmt.Fprintf(w, ", %s(so_Slice){}%s", lparen, rparen)
 		return
 	}
 

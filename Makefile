@@ -1,5 +1,5 @@
 CFLAGS_CORE = -O1 -g -std=gnu11 -Wall -Wextra -Werror -Wno-shadow -Wno-unused-label
-CFLAGS ?= $(CFLAGS_CORE) -fsanitize=address -fsanitize=undefined -fstack-protector-all -fno-omit-frame-pointer
+CFLAGS ?= $(CFLAGS_CORE) -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fstack-protector-all -fno-omit-frame-pointer
 LDLIBS ?= -lm
 
 CLANG = clang

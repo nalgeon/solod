@@ -1,5 +1,12 @@
 #include "main.h"
 
+// -- Types --
+
+typedef struct empty empty;
+
+typedef struct empty {
+} empty;
+
 // -- Forward declarations --
 static so_int takeMap(so_Map* m);
 static void modifyMap(so_Map* m);
@@ -175,7 +182,7 @@ int main(void) {
     }
     {
         // Empty literal
-        so_Map* m = &(so_Map){0};
+        so_Map* m = &(so_Map){};
         if (m->len != 0) {
             so_panic("empty literal");
         }
@@ -423,7 +430,7 @@ int main(void) {
     }
     {
         // len: empty
-        so_Map* m = &(so_Map){0};
+        so_Map* m = &(so_Map){};
         if (m->len != 0) {
             so_panic("len empty");
         }
@@ -578,6 +585,22 @@ int main(void) {
             if (ok) {
                 so_panic("if-init miss");
             }
+        }
+    }
+    {
+        // Map with a value type with no fields.
+        so_Map* set = so_make_map(so_String, empty, 4);
+        so_map_set(so_String, empty, set, so_str("a"), ((empty){}));
+        empty v = so_map_get(so_String, empty, set, so_str("a"));
+        (void)v;
+        {
+            bool ok = so_map_has(so_String, set, so_str("b"));
+            if (ok) {
+                so_panic("empty value miss");
+            }
+        }
+        if (set->len != 1) {
+            so_panic("empty value len");
         }
     }
     {

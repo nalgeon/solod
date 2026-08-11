@@ -16,11 +16,11 @@ static so_int main_SliceHolder_get(main_SliceHolder h, so_int i);
 static so_R_i64_err lenInt64(so_Slice buf) {
     so_R_i64_err _res1 = lenInt64Impl(buf);
     int64_t n = _res1.val;
-    return (so_R_i64_err){.val = n, .err = (so_Error){0}};
+    return (so_R_i64_err){.val = n, .err = (so_Error){}};
 }
 
 static so_R_i64_err lenInt64Impl(so_Slice buf) {
-    return (so_R_i64_err){.val = (int64_t)(so_len(buf)), .err = (so_Error){0}};
+    return (so_R_i64_err){.val = (int64_t)(so_len(buf)), .err = (so_Error){}};
 }
 
 static so_int sumSlice(so_Slice s) {
@@ -42,7 +42,7 @@ static void acceptSlice(so_Slice s) {
 }
 
 static so_Slice nilSlice(void) {
-    return (so_Slice){0};
+    return (so_Slice){};
 }
 
 static so_int sumVariadic(so_Slice nums) {
@@ -137,14 +137,14 @@ int main(void) {
     }
     {
         // Slice literals.
-        so_Slice nils = (so_Slice){0};
+        so_Slice nils = (so_Slice){};
         if (nils.ptr != NULL) {
             so_panic("want nils == nil");
         }
         if (so_len(nils) != 0) {
             so_panic("want len(nils) == 0");
         }
-        so_Slice empty = (so_Slice){0};
+        so_Slice empty = (so_Slice){};
         if (so_len(empty) != 0) {
             so_panic("want len(empty) == 0");
         }
@@ -177,7 +177,7 @@ int main(void) {
         if (so_len(s) != 0 || so_cap(s) != 8) {
             so_panic("want len==0, cap==8");
         }
-        s = so_append(so_int, s, 10);
+        s = so_append(so_int, s, 1, 10);
         if (so_len(s) != 1 || so_at(so_int, s, 0) != 10) {
             so_panic("want len==1, s[0]==10");
         }
@@ -198,8 +198,8 @@ int main(void) {
     {
         // Append: single value.
         so_Slice s = so_make_slice(so_int, 0, 4);
-        s = so_append(so_int, s, 1);
-        s = so_append(so_int, s, 2);
+        s = so_append(so_int, s, 1, 1);
+        s = so_append(so_int, s, 1, 2);
         if (so_len(s) != 2 || so_at(so_int, s, 0) != 1 || so_at(so_int, s, 1) != 2) {
             so_panic("want append single");
         }
@@ -207,7 +207,7 @@ int main(void) {
     {
         // Append: multiple values.
         so_Slice s = so_make_slice(so_int, 0, 8);
-        s = so_append(so_int, s, 1, 2, 3);
+        s = so_append(so_int, s, 3, 1, 2, 3);
         if (so_len(s) != 3 || so_at(so_int, s, 0) != 1 || so_at(so_int, s, 2) != 3) {
             so_panic("want append multi");
         }
@@ -215,7 +215,7 @@ int main(void) {
     {
         // Append: spread another slice.
         so_Slice s = so_make_slice(so_int, 0, 8);
-        s = so_append(so_int, s, 1, 2);
+        s = so_append(so_int, s, 2, 1, 2);
         so_Slice other = (so_Slice){(so_int[3]){3, 4, 5}, 3, 3};
         s = so_extend(so_int, s, (other));
         if (so_len(s) != 5 || so_at(so_int, s, 2) != 3 || so_at(so_int, s, 4) != 5) {
@@ -237,8 +237,8 @@ int main(void) {
     {
         // Append: strings.
         so_Slice s = so_make_slice(so_String, 0, 4);
-        s = so_append(so_String, s, so_str("hello"));
-        s = so_append(so_String, s, so_str("world"));
+        s = so_append(so_String, s, 1, so_str("hello"));
+        s = so_append(so_String, s, 1, so_str("world"));
         if (so_len(s) != 2 || so_string_ne(so_at(so_String, s, 0), so_str("hello")) || so_string_ne(so_at(so_String, s, 1), so_str("world"))) {
             so_panic("want append strings");
         }
@@ -278,11 +278,11 @@ int main(void) {
         if (so_len(s) != 0) {
             so_panic("want len==0 before append");
         }
-        s = so_append(so_int, s, 1);
+        s = so_append(so_int, s, 1, 1);
         if (so_len(s) != 1) {
             so_panic("want len==1 after append");
         }
-        s = so_append(so_int, s, 2, 3);
+        s = so_append(so_int, s, 2, 2, 3);
         if (so_len(s) != 3) {
             so_panic("want len==3 after multi append");
         }
@@ -297,7 +297,7 @@ int main(void) {
     }
     {
         // Pass and return slices.
-        so_byte buf[4] = {0};
+        so_byte buf[4] = {};
         so_R_i64_err _res1 = lenInt64(so_array_slice(so_byte, buf, 0, 4, 4));
         int64_t n = _res1.val;
         if (n != 4) {
@@ -511,7 +511,7 @@ int main(void) {
     }
     {
         // Nil slice: comparison. Nil works on either side.
-        so_Slice s = {0};
+        so_Slice s = {};
         if (s.ptr != NULL) {
             so_panic("want nil slice");
         }
@@ -528,7 +528,7 @@ int main(void) {
     }
     {
         // Nil slice: len and cap.
-        so_Slice s = {0};
+        so_Slice s = {};
         if (so_len(s) != 0) {
             so_panic("want nil len==0");
         }
@@ -538,7 +538,7 @@ int main(void) {
     }
     {
         // Nil slice: pass to function.
-        acceptSlice((so_Slice){0});
+        acceptSlice((so_Slice){});
     }
     {
         // Nil slice: return from function.
@@ -579,7 +579,7 @@ int main(void) {
     {
         // Named slice type: make.
         main_IntSlice s = so_make_slice(so_int, 0, 4);
-        s = so_append(so_int, s, 1, 2);
+        s = so_append(so_int, s, 2, 1, 2);
         if (so_len(s) != 2 || so_at(so_int, s, 0) != 1 || so_at(so_int, s, 1) != 2) {
             so_panic("want named type make+append");
         }
@@ -701,7 +701,7 @@ int main(void) {
         so_at(so_int, s, 0) = 1;
         so_at(so_int, s, 1) = 2;
         so_at(so_int, s, 2) = 3;
-        s = so_append(so_int, s, 4);
+        s = so_append(so_int, s, 1, 4);
         if (so_len(s) != 4 || so_at(so_int, s, 3) != 4) {
             so_panic("want append after make");
         }
@@ -709,9 +709,9 @@ int main(void) {
     {
         // Make with cap, fill with append.
         so_Slice s = so_make_slice(so_int, 0, 5);
-        s = so_append(so_int, s, 10);
-        s = so_append(so_int, s, 20, 30);
-        s = so_append(so_int, s, 40, 50);
+        s = so_append(so_int, s, 1, 10);
+        s = so_append(so_int, s, 2, 20, 30);
+        s = so_append(so_int, s, 2, 40, 50);
         if (so_len(s) != 5 || so_cap(s) != 5) {
             so_panic("want filled to cap");
         }
