@@ -1,0 +1,26 @@
+#pragma once
+#include "so/builtin/builtin.h"
+#include "so/bufio/bufio.h"
+#include "so/bytealg/bytealg.h"
+#include "so/bytes/bytes.h"
+#include "so/c/c.h"
+#include "so/cmp/cmp.h"
+#include "so/encoding/binary/binary.h"
+#include "so/encoding/hex/hex.h"
+#include "so/errors/errors.h"
+#include "so/io/io.h"
+#include "so/maps/maps.h"
+#include "so/math/bits/bits.h"
+#include "so/math/rand/rand.h"
+#include "so/mem/mem.h"
+#include "so/path/path.h"
+#include "so/runtime/runtime.h"
+#include "so/slices/slices.h"
+#include "so/strconv/strconv.h"
+#include "so/strings/strings.h"
+#include "so/time/time.h"
+#include "so/unicode/unicode.h"
+#include "so/unicode/utf8/utf8.h"
+
+// -- Variables and constants --
+extern so_Error main_ErrCheck;
