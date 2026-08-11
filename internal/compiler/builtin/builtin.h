@@ -4,7 +4,7 @@
 
 #ifdef _WIN32
 #include <malloc.h>
-#elif !defined(__OpenBSD__)
+#elif !defined(__OpenBSD__) && !defined(__FreeBSD__)
 #include <alloca.h>
 #endif
 
