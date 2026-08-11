@@ -24,9 +24,11 @@ int main(void) {
         if (u1 + 1 != 0 || u1 / 2 != 9223372036854775807) {
             so_panic("want MaxUint64");
         }
-        so_uint u2 = 9223372036854775808u;
-        if (u2 - 1 != 9223372036854775807) {
-            so_panic("want MaxInt64+1");
+        // The target decides the width of uint, so the value is derived,
+        // not written as a literal.
+        so_uint u2 = ~(so_uint)(0) / 2 + 1;
+        if (u2 - 1 != ~(so_uint)(0) / 2) {
+            so_panic("want MaxInt+1");
         }
         const so_unused uint64_t u3 = 0xFFFFFFFFFFFFFFFFu;
         if (u3 != u1) {

@@ -23,9 +23,11 @@ func main() {
 		if u1+1 != 0 || u1/2 != 9223372036854775807 {
 			panic("want MaxUint64")
 		}
-		var u2 uint = 9223372036854775808
-		if u2-1 != 9223372036854775807 {
-			panic("want MaxInt64+1")
+		// The target decides the width of uint, so the value is derived,
+		// not written as a literal.
+		var u2 uint = ^uint(0)/2 + 1
+		if u2-1 != ^uint(0)/2 {
+			panic("want MaxInt+1")
 		}
 		const u3 uint64 = 0xFFFFFFFFFFFFFFFF
 		if u3 != u1 {

@@ -56,7 +56,7 @@ const r4 = '\xff'
 const r5 = '\u12e4'
 ```
 
-In C, the default type for integers is `so_int` (`int64_t`), for floats it's `double`, and for runes it's `int32_t`.
+In C, the default type for integers is `so_int`, for floats it's `double`, and for runes it's `int32_t`.
 
 Complex numbers are not supported.
 
@@ -116,7 +116,9 @@ vAnyPtr := any(vPtr)
 vNil := any(nil)
 ```
 
-`byte` is translated to `so_byte` (`uint8_t`), `rune` to `so_rune` (`int32_t`), and `int` to `so_int` (`int64_t`).
+`byte` is translated to `so_byte` (`uint8_t`), `rune` to `so_rune` (`int32_t`), `int` to `so_int`, and `uint` to `so_uint`.
+
+The width of `so_int` and `so_uint` equals the pointer width of the target, either 32 bits or 64 bits. Portable code must not assume more than 32 bits. Use `int64` or `uint64` for a value above 32 bits.
 
 `any` is not treated as an interface. Instead, it's translated to `void*`. This makes handling pointers much easier and removes the need for `unsafe.Pointer`.
 
