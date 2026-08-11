@@ -358,15 +358,19 @@ typedef struct {
 //
 // The generator passes n. The macro cannot calculate n with sizeof(T),
 // because sizeof(T) is 0 for a struct type with no fields.
-#define so_append(T, s, n, ...) ({                     \
-    so_Slice _s = (s);                                 \
-    T _vals[] = {__VA_ARGS__};                         \
-    so_int _n = (so_int)(n);                           \
-    if (_s.len + _n > _s.cap)                          \
-        so_panic("append: out of capacity");           \
-    memcpy((T*)_s.ptr + _s.len, _vals, sizeof(_vals)); \
-    _s.len += _n;                                      \
-    _s;                                                \
+//
+// sizeof(_vals) is zero for an append of no values, and for an element
+// type with no fields. Both cases skip memcpy to avoid UB.
+#define so_append(T, s, n, ...) ({                         \
+    so_Slice _s = (s);                                     \
+    T _vals[] = {__VA_ARGS__};                             \
+    so_int _n = (so_int)(n);                               \
+    if (_s.len + _n > _s.cap)                              \
+        so_panic("append: out of capacity");               \
+    if (sizeof(_vals) > 0)                                 \
+        memcpy((T*)_s.ptr + _s.len, _vals, sizeof(_vals)); \
+    _s.len += _n;                                          \
+    _s;                                                    \
 })
 
 // extend appends all elements from a source slice to a destination slice.
@@ -395,10 +399,13 @@ static inline so_int so_copy_impl(so_Slice dst, so_Slice src, size_t elem_size) 
 
 // clear sets all elements up to the length
 // of the slice to their zero value.
-#define so_clear(T, s) ({                            \
-    so_Slice _s = (s);                               \
-    memset(_s.ptr, 0, (size_t)(_s.len) * sizeof(T)); \
-    _s;                                              \
+// An empty slice (ptr == NULL) skips memset to avoid UB.
+#define so_clear(T, s) ({                                \
+    so_Slice _s = (s);                                   \
+    if (_s.len > 0) {                                    \
+        memset(_s.ptr, 0, (size_t)(_s.len) * sizeof(T)); \
+    }                                                    \
+    _s;                                                  \
 })
 
 // --- String/slice operations ---

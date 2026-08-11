@@ -53,6 +53,14 @@ int main(void) {
         }
     }
     {
+        // Append no values to a nil slice.
+        so_Slice nums = {};
+        nums = so_append(so_int, nums, 0);
+        if (so_len(nums) != 0) {
+            so_panic("want len(nums) = 0");
+        }
+    }
+    {
         // Append elements with no fields.
         so_Slice es = so_make_slice(empty, 1, 4);
         so_at(empty, es, 0) = (empty){};

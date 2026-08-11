@@ -45,6 +45,15 @@ func main() {
 	}
 
 	{
+		// Append no values to a nil slice.
+		var nums []int
+		nums = append(nums)
+		if len(nums) != 0 {
+			panic("want len(nums) = 0")
+		}
+	}
+
+	{
 		// Append elements with no fields.
 		es := make([]empty, 1, 4)
 		es[0] = empty{}
