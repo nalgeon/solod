@@ -1,12 +1,10 @@
 #pragma once
 
-#if __STDC_HOSTED__
+// The builtin is globally available in Clang and GCC. It's safe to define
+// because any system header that defines alloca undefines it first.
+#define alloca __builtin_alloca
 
-#ifdef _WIN32
-#include <malloc.h>
-#elif !defined(__OpenBSD__)
-#include <alloca.h>
-#endif
+#if __STDC_HOSTED__
 
 #include <assert.h>
 #include <inttypes.h>
@@ -26,7 +24,6 @@
 #include <stdalign.h>
 #include <stddef.h>
 
-#define alloca __builtin_alloca
 #define memcmp __builtin_memcmp
 #define memcpy __builtin_memcpy
 #define memmove __builtin_memmove
