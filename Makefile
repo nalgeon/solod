@@ -32,7 +32,7 @@ else ifeq ($(mode), fast)
 	CFLAGS = $(CFLAGS_CORE)
 else ifeq ($(mode), bare)
 	CC = $(ZIG)
-	CFLAGS = $(CFLAGS_CORE) --target=wasm32-freestanding -nostdlib -Wl,--no-entry -Wl,--export=main -DSO_HEAP_SIZE=65536
+	CFLAGS = $(CFLAGS_CORE) --target=wasm32-freestanding -nostdlib -Wl,--no-gc-sections -Wl,--no-entry -Wl,--export=main -DSO_HEAP_SIZE=65536
 	LDLIBS =
 	OUT_EXT = .wasm
 	RUN_PREFIX = wasmtime --invoke main
