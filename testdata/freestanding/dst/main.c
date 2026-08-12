@@ -69,6 +69,19 @@ int main(void) {
         check(so_string_eq(so_bytes_string(dst), so_str("04030201")), so_str("hex: wrong encoding"));
     }
     {
+        // encoding/json
+        so_Slice out = so_make_slice(so_byte, 64, 64);
+        strings_Builder sb = strings_FixedBuilder(out);
+        json_Encoder enc = json_NewEncoder((io_Writer){.self = &sb, .Write = strings_Builder_Write});
+        json_Encoder_BeginObject(&enc);
+        json_Encoder_Str(&enc, so_str("pi"));
+        json_Encoder_Float(&enc, 3.5);
+        json_Encoder_EndObject(&enc);
+        json_Encoder_Flush(&enc);
+        check(json_Encoder_Err(&enc).self == NULL, so_str("json: encode failed"));
+        check(so_string_eq(strings_Builder_String(&sb), so_str("{\"pi\":3.5}")), so_str("json: wrong text"));
+    }
+    {
         // errors
         so_Error err = main_ErrCheck;
         check(so_string_eq(err.Error(err.self), so_str("check failed")), so_str("errors: wrong text"));

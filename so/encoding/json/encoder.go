@@ -2,7 +2,6 @@ package json
 
 import (
 	"solod.dev/so/io"
-	"solod.dev/so/math"
 	"solod.dev/so/strconv"
 	"solod.dev/so/unicode/utf8"
 )
@@ -131,7 +130,7 @@ func (e *Encoder) Float(f float64) {
 	if !e.allowValue() {
 		return
 	}
-	if math.IsNaN(f) || math.IsInf(f, 0) {
+	if !isFinite(f) {
 		e.err = ErrNonFinite
 		return
 	}

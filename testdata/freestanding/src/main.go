@@ -16,6 +16,7 @@ import (
 	"solod.dev/so/cmp"
 	"solod.dev/so/encoding/binary"
 	"solod.dev/so/encoding/hex"
+	"solod.dev/so/encoding/json"
 	"solod.dev/so/errors"
 	"solod.dev/so/io"
 	"solod.dev/so/maps"
@@ -93,6 +94,19 @@ func main() {
 		dst := make([]byte, hex.EncodedLen(len(word)))
 		hex.Encode(dst, word)
 		check(string(dst) == "04030201", "hex: wrong encoding")
+	}
+	{
+		// encoding/json
+		out := make([]byte, 64)
+		sb := strings.FixedBuilder(out)
+		enc := json.NewEncoder(&sb)
+		enc.BeginObject()
+		enc.Str("pi")
+		enc.Float(3.5)
+		enc.EndObject()
+		enc.Flush()
+		check(enc.Err() == nil, "json: encode failed")
+		check(sb.String() == `{"pi":3.5}`, "json: wrong text")
 	}
 	{
 		// errors

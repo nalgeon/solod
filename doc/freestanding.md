@@ -51,8 +51,8 @@ These packages work in freestanding mode with no restrictions:
 
 ```text
 bufio  bytes  bytealg  c  cmp  encoding/binary  encoding/hex
-errors  io  maps  math/bits  math/rand  mem  path runtime
-slices  strconv  strings  unicode unicode/utf8  unsafe
+encoding/json  errors  io  maps  math/bits  math/rand  mem  path
+runtime  slices  strconv  strings  unicode unicode/utf8  unsafe
 ```
 
 The `time` package works with these restrictions:

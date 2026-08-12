@@ -1,9 +1,6 @@
 package slog
 
-import (
-	"solod.dev/so/math"
-	"solod.dev/so/time"
-)
+import "solod.dev/so/time"
 
 // Kind represents the type of a Value.
 type Kind int
@@ -50,7 +47,7 @@ func Uint64Value(v uint64) Value {
 
 // Float64Value returns a [Value] for a floating-point number.
 func Float64Value(v float64) Value {
-	return Value{kind: KindFloat64, num: math.Float64bits(v)}
+	return Value{kind: KindFloat64, num: float64bits(v)}
 }
 
 // BoolValue returns a [Value] for a bool.
@@ -128,7 +125,7 @@ func (v Value) Float64() float64 {
 }
 
 func (v Value) float() float64 {
-	return math.Float64frombits(v.num)
+	return float64frombits(v.num)
 }
 
 // Bool returns the value as a bool. Panics if v is not a bool.

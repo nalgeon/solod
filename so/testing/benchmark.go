@@ -8,7 +8,6 @@ import (
 	"solod.dev/so/flag"
 	"solod.dev/so/fmt"
 	"solod.dev/so/io"
-	"solod.dev/so/math"
 	"solod.dev/so/mem"
 	"solod.dev/so/os"
 	"solod.dev/so/runtime"
@@ -420,7 +419,7 @@ func prettyPrint(w io.Writer, x float64, unit string) {
 	// chosen to fit the whole part in 10 places while aligning
 	// the decimal point of all fractional formats.
 	var format string
-	switch y := math.Abs(x); {
+	switch y := floatAbs(x); {
 	case y == 0 || y >= 999.95:
 		format = "%10.0f %s"
 	case y >= 99.995:

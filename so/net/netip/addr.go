@@ -7,7 +7,6 @@ package netip
 import (
 	"solod.dev/so/bytealg"
 	"solod.dev/so/encoding/binary"
-	"solod.dev/so/math"
 	"solod.dev/so/strconv"
 )
 
@@ -19,6 +18,9 @@ const (
 	MaxAddr6Len    = 46 // ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff%enp5s0
 	MaxAddrLen     = MaxAddr6Len
 )
+
+// Largest value of an IPv6 address group.
+const maxUint16 = 0xffff
 
 // Addr represents an IPv4 or IPv6 address (with or without
 // a scoped addressing zone).
@@ -236,7 +238,7 @@ func parseIPv6(in string) (Addr, error) {
 				//more than 4 digits in group, fail.
 				return Addr{}, ErrIPv6
 			}
-			if acc > math.MaxUint16 {
+			if acc > maxUint16 {
 				// Overflow, fail.
 				return Addr{}, ErrIPv6
 			}
