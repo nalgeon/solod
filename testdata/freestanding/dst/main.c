@@ -109,6 +109,18 @@ int main(void) {
         mem_Free(so_int, (alloc), (p));
     }
     {
+        // net/netip. A numeric zone works in freestanding mode,
+        // but an interface name resolves to no zone.
+        netip_AddrResult _res3 = netip_ParseAddr(so_str("fe80::1%2"));
+        netip_Addr ip = _res3.val;
+        so_Error err = _res3.err;
+        check(err.self == NULL, so_str("netip: parse failed"));
+        so_Slice buf = so_make_slice(so_byte, netip_MaxZoneLen, netip_MaxZoneLen);
+        check(so_string_eq(netip_Addr_Zone(ip, buf), so_str("2")), so_str("netip: wrong zone"));
+        netip_Addr named = netip_Addr_WithZone(ip, so_str("eth0"));
+        check(so_string_eq(netip_Addr_Zone(named, buf), so_str("")), so_str("netip: name resolved to a zone"));
+    }
+    {
         // path
         check(so_string_eq(path_Base(so_str("/dir/file.txt")), so_str("file.txt")), so_str("path: wrong base"));
         check(so_string_eq(path_Ext(so_str("/dir/file.txt")), so_str(".txt")), so_str("path: wrong extension"));
@@ -117,9 +129,9 @@ int main(void) {
         // strconv
         so_Slice buf = so_make_slice(so_byte, 32, 32);
         check(so_string_eq(strconv_Itoa(buf, -42), so_str("-42")), so_str("strconv: wrong text"));
-        so_R_int_err _res3 = strconv_Atoi(so_str("42"));
-        so_int n = _res3.val;
-        so_Error err = _res3.err;
+        so_R_int_err _res4 = strconv_Atoi(so_str("42"));
+        so_int n = _res4.val;
+        so_Error err = _res4.err;
         check(err.self == NULL, so_str("strconv: parse failed"));
         check(n == 42, so_str("strconv: wrong number"));
     }

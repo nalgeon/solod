@@ -14,6 +14,7 @@
 #include "so/math/bits/bits.h"
 #include "so/math/rand/rand.h"
 #include "so/mem/mem.h"
+#include "so/net/netip/netip.h"
 #include "so/path/path.h"
 #include "so/runtime/runtime.h"
 #include "so/slices/slices.h"

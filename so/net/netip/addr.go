@@ -474,6 +474,10 @@ func (ip Addr) Unmap() Addr {
 // WithZone returns an IP that's the same as ip but with the provided
 // zone. If zone is empty, the zone is removed. If ip is an IPv4
 // address, WithZone is a no-op and returns ip unchanged.
+//
+// A zone given as an interface name resolves to an index only in a hosted
+// build. A freestanding or wasm build has no network interfaces, so the
+// name resolves to no zone. A numeric zone works in every build.
 func (ip Addr) WithZone(zone string) Addr {
 	if !ip.Is6() {
 		return ip

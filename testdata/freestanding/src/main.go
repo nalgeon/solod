@@ -23,6 +23,7 @@ import (
 	"solod.dev/so/math/bits"
 	"solod.dev/so/math/rand"
 	"solod.dev/so/mem"
+	"solod.dev/so/net/netip"
 	"solod.dev/so/path"
 	"solod.dev/so/runtime"
 	"solod.dev/so/slices"
@@ -134,6 +135,16 @@ func main() {
 		*p = 42
 		check(*p == 42, "mem: wrong value")
 		mem.Free(alloc, p)
+	}
+	{
+		// net/netip. A numeric zone works in freestanding mode,
+		// but an interface name resolves to no zone.
+		ip, err := netip.ParseAddr("fe80::1%2")
+		check(err == nil, "netip: parse failed")
+		buf := make([]byte, netip.MaxZoneLen)
+		check(ip.Zone(buf) == "2", "netip: wrong zone")
+		named := ip.WithZone("eth0")
+		check(named.Zone(buf) == "", "netip: name resolved to a zone")
 	}
 	{
 		// path

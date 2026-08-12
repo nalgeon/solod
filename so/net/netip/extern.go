@@ -2,7 +2,8 @@ package netip
 
 import "solod.dev/so/c"
 
-//so:include <net/if.h>
+//so:embed netip.h
+var netip_h string
 
 // unsigned int if_nametoindex(const char *ifname);
 //

@@ -1,0 +1,17 @@
+#include "so/builtin/builtin.h"
+
+#if defined(so_build_hosted) && !defined(so_build_wasm)
+
+#include <net/if.h>
+
+#else
+
+// A freestanding or WASM environment has no network interfaces, so an interface
+// name can't be resolved to an index. Returning 0 matches the behavior in hosted
+// environments when a name doesn't match any interface.
+static inline unsigned int if_nametoindex(const char* ifname) {
+    (void)ifname;
+    return 0;
+}
+
+#endif  // so_build_hosted && !so_build_wasm

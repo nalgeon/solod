@@ -60,6 +60,10 @@ The `time` package works with these restrictions:
 - `Now`, `Since`, and `Until` are not available.
 - `Time.Format` and `Time.Parse` only support named layouts (such as `RFC3339` or `DateOnly`), not custom layouts.
 
+The `net/netip` package works with one restriction:
+
+- A zone given as an interface name (`fe80::1%eth0`) resolves to no zone, because a freestanding environment has no network interfaces. A numeric zone (`fe80::1%2`) works.
+
 These packages require a hosted environment and will produce a compile-time error if imported:
 
 ```text

@@ -256,6 +256,8 @@ f.Sync() // the line is out of the buffer now
 
 The data can still wait in an operating system cache, so `Sync` does not guarantee that the data reached the storage device.
 
+**net/netip works in freestanding mode**. The package included `<net/if.h>` for `if_nametoindex`, and that header made the whole package hosted. The include now sits behind a hosted guard, and a freestanding build gets a stub that returns 0. A zone given as an interface name resolves to no zone, the same result a hosted `if_nametoindex` gives for a name that matches no interface. A numeric zone works everywhere. See [freestanding mode](freestanding.md).
+
 **encoding/json works in freestanding mode**. The package used `math.IsNaN` and `math.IsInf` to reject a non-finite float. The `math` package requires a hosted environment, so that import alone made `encoding/json` hosted. The package now uses a private finite check and doesn't import `math`. See [freestanding mode](freestanding.md).
 
 ## Tooling
