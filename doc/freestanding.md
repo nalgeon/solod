@@ -52,9 +52,10 @@ Packages that depend on `runtime.Seed` (like `math/rand`) work but produce repea
 These packages work in freestanding mode with no restrictions:
 
 ```text
-bufio  bytes  bytealg  c  cmp  encoding/binary  encoding/hex
-encoding/json  errors  io  maps  math/bits  math/rand  mem  path
-runtime  slices  strconv  strings  unicode unicode/utf8  unsafe
+bufio  bytealg  bytes  c  cmp  encoding  encoding/binary
+encoding/hex  encoding/json  errors  io  maps  math/bits  math/rand
+mem  path  runtime  slices  strconv  strings  sync/atomic  unicode
+unicode/utf8  unsafe
 ```
 
 The `fmt` package works with these restrictions:
@@ -74,5 +75,5 @@ The `time` package works with these restrictions:
 These packages require a hosted environment and will produce a compile-time error if imported:
 
 ```text
-crypto/crand  flag  log/slog  math  os  testing
+conc  crypto/crand  flag  log/slog  math  net  os  sync  testing  uuid
 ```

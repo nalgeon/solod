@@ -1,12 +1,31 @@
 #include "main.h"
 
+// -- Types --
+
+typedef struct hexWord hexWord;
+
+// hexWord is a byte with a hexadecimal text form.
+typedef struct hexWord {
+    so_byte Value;
+} hexWord;
+
 // -- Forward declarations --
+static so_R_slice_err hexWord_AppendText(void* self, so_Slice b);
 static void check(bool ok, so_String msg);
 
 // -- Variables and constants --
 so_Error main_ErrCheck = errors_New("check failed");
 
 // -- Implementation --
+
+// AppendText appends the hexadecimal form of the byte to b.
+static so_R_slice_err hexWord_AppendText(void* self, so_Slice b) {
+    hexWord* w = self;
+    so_int n = so_len(b);
+    b = so_append(so_byte, b, 2, 0, 0);
+    hex_Encode(so_slice(so_byte, b, n, b.len), (so_Slice){(so_byte[1]){w->Value}, 1, 1});
+    return (so_R_slice_err){.val = b, .err = (so_Error){}};
+}
 
 static void check(bool ok, so_String msg) {
     if (!ok) {
@@ -59,6 +78,15 @@ int main(void) {
         check(slices_Contains(so_int, (nums), (3)), so_str("slices: no value"));
     }
     {
+        // encoding
+        encoding_TextAppender app = (encoding_TextAppender){.self = &(hexWord){0x0a}, .AppendText = hexWord_AppendText};
+        so_R_slice_err _res3 = app.AppendText(app.self, so_make_slice(so_byte, 0, 2));
+        so_Slice out = _res3.val;
+        so_Error err = _res3.err;
+        check(err.self == NULL, so_str("encoding: append failed"));
+        check(so_string_eq(so_bytes_string(out), so_str("0a")), so_str("encoding: wrong text"));
+    }
+    {
         // encoding/binary, encoding/hex
         binary_LE le = {};
         so_Slice word = (so_Slice){(so_byte[4]){0, 0, 0, 0}, 4, 4};
@@ -95,15 +123,15 @@ int main(void) {
         check(so_string_eq(text, so_str("n=42")), so_str("fmt: wrong text"));
         so_Slice out = so_make_slice(so_byte, 32, 32);
         strings_Builder sb = strings_FixedBuilder(out);
-        so_R_int_err _res3 = fmt_Fprintf((io_Writer){.self = &sb, .Write = strings_Builder_Write}, so_str("%s=%d"), so_str("n"), (so_int)(42));
-        so_int cnt = _res3.val;
-        so_Error err = _res3.err;
+        so_R_int_err _res4 = fmt_Fprintf((io_Writer){.self = &sb, .Write = strings_Builder_Write}, so_str("%s=%d"), so_str("n"), (so_int)(42));
+        so_int cnt = _res4.val;
+        so_Error err = _res4.err;
         check(err.self == NULL, so_str("fmt: write failed"));
         check(cnt == 4, so_str("fmt: wrong write count"));
         check(so_string_eq(strings_Builder_String(&sb), so_str("n=42")), so_str("fmt: wrong output"));
-        so_R_int_err _res4 = fmt_Printf(so_str("%d\n"), (so_int)(42));
-        cnt = _res4.val;
-        err = _res4.err;
+        so_R_int_err _res5 = fmt_Printf(so_str("%d\n"), (so_int)(42));
+        cnt = _res5.val;
+        err = _res5.err;
         check(err.self == NULL, so_str("fmt: print failed"));
         check(cnt == 3, so_str("fmt: wrong print count"));
     }
@@ -132,9 +160,9 @@ int main(void) {
     {
         // net/netip. A numeric zone works in freestanding mode,
         // but an interface name resolves to no zone.
-        netip_AddrResult _res5 = netip_ParseAddr(so_str("fe80::1%2"));
-        netip_Addr ip = _res5.val;
-        so_Error err = _res5.err;
+        netip_AddrResult _res6 = netip_ParseAddr(so_str("fe80::1%2"));
+        netip_Addr ip = _res6.val;
+        so_Error err = _res6.err;
         check(err.self == NULL, so_str("netip: parse failed"));
         so_Slice buf = so_make_slice(so_byte, netip_MaxZoneLen, netip_MaxZoneLen);
         check(so_string_eq(netip_Addr_Zone(ip, buf), so_str("2")), so_str("netip: wrong zone"));
@@ -150,11 +178,19 @@ int main(void) {
         // strconv
         so_Slice buf = so_make_slice(so_byte, 32, 32);
         check(so_string_eq(strconv_Itoa(buf, -42), so_str("-42")), so_str("strconv: wrong text"));
-        so_R_int_err _res6 = strconv_Atoi(so_str("42"));
-        so_int n = _res6.val;
-        so_Error err = _res6.err;
+        so_R_int_err _res7 = strconv_Atoi(so_str("42"));
+        so_int n = _res7.val;
+        so_Error err = _res7.err;
         check(err.self == NULL, so_str("strconv: parse failed"));
         check(n == 42, so_str("strconv: wrong number"));
+    }
+    {
+        // sync/atomic
+        atomic_Int64 cnt = {};
+        atomic_Int64_Store(&cnt, 1);
+        check(atomic_Int64_Add(&cnt, 2) == 3, so_str("atomic: wrong sum"));
+        check(atomic_Int64_CompareAndSwap(&cnt, 3, 7), so_str("atomic: swap failed"));
+        check(atomic_Int64_Load(&cnt) == 7, so_str("atomic: wrong value"));
     }
     {
         // time. Now, Since and Until are missing in freestanding mode,

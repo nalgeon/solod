@@ -14,6 +14,7 @@ import (
 	"solod.dev/so/bytes"
 	"solod.dev/so/c"
 	"solod.dev/so/cmp"
+	"solod.dev/so/encoding"
 	"solod.dev/so/encoding/binary"
 	"solod.dev/so/encoding/hex"
 	"solod.dev/so/encoding/json"
@@ -30,12 +31,26 @@ import (
 	"solod.dev/so/slices"
 	"solod.dev/so/strconv"
 	"solod.dev/so/strings"
+	"solod.dev/so/sync/atomic"
 	"solod.dev/so/time"
 	"solod.dev/so/unicode"
 	"solod.dev/so/unicode/utf8"
 )
 
 var ErrCheck = errors.New("check failed")
+
+// hexWord is a byte with a hexadecimal text form.
+type hexWord struct {
+	Value byte
+}
+
+// AppendText appends the hexadecimal form of the byte to b.
+func (w *hexWord) AppendText(b []byte) ([]byte, error) {
+	n := len(b)
+	b = append(b, 0, 0)
+	hex.Encode(b[n:], []byte{w.Value})
+	return b, nil
+}
 
 func check(ok bool, msg string) {
 	if !ok {
@@ -85,6 +100,13 @@ func main() {
 		slices.Sort(nums)
 		check(nums[0] == 1, "slices: not sorted")
 		check(slices.Contains(nums, 3), "slices: no value")
+	}
+	{
+		// encoding
+		var app encoding.TextAppender = &hexWord{0x0a}
+		out, err := app.AppendText(make([]byte, 0, 2))
+		check(err == nil, "encoding: append failed")
+		check(string(out) == "0a", "encoding: wrong text")
 	}
 	{
 		// encoding/binary, encoding/hex
@@ -178,6 +200,14 @@ func main() {
 		n, err := strconv.Atoi("42")
 		check(err == nil, "strconv: parse failed")
 		check(n == 42, "strconv: wrong number")
+	}
+	{
+		// sync/atomic
+		var cnt atomic.Int64
+		cnt.Store(1)
+		check(cnt.Add(2) == 3, "atomic: wrong sum")
+		check(cnt.CompareAndSwap(3, 7), "atomic: swap failed")
+		check(cnt.Load() == 7, "atomic: wrong value")
 	}
 	{
 		// time. Now, Since and Until are missing in freestanding mode,
