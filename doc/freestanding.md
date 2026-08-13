@@ -73,12 +73,12 @@ conc  flag  log/slog  math  net  os  sync  testing
 
 A freestanding environment has no entropy source and no clock, and only the target knows how to reach its own hardware. The stdlib declares a weak C function for each of these, and the target defines the ones its program needs:
 
-| Hook            | Signature                                         | With no definition    |
-| --------------- | ------------------------------------------------- | --------------------- |
-| `so_crand_read` | `so_int so_crand_read(uint8_t* buf, so_int size)` | `crypto/crand` panics |
-| `so_time_wall`  | `so_R_i64_i32 so_time_wall(void)`                 | `time.Now` panics     |
-| `so_time_mono`  | `int64_t so_time_mono(void)`                      | no monotonic clock    |
-| `so_time_sleep` | `void so_time_sleep(int64_t ns)`                  | `time.Sleep` panics   |
+| Hook            | Signature                                         | With no definition                            |
+| --------------- | ------------------------------------------------- | --------------------------------------------- |
+| `so_crand_read` | `so_int so_crand_read(uint8_t* buf, so_int size)` | `crypto/crand` panics, `runtime.Seed` repeats |
+| `so_time_wall`  | `so_R_i64_i32 so_time_wall(void)`                 | `time.Now` panics                             |
+| `so_time_mono`  | `int64_t so_time_mono(void)`                      | no monotonic clock                            |
+| `so_time_sleep` | `void so_time_sleep(int64_t ns)`                  | `time.Sleep` panics                           |
 
 Every declaration is weak, so a program that never calls the package still links. Define the hooks in a C file and add it to the build, or embed it with `so:embed`:
 
@@ -102,7 +102,9 @@ void so_time_sleep(int64_t ns) {
 
 Notes on each hook:
 
-`so_crand_read` fills `buf` with `size` bytes and returns the number of bytes written. There is no deterministic fallback on purpose. A generator that quietly returns predictable bytes gives every device the same keys and identifiers, and nothing reports the failure.
+`so_crand_read` fills `buf` with `size` bytes and returns the number of bytes written. `crypto/crand` has no deterministic fallback on purpose. A generator that quietly returns predictable bytes gives every device the same keys and identifiers, and nothing reports the failure.
+
+`runtime.Seed` reads the same hook, so one definition also seeds `math/rand` and the hash of `maps`. `Seed` does fall back, as [Deterministic random](#deterministic-random) describes, because these packages promise nothing about unpredictability and must work on a board with no entropy source.
 
 `so_time_wall` returns seconds and nanoseconds since the Unix epoch. A board that counts elapsed time but does not know the date returns 0 seconds. Every `Time` then dates at the epoch, and `Since` and `Until` stay exact, because they measure with the monotonic clock.
 
@@ -122,9 +124,9 @@ It's best not to use `mem.System` in freestanding mode. Instead, use `mem.Arena`
 
 ### Deterministic random
 
-`runtime.Seed` uses a deterministic generator with a fixed initial state, instead of getting randomness from the operating system. Each call returns a different value, but the sequence is always the same every time you run the program.
+If the `so_crand_read` hook is not defined, `runtime.Seed` uses a deterministic generator with a fixed initial state. Each call returns a different value, but the sequence is the same on every run.
 
-Packages that depend on `runtime.Seed` (like `math/rand`) work but produce repeatable output.
+Packages that depend on `runtime.Seed` (like `math/rand` and `maps`) work but produce repeatable output.
 
 ### No stdio
 

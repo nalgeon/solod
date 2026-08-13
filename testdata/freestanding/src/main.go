@@ -195,6 +195,10 @@ func main() {
 		check(rand.Uint64() != rand.Uint64(), "rand: repeated value")
 		check(runtime.NumCPU() >= 1, "runtime: no CPU")
 		check(runtime.Seed() != 0, "runtime: zero seed")
+		if hooked {
+			// Seed draws from so_crand_read, which counts up.
+			check(runtime.Seed() == 0x0807060504030201, "runtime: wrong seed")
+		}
 	}
 	{
 		// mem

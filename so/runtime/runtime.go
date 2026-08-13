@@ -76,8 +76,14 @@ func NumCPU() int {
 }
 
 // Seed returns a random 64-bit seed.
-// It's cryptographically secure on macOS/Linux (arc4random_buf/getrandom)
-// and falls back to a time-based seed on other platforms.
+// It reads the cryptographic random of the operating system, so it panics on a
+// hosted platform with no such source.
+//
+// In a freestanding environment, Seed reads the so_crand_read hook of the
+// target. A target with no hook gets a deterministic sequence, which repeats on
+// every run. See the [freestanding guide].
+//
+// [freestanding guide]: https://github.com/solod-dev/solod/blob/main/doc/freestanding.md
 //
 //so:extern
 func Seed() uint64 {

@@ -308,6 +308,8 @@ f.Sync() // the line is out of the buffer now
 
 The data can still wait in an operating system cache, so `Sync` does not guarantee that the data reached the storage device.
 
+**runtime.Seed reads the target entropy in freestanding mode**. `Seed` used a deterministic generator with a fixed initial state, so `math/rand` and the hash of `maps` repeated on every run. `Seed` now reads the same `so_crand_read` hook as `crypto/crand`, so one definition covers both. A target with no hook keeps the deterministic generator: `math/rand` and `maps` promise nothing about unpredictability and must work on a board with no entropy source. See [freestanding mode](freestanding.md).
+
 **time reads the clock in freestanding mode**. `Now`, `Since`, `Until`, and `Sleep` used to panic. The target now supplies the clock through three weak hooks, the same way `crypto/crand` supplies entropy:
 
 ```c

@@ -201,6 +201,10 @@ int main(void) {
         check(rand_Uint64() != rand_Uint64(), so_str("rand: repeated value"));
         check(runtime_NumCPU() >= 1, so_str("runtime: no CPU"));
         check(runtime_Seed() != 0, so_str("runtime: zero seed"));
+        if (HOOKED) {
+            // Seed draws from so_crand_read, which counts up.
+            check(runtime_Seed() == 0x0807060504030201, so_str("runtime: wrong seed"));
+        }
     }
     {
         // mem
