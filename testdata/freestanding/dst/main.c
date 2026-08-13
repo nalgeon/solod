@@ -87,6 +87,27 @@ int main(void) {
         check(so_string_eq(err.Error(err.self), so_str("check failed")), so_str("errors: wrong text"));
     }
     {
+        // fmt. The print family works. Print, Println and Printf drop the
+        // bytes, because a freestanding host has no standard output. The scan
+        // family panics.
+        so_Slice buf = so_make_slice(so_byte, 32, 32);
+        so_String text = fmt_Sprintf(buf, so_str("n=%d"), (so_int)(42));
+        check(so_string_eq(text, so_str("n=42")), so_str("fmt: wrong text"));
+        so_Slice out = so_make_slice(so_byte, 32, 32);
+        strings_Builder sb = strings_FixedBuilder(out);
+        so_R_int_err _res3 = fmt_Fprintf((io_Writer){.self = &sb, .Write = strings_Builder_Write}, so_str("%s=%d"), so_str("n"), (so_int)(42));
+        so_int cnt = _res3.val;
+        so_Error err = _res3.err;
+        check(err.self == NULL, so_str("fmt: write failed"));
+        check(cnt == 4, so_str("fmt: wrong write count"));
+        check(so_string_eq(strings_Builder_String(&sb), so_str("n=42")), so_str("fmt: wrong output"));
+        so_R_int_err _res4 = fmt_Printf(so_str("%d\n"), (so_int)(42));
+        cnt = _res4.val;
+        err = _res4.err;
+        check(err.self == NULL, so_str("fmt: print failed"));
+        check(cnt == 3, so_str("fmt: wrong print count"));
+    }
+    {
         // maps
         maps_Map m = maps_New(so_String, so_int, (alloc), (8));
         maps_Map_Set(so_String, so_int, (&m), (so_str("one")), (1));
@@ -111,9 +132,9 @@ int main(void) {
     {
         // net/netip. A numeric zone works in freestanding mode,
         // but an interface name resolves to no zone.
-        netip_AddrResult _res3 = netip_ParseAddr(so_str("fe80::1%2"));
-        netip_Addr ip = _res3.val;
-        so_Error err = _res3.err;
+        netip_AddrResult _res5 = netip_ParseAddr(so_str("fe80::1%2"));
+        netip_Addr ip = _res5.val;
+        so_Error err = _res5.err;
         check(err.self == NULL, so_str("netip: parse failed"));
         so_Slice buf = so_make_slice(so_byte, netip_MaxZoneLen, netip_MaxZoneLen);
         check(so_string_eq(netip_Addr_Zone(ip, buf), so_str("2")), so_str("netip: wrong zone"));
@@ -129,9 +150,9 @@ int main(void) {
         // strconv
         so_Slice buf = so_make_slice(so_byte, 32, 32);
         check(so_string_eq(strconv_Itoa(buf, -42), so_str("-42")), so_str("strconv: wrong text"));
-        so_R_int_err _res4 = strconv_Atoi(so_str("42"));
-        so_int n = _res4.val;
-        so_Error err = _res4.err;
+        so_R_int_err _res6 = strconv_Atoi(so_str("42"));
+        so_int n = _res6.val;
+        so_Error err = _res6.err;
         check(err.self == NULL, so_str("strconv: parse failed"));
         check(n == 42, so_str("strconv: wrong number"));
     }

@@ -2,53 +2,41 @@
 #include "so/builtin/builtin.h"
 #include "so/io/io.h"
 
-#ifndef so_build_hosted
-#error "fmt: hosted environment required"
-#endif
-
-// BufSize is the size of the internal formatting buffer in bytes.
-#define fmt_BufSize 1024
-
 extern so_Error fmt_ErrPrint;  // print failure
 extern so_Error fmt_ErrScan;   // scan failure
-extern so_Error fmt_ErrSize;   // buffer size exceeded
 
-// Buffer is a fixed-size stack-allocated buffer
-// for formatted output and scanning.
-typedef struct {
-    char* Ptr;
-    so_int Len;
-} fmt_Buffer;
-
-// NewBuffer creates a new stack-allocated Buffer of the given size.
-#define fmt_NewBuffer(size) ({                             \
-    so_int _bsize = (size);                                \
-    so_assert(_bsize >= 0, "fmt: negative buffer size");   \
-    (fmt_Buffer){.Ptr = so_alloca(_bsize), .Len = _bsize}; \
-})
+// The print family is nodecay, so every argument arrives as a So type.
 
 // Print writes its arguments to standard output, separated by spaces.
 // It returns the number of bytes written and any write error encountered.
-#define fmt_Print(...) fmt_print(false, __VA_ARGS__, NULL)
+//
+// The last argument marks the end of the list. No real So string has a
+// negative length, so an argument cannot collide with the marker. The ##
+// deletes the comma when the argument list is empty.
+#define fmt_Print(...) fmt_print(false, ##__VA_ARGS__, (so_String){NULL, -1})
 // Println is like Print but adds a newline at the end.
-#define fmt_Println(...) fmt_print(true, __VA_ARGS__, NULL)
+#define fmt_Println(...) fmt_print(true, ##__VA_ARGS__, (so_String){NULL, -1})
 so_R_int_err fmt_print(int newline, ...);
 
 // Printf formats according to a format specifier and writes to standard output.
 // It returns the number of bytes written and any write error encountered.
-so_R_int_err fmt_Printf(const char* format, ...);
+so_R_int_err fmt_Printf(so_String format, ...);
 
 // Sprintf formats according to a format specifier and returns the resulting string.
 // If the output size exceeds buf length, it silently truncates the output.
-so_String fmt_Sprintf(fmt_Buffer buf, const char* format, ...);
+so_String fmt_Sprintf(so_Slice buf, so_String format, ...);
 
 // vsprintf is like Sprintf but takes a va_list instead of a variable number of arguments.
-so_String fmt_vsprintf(fmt_Buffer buf, const char* format, va_list args);
+// It uses up the va_list, so the caller must pass it to va_end
+// and must not read it again.
+so_String fmt_vsprintf(so_Slice buf, so_String format, va_list ap);
 
 // Fprintf formats according to a format specifier and writes to w.
 // It returns the number of bytes written and any write error encountered.
-// Returns [ErrSize] if the output size exceeds BufSize.
-so_R_int_err fmt_Fprintf(io_Writer w, const char* format, ...);
+so_R_int_err fmt_Fprintf(io_Writer w, so_String format, ...);
+
+// The scan family reads through the stdio of the host, so it needs a hosted
+// environment. A freestanding call panics.
 
 // Scanf scans text read from standard input, storing successive
 // space-separated values into successive arguments as determined by the format.

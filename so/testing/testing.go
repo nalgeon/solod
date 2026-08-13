@@ -79,12 +79,18 @@ func (t *T) Error(msg string) {
 	t.Fail()
 }
 
+// msgSize is the size of the buffer that [T.Errorf] and [T.Fatalf] format
+// into. A longer message is truncated.
+//
+//so:extern testing_msgSize
+const msgSize = 1024
+
 // Errorf formats its arguments like [fmt.Sprintf], then
 // behaves like [T.Error] (Log followed by Fail).
 //
-//so:extern
+//so:extern nodecay
 func (t *T) Errorf(format string, args ...any) {
-	buf := fmt.NewBuffer(fmt.BufSize)
+	buf := make([]byte, msgSize)
 	t.Error(fmt.Sprintf(buf, format, args...))
 }
 
@@ -98,9 +104,9 @@ func (t *T) Fatal(msg string) {
 // Fatalf formats its arguments like [fmt.Sprintf], then behaves like [T.Fatal].
 // The test function must return after calling it; see [T].
 //
-//so:extern
+//so:extern nodecay
 func (t *T) Fatalf(format string, args ...any) {
-	buf := fmt.NewBuffer(fmt.BufSize)
+	buf := make([]byte, msgSize)
 	t.Fatal(fmt.Sprintf(buf, format, args...))
 }
 
@@ -183,8 +189,9 @@ func runSuite(suite Suite, run string) bool {
 		if !t.failed && !t.skipped {
 			stats := t.alloc.Stats()
 			if stats.Mallocs != stats.Frees {
+				// %d takes an int, so the uint64 counts need a conversion.
 				fmt.Fprintf(t.w, "    memory leak: %d unfreed allocation(s), %d byte(s)\n",
-					stats.Mallocs-stats.Frees, stats.Alloc)
+					int(stats.Mallocs-stats.Frees), int(stats.Alloc))
 				t.failed = true
 			}
 		}

@@ -18,6 +18,7 @@ import (
 	"solod.dev/so/encoding/hex"
 	"solod.dev/so/encoding/json"
 	"solod.dev/so/errors"
+	"solod.dev/so/fmt"
 	"solod.dev/so/io"
 	"solod.dev/so/maps"
 	"solod.dev/so/math/bits"
@@ -113,6 +114,25 @@ func main() {
 		// errors
 		var err = ErrCheck
 		check(err.Error() == "check failed", "errors: wrong text")
+	}
+	{
+		// fmt. The print family works. Print, Println and Printf drop the
+		// bytes, because a freestanding host has no standard output. The scan
+		// family panics.
+		buf := make([]byte, 32)
+		text := fmt.Sprintf(buf, "n=%d", 42)
+		check(text == "n=42", "fmt: wrong text")
+
+		out := make([]byte, 32)
+		sb := strings.FixedBuilder(out)
+		cnt, err := fmt.Fprintf(&sb, "%s=%d", "n", 42)
+		check(err == nil, "fmt: write failed")
+		check(cnt == 4, "fmt: wrong write count")
+		check(sb.String() == "n=42", "fmt: wrong output")
+
+		cnt, err = fmt.Printf("%d\n", 42)
+		check(err == nil, "fmt: print failed")
+		check(cnt == 3, "fmt: wrong print count")
 	}
 	{
 		// maps

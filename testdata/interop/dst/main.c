@@ -42,6 +42,31 @@ int main(void) {
         write_acc(&acc, "Hello %s!", "world");
     }
     {
+        // Extern nodecay variadic function: the args go flat,
+        // at their So types, and every scalar widens.
+        so_String name = so_str("Alice");
+        int32_t i32 = 7;
+        so_uint u = 4;
+        uint8_t u8 = 3;
+        float f32 = 1.5f;
+        Account acc = {};
+        so_int got = measure(so_str("ssiiiiiuudp"), name, so_str("Bob"), (so_int)(10), (so_int)(-8), (so_int)(i32), (so_int)(true), (so_int)('A'), (so_uint)(u), (so_uint)(u8), (double)(f32), &acc);
+        so_int want = so_len(name) + so_len(so_str("Bob")) + 10 - 8 + (so_int)(i32) + 1 + (so_int)('A') + (so_int)(u) + (so_int)(u8) + (so_int)(f32) + 1;
+        if (got != want) {
+            so_panic("measure failed");
+        }
+        if (measure(so_str("")) != 0) {
+            so_panic("empty measure failed");
+        }
+    }
+    {
+        // Extern nodecay variadic method.
+        Account acc = (Account){.balance = 20};
+        if (Account_Measure(&acc, so_str("is"), (so_int)(5), so_str("abc")) != 28) {
+            so_panic("Measure failed");
+        }
+    }
+    {
         // Extern variadic method.
         Account acc = (Account){.name = so_str("Eve")};
         Account_Log(&acc, "Balance: %d", 789);

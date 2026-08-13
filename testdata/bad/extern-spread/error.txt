@@ -1,0 +1,3 @@
+main.go:8:9: spreading variadic arguments to an extern function is not supported
+	return measure("ii", args...)
+	       ^here

@@ -209,6 +209,27 @@ type SDL_CommonEvent struct {
 
 [fc25bb8](https://github.com/solod-dev/solod/commit/fc25bb875b10e4d64a6f223ad3f5ec647ed2733e)
 
+**Nodecay on a variadic passes So types**. A plain extern variadic is a C variadic: every argument decays, and the callee reads C types. A nodecay extern variadic is not. Each argument goes to the C `...` on its own, at its So type, and every scalar widens:
+
+| So type                            | C type read by `va_arg` |
+| ---------------------------------- | ----------------------- |
+| any signed integer, `rune`, `bool` | `so_int`                |
+| any unsigned integer               | `so_uint`               |
+| `float32`, `float64`               | `double`                |
+| `string`                           | `so_String`             |
+| anything else                      | the type itself         |
+
+```go
+//so:extern nodecay
+func measure(kinds string, args ...any) int
+
+var n int32 = 7
+measure("is", n, "abc")
+// measure(so_str("is"), (so_int)(n), so_str("abc"))
+```
+
+The call must list its arguments explicitly rather than using spread syntax. An `any` argument is an error. See the [interop guide](./interop.md) for details.
+
 **Target-width C types**. `so/c` now supports more common C types:
 
 ```text
@@ -247,6 +268,23 @@ so build -assert=off .
 
 ## Standard library
 
+**fmt works in freestanding mode**. The print family used to wrap C's `vsnprintf`, so it printed C's text with C's verbs, and the `<stdio.h>` include made the whole package hosted. It now runs a formatting engine ported from Go's `fmt` and writes the bytes Go writes. Hosted and freestanding builds produce the same output.
+
+The verbs are Go's, with two differences. So has no reflection, so the verbs that need type information are absent: `%v`, `%T`, `%w`, `%q`, and `%U`. And `%u` is added for an unsigned integer, because a print call carries no type information either, so nothing else can tell a signed value from an unsigned one. `%t` for a bool and `%O` for octal with a `0o` prefix are new as well.
+
+`Print`, `Println`, and `Printf` write to the new `fmt.Output`, whose default is the standard output of the host. A freestanding host has no standard output, so the default drops the bytes there. Assign another writer to `fmt.Output` to get the output back. The scan family (`Scanf`, `Sscanf`, `Fscanf`) reads through the stdio of the host, so it stays hosted and a freestanding call panics. See [freestanding mode](freestanding.md).
+
+⚠️ `BufSize` and `ErrSize` are gone. The output has no size limit any more, so `Fprintf` never returns `ErrSize`.
+
+⚠️ `Buffer`, `NewBuffer` and `BufferFrom` are gone. `Sprintf` takes the destination as a byte slice:
+
+```go
+buf := make([]byte, 64)
+s := fmt.Sprintf(buf, "%d apples", n)
+```
+
+`Buffer` existed because a `[]byte` argument decayed to a bare pointer, which lost the length. The print family is nodecay now, so the slice arrives whole.
+
 **os.File.Sync**. A `File` writes through a buffered C stream, so a program that ends abnormally loses the buffered data. `Sync` flushes the stream:
 
 ```go
@@ -278,4 +316,4 @@ A common convention is to name a test package after the package under test, with
 
 The runner is no longer written to disk. `so test` and `so bench` pass the generated runner to the Go loader as an in-memory overlay, so the committed `test/main.go` and `bench/main.go` files are gone. Adding, renaming or removing a `TestXxx` or `BenchmarkXxx` needs no other step.
 
-⚠️ This is a breaking change. If you have test or benchmark subpackages, rename them from `main` to `{package}_test` or `{package}_bench`, and remove the `main.go` files.
+⚠️ If you have test or benchmark subpackages, rename them from `main` to `{package}_test` or `{package}_bench`, and remove the `main.go` files.

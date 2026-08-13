@@ -41,7 +41,7 @@ func BenchmarkAtof64_Big_So(b *testing.B) {
 }
 
 func BenchmarkParseInt_7bit_So(b *testing.B) {
-	buf := fmt.NewBuffer(64)
+	buf := make([]byte, 64)
 	s := fmt.Sprintf(buf, "%d", 1<<7-1)
 	for b.Loop() {
 		n, _ := strconv.ParseInt(s, 10, 64)
@@ -50,7 +50,7 @@ func BenchmarkParseInt_7bit_So(b *testing.B) {
 }
 
 func BenchmarkParseInt_26bit_So(b *testing.B) {
-	buf := fmt.NewBuffer(64)
+	buf := make([]byte, 64)
 	s := fmt.Sprintf(buf, "%d", 1<<26-1)
 	for b.Loop() {
 		n, _ := strconv.ParseInt(s, 10, 64)
@@ -59,7 +59,7 @@ func BenchmarkParseInt_26bit_So(b *testing.B) {
 }
 
 func BenchmarkParseInt_31bit_So(b *testing.B) {
-	buf := fmt.NewBuffer(64)
+	buf := make([]byte, 64)
 	s := fmt.Sprintf(buf, "%d", 1<<31-1)
 	for b.Loop() {
 		n, _ := strconv.ParseInt(s, 10, 64)
@@ -68,9 +68,8 @@ func BenchmarkParseInt_31bit_So(b *testing.B) {
 }
 
 func BenchmarkParseInt_56bit_So(b *testing.B) {
-	buf := fmt.NewBuffer(64)
-	format := "%lld"
-	s := fmt.Sprintf(buf, format, 1<<56-1)
+	buf := make([]byte, 64)
+	s := fmt.Sprintf(buf, "%d", 1<<56-1)
 	for b.Loop() {
 		n, _ := strconv.ParseInt(s, 10, 64)
 		sinkInt += int(n)
@@ -78,9 +77,8 @@ func BenchmarkParseInt_56bit_So(b *testing.B) {
 }
 
 func BenchmarkParseInt_62bit_So(b *testing.B) {
-	buf := fmt.NewBuffer(64)
-	format := "%lld"
-	s := fmt.Sprintf(buf, format, 1<<62-1)
+	buf := make([]byte, 64)
+	s := fmt.Sprintf(buf, "%d", 1<<62-1)
 	for b.Loop() {
 		n, _ := strconv.ParseInt(s, 10, 64)
 		sinkInt += int(n)

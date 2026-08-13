@@ -1,32 +1,65 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 /*
-Package fmt implements formatted I/O with functions analogous
-to C's printf and scanf. The format 'verbs' are the same as in C
-(not the ones used in Go):
+Package fmt formats and scans text. The print family formats with Go's verbs
+and writes the bytes Go writes. The scan family reads through the stdio of the
+host, so it needs a hosted environment; everything else works freestanding.
 
-	%%	literal percent sign
+The verbs:
 
+	%%	a literal percent sign
+
+	%b	integer, base 2
 	%d	integer, base 10, signed
 	%u	integer, base 10, unsigned
-	%o	integer, base 8, unsigned
-	%x	integer, base 16, unsigned
+	%o	integer, base 8
+	%O	integer, base 8, with a 0o prefix
+	%x	integer, base 16, lowercase
+	%X	integer, base 16, uppercase
 
-	%f	floating-point, decimal notation
-	%e	floating-point, decimal exponent notation
-	%a	floating-point, hexadecimal exponent notation
-	%g	floating-point, decimal or exponent notation as needed
+	%e %E	float, decimal exponent notation
+	%f %F	float, decimal notation
+	%g %G	float, exponent notation for a large exponent, %f notation otherwise
+	%a %A	float, hexadecimal exponent notation
 
-	%c	single literal character
-	%s	character string
+	%c	the character of a code point
+	%s	string
+	%t	bool
+	%p	pointer, base 16 notation, with a 0x prefix
 
-	%p	pointer, base 16 notation, with leading 0x
+The flags are Go's: '+', '-', '#', ' ' and '0'. A width and a precision are
+decimal numbers, and a '*' takes the value from an argument.
+
+Two differences against Go. So has no reflection, so the verbs that need type
+information are absent: %v, %T, %w, %q and %U. And %u is added, because a call
+carries no type information either, so nothing else can tell a signed value
+from an unsigned one.
+
+# The verb picks the type
+
+Each verb takes exactly one type, and a print call cannot check the argument
+against it. A wrong verb is undefined behavior, as in C.
+
+An integer verb takes an int, and %u takes a uint. A float verb takes a
+float64, %c takes a rune, %p takes a pointer, and %s takes a string. A []byte
+needs string(b).
+
+A narrower type needs no conversion. The print family is extern nodecay, so
+every scalar widens at the call site:
+
+	var i32 int32 = 42
+	fmt.Printf("%d", i32)
+
+An unknown verb stops the walk over the format string. The output holds the
+text up to that verb, then %!<verb>(MISSING).
 */
 package fmt
 
 import (
 	"fmt" // for testing
-	"unsafe"
 
-	"solod.dev/so/c"
 	"solod.dev/so/errors"
 	"solod.dev/so/io"
 )
@@ -37,62 +70,19 @@ var fmt_h string
 //so:embed fmt.c
 var fmt_c string
 
-// BufSize is the size of the internal formatting buffer in bytes.
-//
-//so:extern
-const BufSize = 1024
-
 //so:extern
 var (
 	ErrPrint = errors.New("print failure")
 	ErrScan  = errors.New("scan failure")
-	ErrSize  = errors.New("buffer size exceeded")
 )
 
-// Buffer is a fixed-size stack-allocated buffer for formatted output.
-// It is used instead of a []byte to avoid the slice decay problem with
-// C variadics - see [Sprintf] for details.
-//
-//so:extern
-type Buffer struct {
-	Ptr *c.Char
-	Len int
-}
-
-// NewBuffer creates a new stack-allocated Buffer of the given size.
-//
-//so:extern
-func NewBuffer(size int) Buffer {
-	b := make([]byte, size)
-	return Buffer{
-		Ptr: (*c.Char)(unsafe.SliceData(b)),
-		Len: size,
-	}
-}
-
-// BufferFrom creates a Buffer that uses the provided byte slice as its storage.
-// The buffer doesn't take ownership of the slice and doesn't free it.
-func BufferFrom(buf []byte) Buffer {
-	ptr := unsafe.SliceData(buf)
-	return Buffer{
-		Ptr: (*c.Char)(ptr),
-		Len: len(buf),
-	}
-}
-
-// String returns the contents of the Buffer as a string,
-// up to the first null byte.
-func (b Buffer) String() string {
-	return c.String(b.Ptr)
-}
-
-// Print writes its arguments to standard output, separated by spaces.
+// Print writes its arguments to [Output], separated by spaces.
 // It returns the number of bytes written and any write error encountered.
 //
 // Since Print only accepts string arguments, most of the time you'd want
 // to use the print built-in function instead.
 //
-//so:extern
+//so:extern nodecay
 func Print(a ...string) (int, error) {
 	args := make([]any, len(a))
 	for i, s := range a {
@@ -106,7 +96,7 @@ func Print(a ...string) (int, error) {
 // Since Println only accepts string arguments, most of the time you'd want
 // to use the println built-in function instead.
 //
-//so:extern
+//so:extern nodecay
 func Println(a ...string) (int, error) {
 	args := make([]any, len(a))
 	for i, s := range a {
@@ -115,10 +105,10 @@ func Println(a ...string) (int, error) {
 	return fmt.Println(args...)
 }
 
-// Printf formats according to a format specifier and writes to standard output.
+// Printf formats according to a format specifier and writes to [Output].
 // It returns the number of bytes written and any write error encountered.
 //
-//so:extern
+//so:extern nodecay
 func Printf(format string, a ...any) (int, error) {
 	return fmt.Printf(format, a...)
 }
@@ -127,23 +117,15 @@ func Printf(format string, a ...any) (int, error) {
 // and returns the resulting string.
 // If the output size exceeds buf length, it silently truncates the output.
 //
-// Sprintf accepts a [Buffer] instead of a plain []byte because it's a C variadic
-// over vsnprintf. A []byte arg would decay to a bare pointer (losing the length
-// vsnprintf needs to bound the output), and nodecay is all-or-nothing per
-// function, so it would also stop the format string from decaying to the
-// char* the variadic requires. As a named struct, Buffer is passed by value
-// with both Ptr and Len intact while format still decays to char*.
-//
-//so:extern
-func Sprintf(buf Buffer, format string, a ...any) string {
+//so:extern nodecay
+func Sprintf(buf []byte, format string, a ...any) string {
 	return fmt.Sprintf(format, a...)
 }
 
 // Fprintf formats according to a format specifier and writes to w.
 // It returns the number of bytes written and any write error encountered.
-// Returns [ErrSize] if the output size exceeds BufSize.
 //
-//so:extern
+//so:extern nodecay
 func Fprintf(w io.Writer, format string, a ...any) (int, error) {
 	return fmt.Fprintf(w, format, a...)
 }
@@ -151,6 +133,8 @@ func Fprintf(w io.Writer, format string, a ...any) (int, error) {
 // Scanf scans text read from standard input, storing successive
 // space-separated values into successive arguments as determined by the format.
 // It returns the number of items successfully scanned.
+//
+// Scanf requires a hosted environment. A freestanding call panics.
 //
 //so:extern
 func Scanf(format string, a ...any) (int, error) {
@@ -161,6 +145,8 @@ func Scanf(format string, a ...any) (int, error) {
 // values into successive arguments as determined by the format.
 // It returns the number of items successfully scanned.
 //
+// Sscanf requires a hosted environment. A freestanding call panics.
+//
 //so:extern
 func Sscanf(str string, format string, a ...any) (int, error) {
 	return fmt.Sscanf(str, format, a...)
@@ -169,6 +155,8 @@ func Sscanf(str string, format string, a ...any) (int, error) {
 // Fscanf scans text read from r, storing successive space-separated
 // values into successive arguments as determined by the format.
 // It returns the number of items successfully scanned.
+//
+// Fscanf requires a hosted environment. A freestanding call panics.
 //
 //so:extern
 func Fscanf(r io.Reader, format string, a ...any) (int, error) {

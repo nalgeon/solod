@@ -141,10 +141,17 @@ func (g *Generator) emitMethodCall(w io.Writer, sel *ast.SelectorExpr, call *ast
 func (g *Generator) emitMethodCallArgs(w io.Writer, sel *ast.SelectorExpr, call *ast.CallExpr, sig *types.Signature, lparen, rparen string) {
 	args := call.Args
 
-	if ext, ok := g.methodExtern(sel); ok && !ext.nodecay {
-		// Extern C method: decay args to C-compatible types.
-		g.emitMethodExternArgs(w, sel, call, sig)
-		return
+	if ext, ok := g.methodExtern(sel); ok {
+		if !ext.nodecay {
+			// Extern C method: decay args to C-compatible types.
+			g.emitMethodExternArgs(w, sel, call, sig)
+			return
+		}
+		if sig.Variadic() {
+			// Extern nodecay method: emit the variadic args flat.
+			g.emitMethodExternVarArgs(w, sel, call, sig)
+			return
+		}
 	}
 
 	if sig.Variadic() && !call.Ellipsis.IsValid() {
@@ -173,6 +180,18 @@ func (g *Generator) emitMethodExternArgs(w io.Writer, sel *ast.SelectorExpr, cal
 		} else {
 			g.emitCArg(w, arg)
 		}
+	}
+}
+
+// emitMethodExternVarArgs emits the arguments of a call to a variadic extern
+// nodecay method. See [Generator.emitExternVarArg] for the argument rules.
+func (g *Generator) emitMethodExternVarArgs(w io.Writer, sel *ast.SelectorExpr, call *ast.CallExpr, sig *types.Signature) {
+	if call.Ellipsis.IsValid() {
+		g.fail(call, "spreading variadic arguments to an extern function is not supported")
+	}
+	for i := range call.Args {
+		fmt.Fprint(w, ", ")
+		g.emitExternVarArg(w, sel, call, sig, i)
 	}
 }
 

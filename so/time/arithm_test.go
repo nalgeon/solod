@@ -142,7 +142,7 @@ func abs(t Time) (sec, nsec int64) {
 
 // absString returns abs as a decimal string.
 func absString(t Time) string {
-	buf := fmt.NewBuffer(32)
+	buf := make([]byte, 32)
 	sec, nsec := abs(t)
 	if sec < 0 {
 		sec = -sec

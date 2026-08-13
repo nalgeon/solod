@@ -183,10 +183,12 @@ func genericFtoa(dst []byte, val float64, fmt byte, prec, bitSize int) []byte {
 		digits = 1
 	}
 	if digits <= 18 {
+		// C ends the life of a local array at the end of its block, and digs.d
+		// points into buf, so buf must live as long as the formatDigits call.
+		var buf [24]byte
 		// digits <= 0 happens for %f on very small numbers
 		// and means that we're guaranteed to print all zeros.
 		if digits > 0 {
-			var buf [24]byte
 			digs.d = buf[:]
 			fixedFtoa(&digs, mant, exp-int(flt.mantbits), digits, prec, fmt)
 		}

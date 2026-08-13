@@ -1,0 +1,3 @@
+main.go:8:22: cannot pass an any value to a variadic extern function
+	return measure("i", a)
+	                    ^here

@@ -9,6 +9,7 @@
 #include "so/encoding/hex/hex.h"
 #include "so/encoding/json/json.h"
 #include "so/errors/errors.h"
+#include "so/fmt/fmt.h"
 #include "so/io/io.h"
 #include "so/maps/maps.h"
 #include "so/math/bits/bits.h"

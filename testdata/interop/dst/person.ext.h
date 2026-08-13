@@ -33,3 +33,7 @@ int64_t account_inc_balance(Account* a, int64_t amount);
 void account_set_name(Account* a, so_String name);
 
 void write_acc(Account* a, const char* fmt, ...);
+
+so_int measure(so_String kinds, ...);
+
+so_int Account_Measure(Account* a, so_String kinds, ...);

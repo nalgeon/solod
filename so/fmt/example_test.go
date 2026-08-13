@@ -44,7 +44,7 @@ func ExamplePrintf() {
 
 func ExampleSprintf() {
 	const name, age = "Kim", 22
-	buf := fmt.NewBuffer(64)
+	buf := make([]byte, 64)
 	s := fmt.Sprintf(buf, "%s is %d years old.\n", name, age)
 	fmt.Print(s)
 

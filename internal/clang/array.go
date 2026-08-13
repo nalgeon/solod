@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/types"
 	"io"
+	"strings"
 )
 
 // emitArrayLit emits a fixed-size array literal as a C initializer list.
@@ -250,11 +251,11 @@ func arrayDims(typ types.Type) string {
 	if _, ok := typ.(*types.Named); ok {
 		return ""
 	}
-	var dims string
+	var dims strings.Builder
 	for arr, ok := typ.(*types.Array); ok; arr, ok = arr.Elem().(*types.Array) {
-		dims += fmt.Sprintf("[%d]", arr.Len())
+		fmt.Fprintf(&dims, "[%d]", arr.Len())
 	}
-	return dims
+	return dims.String()
 }
 
 // arraySize returns the compile-time size of an array type, or -1 if not an array.

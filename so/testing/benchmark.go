@@ -442,8 +442,7 @@ func prettyPrint(w io.Writer, x float64, unit string) {
 
 // MemString returns r.AllocedBytesPerOp and r.AllocsPerOp in the same format as 'go test'.
 func (r BenchmarkResult) MemString(buf []byte) string {
-	fbuf := fmt.BufferFrom(buf)
-	return fmt.Sprintf(fbuf, "%8d B/op  %8d allocs/op",
+	return fmt.Sprintf(buf, "%8d B/op  %8d allocs/op",
 		r.AllocedBytesPerOp(), r.AllocsPerOp())
 }
 

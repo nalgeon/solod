@@ -98,6 +98,28 @@ func TestFormatFloat(t *testing.T) {
 	}
 }
 
+// TestFormatFloatPrec covers an explicit precision, which takes the fixed
+// digit path instead of the shortest one.
+func TestFormatFloatPrec(t *testing.T) {
+	buf := make([]byte, strconv.MaxFloat64Len)
+	s := strconv.FormatFloat(buf, 1.5, 'f', 6, 64)
+	if s != "1.500000" {
+		t.Error("FormatFloat f prec")
+	}
+	s = strconv.FormatFloat(buf, 3.14159, 'f', 0, 64)
+	if s != "3" {
+		t.Error("FormatFloat f prec 0")
+	}
+	s = strconv.FormatFloat(buf, 1234.5678, 'e', 3, 64)
+	if s != "1.235e+03" {
+		t.Error("FormatFloat e prec")
+	}
+	s = strconv.FormatFloat(buf, 1234.5678, 'g', 3, 64)
+	if s != "1.23e+03" {
+		t.Error("FormatFloat g prec")
+	}
+}
+
 func TestFormatInt(t *testing.T) {
 	buf := make([]byte, strconv.MaxIntBase10Len)
 	s := strconv.FormatInt(buf, -42, 10)

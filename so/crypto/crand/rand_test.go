@@ -130,7 +130,7 @@ func TestText(t *testing.T) {
 func indexSetTable(t *testing.T, indexSet [26]map[rune]int) {
 	alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
 	line := "   "
-	buf := fmt.NewBuffer(16)
+	buf := make([]byte, 16)
 	for _, r := range alphabet {
 		line += fmt.Sprintf(buf, " %3s", string(r))
 	}

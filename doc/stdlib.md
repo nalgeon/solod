@@ -40,7 +40,7 @@ Three language traits shape the whole library:
 
 ## Input and output
 
-[fmt](https://pkg.go.dev/solod.dev/so/fmt) formats and scans text through the `Printf`/`Sprintf`/`Fprintf` and `Scanf`/`Sscanf`/`Fscanf` families. The verbs are C's, not Go's, and without reflection there is no `%v`. `Print` and `Println` take only strings, so for anything else use the built-in `print` and `println`.
+[fmt](https://pkg.go.dev/solod.dev/so/fmt) formats and scans text through the `Printf`/`Sprintf`/`Fprintf` and `Scanf`/`Sscanf`/`Fscanf` families. The verbs are Go's, minus the ones that need type information (`%v`, `%T`, `%w`, `%q`, `%U`) and plus `%u` for an unsigned integer.
 
 [io](https://pkg.go.dev/solod.dev/so/io) defines the `Reader`, `Writer`, and `Closer` interfaces the rest of the library builds on, along with `Copy`, `ReadAll`, and a few reader wrappers.
 

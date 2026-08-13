@@ -112,6 +112,49 @@ Both options can be combined:
 func MyFunc(s string)
 ```
 
+### Nodecay and variadics
+
+A plain extern variadic is a C variadic: every argument decays, and the callee reads C types. A nodecay extern variadic is not. Each argument goes to the C `...` on its own, at its So type, so the callee reads `so_String` for a string and `so_Slice` for a slice.
+
+For a nodecay variadic function, the transpiler emits the variadic argument types as follows:
+
+| So type                            | C type read by `va_arg` |
+| ---------------------------------- | ----------------------- |
+| any signed integer, `rune`, `bool` | `so_int`                |
+| any unsigned integer               | `so_uint`               |
+| `float32`, `float64`               | `double`                |
+| `string`                           | `so_String`             |
+| anything else                      | the type itself         |
+
+`so_int` and `so_uint` are as wide as So's `int`, which is 32 bits on a 32-bit target. An `int64` or a `uint64` argument truncates there.
+
+The call must list its arguments explicitly rather than using spread syntax. `f(args...)` spreads a slice, and C has no way to take a slice apart, so it is an error. An `any` argument is an error as well, because it carries no type the callee can read.
+
+```go
+//so:extern nodecay
+func measure(kinds string, args ...any) int
+
+var n int32 = 7
+measure("is", n, "abc")
+// Generated C:
+// measure(so_str("is"), (so_int)(n), so_str("abc"))
+```
+
+The C side declares the fixed parameters and reads the rest:
+
+```c
+so_int measure(so_String kinds, ...) {
+    va_list args;
+    va_start(args, kinds);
+    so_int n = va_arg(args, so_int);
+    so_String s = va_arg(args, so_String);
+    va_end(args);
+    return n + s.len;
+}
+```
+
+A variadic has no argument count, so the callee needs one of its own: a count, a kinds string as above, or a terminator argument.
+
 ### Field names
 
 A `c:"..."` struct tag overrides the C name of a single field. This is needed when a C struct has a field whose name is a Go keyword, such as `type`:

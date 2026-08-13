@@ -27,7 +27,7 @@ func ensureStrKeys() {
 		return
 	}
 	strKeys = mem.AllocSlice[string](nil, nKeys, nKeys)
-	buf := fmt.NewBuffer(32)
+	buf := make([]byte, 32)
 	for i := range nKeys {
 		strKeys[i] = strings.Clone(nil, fmt.Sprintf(buf, "key-%d", i))
 	}

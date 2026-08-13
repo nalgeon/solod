@@ -281,10 +281,17 @@ func (g *Generator) emitFuncCallArgs(w io.Writer, call *ast.CallExpr) {
 		sig, _ = funType.Underlying().(*types.Signature)
 	}
 
-	if ext, ok := g.funcExtern(call); ok && !ext.nodecay {
-		// Extern C function: decay args to C-compatible types.
-		g.emitFuncExternArgs(w, call)
-		return
+	if ext, ok := g.funcExtern(call); ok {
+		if !ext.nodecay {
+			// Extern C function: decay args to C-compatible types.
+			g.emitFuncExternArgs(w, call)
+			return
+		}
+		if sig != nil && sig.Variadic() {
+			// Extern nodecay function: emit the variadic args flat.
+			g.emitFuncExternVarArgs(w, call, sig)
+			return
+		}
 	}
 
 	if sig != nil && sig.Variadic() && !call.Ellipsis.IsValid() {
@@ -368,6 +375,43 @@ func (g *Generator) emitFuncExternArgs(w io.Writer, call *ast.CallExpr) {
 			g.emitCArg(w, arg)
 		}
 	}
+}
+
+// emitFuncExternVarArgs emits the arguments of a call to a variadic extern
+// nodecay function.
+func (g *Generator) emitFuncExternVarArgs(w io.Writer, call *ast.CallExpr, sig *types.Signature) {
+	if call.Ellipsis.IsValid() {
+		g.fail(call, "spreading variadic arguments to an extern function is not supported")
+	}
+	for i := range call.Args {
+		if i > 0 {
+			fmt.Fprint(w, ", ")
+		}
+		g.emitExternVarArg(w, call, call, sig, i)
+	}
+}
+
+// emitExternVarArg emits argument i of a call to a variadic extern nodecay
+// function. A fixed argument takes the declared parameter type. A variadic
+// argument goes flat, at its own type, because the callee reads one value per
+// va_arg call. A so_Slice literal cannot cross a C variadic.
+func (g *Generator) emitExternVarArg(w io.Writer, node ast.Node, call *ast.CallExpr, sig *types.Signature, i int) {
+	arg := call.Args[i]
+	if i < sig.Params().Len()-1 {
+		g.emitCallArg(w, node, arg, sig.Params().At(i).Type())
+		return
+	}
+	argType := g.types.TypeOf(arg)
+	if iface, ok := argType.Underlying().(*types.Interface); ok && iface.Empty() {
+		g.fail(arg, "cannot pass an any value to a variadic extern function")
+	}
+	// The generator widens the scalar types to avoid C promotion issues.
+	if cType, ok := varArgType(argType); ok {
+		fmt.Fprintf(w, "(%s)", cType)
+		g.emitParenExpr(w, arg)
+		return
+	}
+	g.emitExprAsType(w, node, arg, argType)
 }
 
 // emitCallArg emits a call argument coerced to the parameter type.
@@ -491,6 +535,26 @@ func recvTypeParams(recv *ast.Field) []string {
 		return names
 	}
 	return nil
+}
+
+// varArgType returns the C type a scalar widens to in the variadic position of
+// an extern nodecay call. The second result reports whether the type widens.
+func varArgType(typ types.Type) (string, bool) {
+	basic, ok := typ.Underlying().(*types.Basic)
+	if !ok {
+		return "", false
+	}
+	switch info := basic.Info(); {
+	case info&types.IsBoolean != 0:
+		return "so_int", true
+	case info&types.IsUnsigned != 0:
+		return "so_uint", true
+	case info&types.IsInteger != 0:
+		return "so_int", true
+	case info&types.IsFloat != 0:
+		return "double", true
+	}
+	return "", false
 }
 
 // isGenericFunc reports whether a function declaration is generic

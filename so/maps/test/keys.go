@@ -89,7 +89,8 @@ func TestKeyUint64(t *testing.T) {
 	}
 	for i, key := range keys {
 		if got := m.Get(key); got != i+1 {
-			t.Errorf("Get(%x) = %d, want %d", key, got, i+1)
+			// The key does not fit an int, so the message names its index.
+			t.Errorf("Get(keys[%d]) = %d, want %d", i, got, i+1)
 		}
 	}
 	m.Delete(0xFFFFFFFFFFFFFFFF)

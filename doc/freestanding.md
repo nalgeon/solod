@@ -45,6 +45,8 @@ Packages that depend on `runtime.Seed` (like `math/rand`) work but produce repea
 
 `panic` silently traps instead of printing a message. `print` and `println` are no-ops.
 
+`fmt.Print`, `fmt.Println`, and `fmt.Printf` format the text and then drop the bytes, because there is no standard output to write them to. Assign another writer to `fmt.Output` — a UART or a host import — to get the output back.
+
 ## Stdlib packages
 
 These packages work in freestanding mode with no restrictions:
@@ -55,17 +57,22 @@ encoding/json  errors  io  maps  math/bits  math/rand  mem  path
 runtime  slices  strconv  strings  unicode unicode/utf8  unsafe
 ```
 
-The `time` package works with these restrictions:
+The `fmt` package works with these restrictions:
 
-- `Now`, `Since`, and `Until` are not available.
-- `Time.Format` and `Time.Parse` only support named layouts (such as `RFC3339` or `DateOnly`), not custom layouts.
+- `Scanf`, `Sscanf`, and `Fscanf` read through the stdio of the host, so a freestanding call panics.
+- `Print`, `Println`, and `Printf` drop the bytes unless you set `fmt.Output`, as [No stdio](#no-stdio) describes. `Sprintf` and `Fprintf` are unaffected.
 
 The `net/netip` package works with one restriction:
 
 - A zone given as an interface name (`fe80::1%eth0`) resolves to no zone, because a freestanding environment has no network interfaces. A numeric zone (`fe80::1%2`) works.
 
+The `time` package works with these restrictions:
+
+- `Now`, `Since`, and `Until` are not available.
+- `Time.Format` and `Time.Parse` only support named layouts (such as `RFC3339` or `DateOnly`), not custom layouts.
+
 These packages require a hosted environment and will produce a compile-time error if imported:
 
 ```text
-crypto/crand  flag  fmt  log/slog  math  os  testing
+crypto/crand  flag  log/slog  math  os  testing
 ```

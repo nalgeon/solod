@@ -36,6 +36,15 @@ func printf(format string, args ...any) int
 //so:extern
 func write_acc(acc *Account, format string, args ...any)
 
+// measure sums the arguments the kinds string describes. It is nodecay, so
+// every argument arrives as a So type.
+//
+//so:extern nodecay
+func measure(kinds string, args ...any) int
+
+//so:extern nodecay
+func (acc *Account) Measure(kinds string, args ...any) int
+
 //so:extern unsigned char
 type uchar uint8
 
@@ -87,6 +96,33 @@ func main() {
 		// Extern variadic function.
 		acc := Account{name: "Bob"}
 		write_acc(&acc, "Hello %s!", "world")
+	}
+	{
+		// Extern nodecay variadic function: the args go flat,
+		// at their So types, and every scalar widens.
+		name := "Alice"
+		var i32 int32 = 7
+		var u uint = 4
+		var u8 uint8 = 3
+		var f32 float32 = 1.5
+		var acc Account
+		got := measure("ssiiiiiuudp",
+			name, "Bob", 10, -8, i32, true, 'A', u, u8, f32, &acc)
+		want := len(name) + len("Bob") + 10 - 8 + int(i32) + 1 + int('A') +
+			int(u) + int(u8) + int(f32) + 1
+		if got != want {
+			panic("measure failed")
+		}
+		if measure("") != 0 {
+			panic("empty measure failed")
+		}
+	}
+	{
+		// Extern nodecay variadic method.
+		acc := Account{balance: 20}
+		if acc.Measure("is", 5, "abc") != 28 {
+			panic("Measure failed")
+		}
 	}
 	{
 		// Extern variadic method.
