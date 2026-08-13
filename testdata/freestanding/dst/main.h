@@ -31,15 +31,14 @@
 
 // -- Embeds --
 
-// begin include
-// CRAND_HOOKED reports whether crypto/crand draws from so_crand_read in main.c.
-// A hosted build draws from the CSPRNG of the operating system instead.
+// HOOKED reports whether crypto/crand and time draw from the target hooks in
+// main.c. A hosted build draws from the operating system instead, so the values
+// it gets back are the real ones and the test cannot predict them.
 #ifdef so_build_hosted
-#define CRAND_HOOKED 0
+#define HOOKED 0
 #else
-#define CRAND_HOOKED 1
+#define HOOKED 1
 #endif
-// end include
 
 // -- Variables and constants --
 extern so_Error main_ErrCheck;

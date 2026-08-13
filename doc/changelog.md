@@ -278,6 +278,8 @@ so_int so_crand_read(uint8_t* buf, so_int size) {
 
 The declaration is weak, so a program that never calls `crypto/crand` still links. A call with no definition panics. See [freestanding mode](freestanding.md).
 
+**encoding/json works in freestanding mode**. The package used `math.IsNaN` and `math.IsInf` to reject a non-finite float. The `math` package requires a hosted environment, so that import alone made `encoding/json` hosted. The package now uses a private finite check and doesn't import `math`. See [freestanding mode](freestanding.md).
+
 **fmt works in freestanding mode**. The print family used to wrap C's `vsnprintf`, so it printed C's text with C's verbs, and the `<stdio.h>` include made the whole package hosted. It now runs a formatting engine ported from Go's `fmt` and writes the bytes Go writes. Hosted and freestanding builds produce the same output.
 
 The verbs are Go's, with two differences. So has no reflection, so the verbs that need type information are absent: `%v`, `%T`, `%w`, `%q`, and `%U`. And `%u` is added for an unsigned integer, because a print call carries no type information either, so nothing else can tell a signed value from an unsigned one. `%t` for a bool and `%O` for octal with a `0o` prefix are new as well.
@@ -295,6 +297,8 @@ s := fmt.Sprintf(buf, "%d apples", n)
 
 `Buffer` existed because a `[]byte` argument decayed to a bare pointer, which lost the length. The print family is nodecay now, so the slice arrives whole.
 
+**net/netip works in freestanding mode**. The package included `<net/if.h>` for `if_nametoindex`, and that header made the whole package hosted. The include now sits behind a hosted guard, and a freestanding build gets a stub that returns 0. A zone given as an interface name resolves to no zone, the same result a hosted `if_nametoindex` gives for a name that matches no interface. A numeric zone works everywhere. See [freestanding mode](freestanding.md).
+
 **os.File.Sync**. A `File` writes through a buffered C stream, so a program that ends abnormally loses the buffered data. `Sync` flushes the stream:
 
 ```go
@@ -304,11 +308,25 @@ f.Sync() // the line is out of the buffer now
 
 The data can still wait in an operating system cache, so `Sync` does not guarantee that the data reached the storage device.
 
-**net/netip works in freestanding mode**. The package included `<net/if.h>` for `if_nametoindex`, and that header made the whole package hosted. The include now sits behind a hosted guard, and a freestanding build gets a stub that returns 0. A zone given as an interface name resolves to no zone, the same result a hosted `if_nametoindex` gives for a name that matches no interface. A numeric zone works everywhere. See [freestanding mode](freestanding.md).
+**time reads the clock in freestanding mode**. `Now`, `Since`, `Until`, and `Sleep` used to panic. The target now supplies the clock through three weak hooks, the same way `crypto/crand` supplies entropy:
 
-**encoding/json works in freestanding mode**. The package used `math.IsNaN` and `math.IsInf` to reject a non-finite float. The `math` package requires a hosted environment, so that import alone made `encoding/json` hosted. The package now uses a private finite check and doesn't import `math`. See [freestanding mode](freestanding.md).
+```c
+so_R_i64_i32 so_time_wall(void) {
+    return (so_R_i64_i32){.val = board_rtc_unix_seconds(), .val2 = 0};
+}
 
-**uuid works in freestanding mode**. The package imports `crypto/crand`, so `New` and `NewV4` now work in a freestanding environment as soon as `so_crand_read` is defined. `NewV7` reads the clock through `time.Now`, so a freestanding call panics. See [freestanding mode](freestanding.md).
+int64_t so_time_mono(void) {
+    return board_uptime_ms() * 1000000;
+}
+
+void so_time_sleep(int64_t ns) {
+    board_delay_ms(ns / 1000000);
+}
+```
+
+A board that counts elapsed time but does not know the date returns 0 seconds from `so_time_wall`. Every `Time` then dates at the epoch, and `Since` and `Until` stay exact, because they measure with the monotonic clock. A target with no `so_time_mono` still works: `time.Now` returns a wall clock reading alone. See [freestanding mode](freestanding.md).
+
+**uuid works in freestanding mode**. The package imports `crypto/crand`, so `New` and `NewV4` now work in a freestanding environment as soon as `so_crand_read` is defined, and `NewV7` works once `so_time_wall` is defined too. See [freestanding mode](freestanding.md).
 
 ## Tooling
 

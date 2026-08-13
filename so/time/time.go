@@ -123,6 +123,11 @@ func Date(year int, month Month, day, hour, min, sec, nsec int, offset Offset) T
 }
 
 // Now returns the current time in UTC.
+//
+// In a freestanding environment, Now reads the clock through the so_time_wall
+// and so_time_mono hooks of the target. See the [freestanding guide].
+//
+// [freestanding guide]: https://github.com/solod-dev/solod/blob/main/doc/freestanding.md
 func Now() Time {
 	sec, nsec := time_wall()
 	mono := time_mono()
@@ -269,6 +274,11 @@ func (t *Time) stripMono() {
 
 // Sleep pauses the current thread for at least the duration d.
 // A negative or zero duration causes Sleep to return immediately.
+//
+// In a freestanding environment, Sleep waits through the so_time_sleep
+// hook of the target. See the [freestanding guide].
+//
+// [freestanding guide]: https://github.com/solod-dev/solod/blob/main/doc/freestanding.md
 func Sleep(d Duration) {
 	if d <= 0 {
 		return

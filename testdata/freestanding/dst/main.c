@@ -4,17 +4,40 @@
 
 //go:build ignore
 
-#if CRAND_HOOKED
-// so_crand_read is the entropy source that crypto/crand needs in a freestanding
-// environment. A real target reads the hardware random number generator here.
-// This one counts up, so the test can check the bytes it gets back.
+#ifndef so_build_hosted
+
+// This case stands in for the board. A freestanding environment has no entropy
+// source and no clock, so it defines the target hooks that crypto/crand and
+// time need. A real target reads its hardware here.
+
+// so_crand_read counts up, so the test can check the bytes it gets back.
 so_int so_crand_read(uint8_t* buf, so_int size) {
     for (so_int i = 0; i < size; i++) {
         buf[i] = (uint8_t)(i + 1);
     }
     return size;
 }
-#endif  // CRAND_HOOKED
+
+// fakeMono counts the nanoseconds that so_time_mono and so_time_sleep report.
+static int64_t fakeMono = 1000000;
+
+// so_time_wall reports a fixed 2009-11-10T23:00:00Z, the Go playground date.
+so_R_i64_i32 so_time_wall(void) {
+    return (so_R_i64_i32){.val = 1257894000, .val2 = 0};
+}
+
+// so_time_mono adds a millisecond on every call, so elapsed time always grows.
+int64_t so_time_mono(void) {
+    fakeMono += 1000000;
+    return fakeMono;
+}
+
+// so_time_sleep adds the full duration to the monotonic count.
+void so_time_sleep(int64_t ns) {
+    fakeMono += ns;
+}
+
+#endif  // !so_build_hosted
 
 // -- Types --
 
@@ -102,7 +125,7 @@ int main(void) {
         so_Error err = _res3.err;
         check(err.self == NULL, so_str("crand: read failed"));
         check(n == 4, so_str("crand: wrong count"));
-        if (CRAND_HOOKED) {
+        if (HOOKED) {
             check(so_at(so_byte, buf, 0) == 1 && so_at(so_byte, buf, 3) == 4, so_str("crand: wrong bytes"));
         }
     }
@@ -222,8 +245,23 @@ int main(void) {
         check(atomic_Int64_Load(&cnt) == 7, so_str("atomic: wrong value"));
     }
     {
-        // time. Now, Since and Until are missing in freestanding mode,
-        // and Format only supports named layouts.
+        // time. Now, Since, Until and Sleep draw from the target hooks
+        // so_time_wall, so_time_mono and so_time_sleep (see main.c).
+        if (HOOKED) {
+            // so_time_wall reports the Go playground date.
+            time_Time now = time_Now();
+            so_Slice buf = so_make_slice(so_byte, time_RFC3339Len + 1, time_RFC3339Len + 1);
+            so_String got = time_Time_Format(now, buf, time_RFC3339, time_UTC);
+            check(so_string_eq(got, so_str("2009-11-10T23:00:00Z")), so_str("time: wrong time from the hook"));
+            time_Time start = time_Now();
+            time_Sleep(10 * time_Millisecond);
+            time_Duration elapsed = time_Since(start);
+            check(elapsed >= 10 * time_Millisecond, so_str("time: sleep did not elapse"));
+            check(time_Until(start) <= 0, so_str("time: start is not in the past"));
+        }
+    }
+    {
+        // time. Format only supports named layouts in freestanding mode.
         time_Time ts = time_Date(2026, time_August, 11, 12, 0, 0, 0, time_UTC);
         check(time_Time_Year(ts) == 2026, so_str("time: wrong year"));
         so_Slice buf = so_make_slice(so_byte, time_RFC3339Len + 1, time_RFC3339Len + 1);
@@ -232,7 +270,8 @@ int main(void) {
     }
     {
         // uuid. New and NewV4 draw from crypto/crand, so they need
-        // so_crand_read. NewV7 reads the clock, so it panics.
+        // so_crand_read. NewV7 also reads the clock, so it needs
+        // so_time_wall as well.
         uuid_UUID u = uuid_New();
         so_Slice buf = so_make_slice(so_byte, uuid_UUIDLen, uuid_UUIDLen);
         so_R_slice_err _res9 = uuid_UUID_MarshalText(u, buf);
@@ -245,6 +284,10 @@ int main(void) {
         err = _res10.err;
         check(err.self == NULL, so_str("uuid: parse failed"));
         check(uuid_UUID_Equal(parsed, u), so_str("uuid: round trip changed the value"));
+        check(uuid_UUID_Version(u) == 4, so_str("uuid: wrong version"));
+        uuid_UUID v7 = uuid_NewV7();
+        check(uuid_UUID_Version(v7) == 7, so_str("uuid: wrong v7 version"));
+        check(!uuid_UUID_Equal(v7, uuid_Nil()), so_str("uuid: v7 is the nil value"));
     }
     so_println("%s", "ok");
     return 0;

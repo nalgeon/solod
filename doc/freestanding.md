@@ -2,6 +2,11 @@
 
 So can target freestanding (bare-metal) environments where no C standard library is available.
 
+[Compiling](#compiling) •
+[Stdlib packages](#stdlib-packages) •
+[Target hooks](#target-hooks) •
+[Limitations](#limitations)
+
 ## Compiling
 
 Set `CC` and `CFLAGS` to target a freestanding environment. For example, using `zig cc` to target bare `wasm32`:
@@ -25,6 +30,86 @@ zig cc -Oz \
     generated/**/*.c
 ```
 
+## Stdlib packages
+
+These packages work in freestanding mode with no restrictions:
+
+```text
+bufio  bytealg  bytes  c  cmp  encoding  encoding/binary
+encoding/hex  encoding/json  errors  io  maps  math/bits  math/rand
+mem  path  runtime  slices  strconv  strings  sync/atomic  unicode
+unicode/utf8  unsafe
+```
+
+The `crypto/crand` package works with one restriction:
+
+- A freestanding environment has no CSPRNG, so the package draws from the `so_crand_read` hook. See [Target hooks](#target-hooks).
+
+The `fmt` package works with these restrictions:
+
+- `Scanf`, `Sscanf`, and `Fscanf` read through the stdio of the host, so a freestanding call panics.
+- `Print`, `Println`, and `Printf` drop the bytes unless you set `fmt.Output`, as [No stdio](#no-stdio) describes. `Sprintf` and `Fprintf` are unaffected.
+
+The `net/netip` package works with one restriction:
+
+- A zone given as an interface name (`fe80::1%eth0`) resolves to no zone, because a freestanding environment has no network interfaces. A numeric zone (`fe80::1%2`) works.
+
+The `time` package works with these restrictions:
+
+- `Now`, `Since`, `Until`, and `Sleep` read the clock through the `so_time_wall`, `so_time_mono`, and `so_time_sleep` hooks. See [Target hooks](#target-hooks).
+- `Time.Format` and `Time.Parse` only support named layouts (such as `RFC3339` or `DateOnly`), not custom layouts.
+
+The `uuid` package works with one restriction:
+
+- `New` and `NewV4` hold random data only, so they need the `so_crand_read` hook. `NewV7` also reads the clock, so it needs `so_time_wall` as well. See [Target hooks](#target-hooks).
+
+These packages require a hosted environment and will produce a compile-time error if imported:
+
+```text
+conc  flag  log/slog  math  net  os  sync  testing
+```
+
+## Target hooks
+
+A freestanding environment has no entropy source and no clock, and only the target knows how to reach its own hardware. The stdlib declares a weak C function for each of these, and the target defines the ones its program needs:
+
+| Hook            | Signature                                         | With no definition    |
+| --------------- | ------------------------------------------------- | --------------------- |
+| `so_crand_read` | `so_int so_crand_read(uint8_t* buf, so_int size)` | `crypto/crand` panics |
+| `so_time_wall`  | `so_R_i64_i32 so_time_wall(void)`                 | `time.Now` panics     |
+| `so_time_mono`  | `int64_t so_time_mono(void)`                      | no monotonic clock    |
+| `so_time_sleep` | `void so_time_sleep(int64_t ns)`                  | `time.Sleep` panics   |
+
+Every declaration is weak, so a program that never calls the package still links. Define the hooks in a C file and add it to the build, or embed it with `so:embed`:
+
+```c
+so_int so_crand_read(uint8_t* buf, so_int size) {
+    return board_rng_fill(buf, size);
+}
+
+so_R_i64_i32 so_time_wall(void) {
+    return (so_R_i64_i32){.val = board_rtc_unix_seconds(), .val2 = 0};
+}
+
+int64_t so_time_mono(void) {
+    return board_uptime_ms() * 1000000;
+}
+
+void so_time_sleep(int64_t ns) {
+    board_delay_ms(ns / 1000000);
+}
+```
+
+Notes on each hook:
+
+`so_crand_read` fills `buf` with `size` bytes and returns the number of bytes written. There is no deterministic fallback on purpose. A generator that quietly returns predictable bytes gives every device the same keys and identifiers, and nothing reports the failure.
+
+`so_time_wall` returns seconds and nanoseconds since the Unix epoch. A board that counts elapsed time but does not know the date returns 0 seconds. Every `Time` then dates at the epoch, and `Since` and `Until` stay exact, because they measure with the monotonic clock.
+
+`so_time_mono` returns nanoseconds from an arbitrary origin. The count must never decrease and must never be 0, because `time.Now` reads 0 as the absence of a monotonic clock. Convert the tick of the board to nanoseconds here, and widen a counter that wraps: a 32-bit counter at 1 kHz wraps after 49 days.
+
+A target with no `so_time_mono` still works. `time.Now` returns a wall clock reading alone, and `Since` and `Until` measure with the wall clock.
+
 ## Limitations
 
 ### Bump allocator
@@ -46,44 +131,3 @@ Packages that depend on `runtime.Seed` (like `math/rand`) work but produce repea
 `panic` silently traps instead of printing a message. `print` and `println` are no-ops.
 
 `fmt.Print`, `fmt.Println`, and `fmt.Printf` format the text and then drop the bytes, because there is no standard output to write them to. Assign another writer to `fmt.Output` — a UART or a host import — to get the output back.
-
-## Stdlib packages
-
-These packages work in freestanding mode with no restrictions:
-
-```text
-bufio  bytealg  bytes  c  cmp  encoding  encoding/binary
-encoding/hex  encoding/json  errors  io  maps  math/bits  math/rand
-mem  path  runtime  slices  strconv  strings  sync/atomic  unicode
-unicode/utf8  unsafe
-```
-
-The `crypto/crand` package needs an entropy source from the target:
-
-- A freestanding environment has no CSPRNG, so the target must define the C function `so_int so_crand_read(uint8_t* buf, so_int size)`. Point it at the hardware random number generator of the board or at a host import. The function fills `buf` with `size` bytes and returns the number of bytes written.
-- The declaration is weak, so a program that never calls `crypto/crand` still links. A call with no definition panics.
-- There is no deterministic fallback on purpose. A generator that quietly returns predictable bytes gives every device the same keys and identifiers, and nothing reports the failure.
-
-The `fmt` package works with these restrictions:
-
-- `Scanf`, `Sscanf`, and `Fscanf` read through the stdio of the host, so a freestanding call panics.
-- `Print`, `Println`, and `Printf` drop the bytes unless you set `fmt.Output`, as [No stdio](#no-stdio) describes. `Sprintf` and `Fprintf` are unaffected.
-
-The `net/netip` package works with one restriction:
-
-- A zone given as an interface name (`fe80::1%eth0`) resolves to no zone, because a freestanding environment has no network interfaces. A numeric zone (`fe80::1%2`) works.
-
-The `time` package works with these restrictions:
-
-- `Now`, `Since`, and `Until` are not available.
-- `Time.Format` and `Time.Parse` only support named layouts (such as `RFC3339` or `DateOnly`), not custom layouts.
-
-The `uuid` package works with one restriction:
-
-- `NewV7` reads the clock through `time.Now`, so a freestanding call panics. `New` and `NewV4` hold random data only, so they work as soon as `crypto/crand` has an entropy source.
-
-These packages require a hosted environment and will produce a compile-time error if imported:
-
-```text
-conc  flag  log/slog  math  net  os  sync  testing
-```

@@ -68,18 +68,57 @@ static inline char* strptime(const char* str, const char* format, time_tm* tm) {
     return NULL;
 }
 
+// so_time_wall returns the current wall clock time as seconds and nanoseconds
+// since the Unix epoch. A freestanding environment has no clock of its own, so
+// the target must define this function. Point it at the real time clock of the
+// board or at a host import. A target that counts elapsed time only returns 0
+// seconds, which dates every Time at the epoch and keeps Since and Until exact.
+//
+// The declaration is weak, so a program that never reads the wall clock still
+// links. A call with no definition panics.
+__attribute__((weak)) so_R_i64_i32 so_time_wall(void);
+
+// so_time_mono returns a monotonic count of nanoseconds from an arbitrary
+// origin. The target must define this function to get a monotonic clock. Point
+// it at a timer peripheral, at the tick counter of the operating system, or at
+// a host import.
+//
+// The count must never decrease and must never be 0, because Now reads 0 as the
+// absence of a monotonic clock. Convert the tick of the board to nanoseconds
+// here, and widen a counter that wraps: a 32-bit counter at 1 kHz wraps after
+// 49 days.
+//
+// The declaration is weak. A target with no definition has no monotonic clock,
+// so Time holds a wall clock reading alone.
+__attribute__((weak)) int64_t so_time_mono(void);
+
+// so_time_sleep pauses for at least ns nanoseconds. The target must define this
+// function. Point it at a wait instruction, at the delay of the operating
+// system, or at a host import.
+//
+// The declaration is weak, so a program that never sleeps still links. A call
+// with no definition panics.
+__attribute__((weak)) void so_time_sleep(int64_t ns);
+
 static inline so_R_i64_i32 time_wall() {
-    so_panic("time: wall clock time requires a hosted environment");
-    return (so_R_i64_i32){};
+    if (so_time_wall == NULL) {
+        so_panic("time: define so_time_wall for this target");
+    }
+    return so_time_wall();
 }
 
 static inline int64_t time_mono() {
-    return 0;
+    // A target with no so_time_mono has no monotonic clock.
+    // Now reads the 0 as the absence of a monotonic clock.
+    if (so_time_mono == NULL) return 0;
+    return so_time_mono();
 }
 
 static inline void time_sleep(int64_t ns) {
-    (void)ns;
-    so_panic("time: sleep requires a hosted environment");
+    if (so_time_sleep == NULL) {
+        so_panic("time: define so_time_sleep for this target");
+    }
+    so_time_sleep(ns);
 }
 
 #endif  // so_build_hosted

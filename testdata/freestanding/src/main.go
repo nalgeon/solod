@@ -45,10 +45,11 @@ var main_h string
 //so:embed main.c
 var main_c string
 
-// crandHooked reports whether crypto/crand draws from so_crand_read in main.c.
+// hooked reports whether crypto/crand and time draw from the target hooks in
+// main.c. A hosted build draws from the operating system instead.
 //
-//so:extern CRAND_HOOKED
-const crandHooked = false
+//so:extern HOOKED
+const hooked = false
 
 var ErrCheck = errors.New("check failed")
 
@@ -121,7 +122,7 @@ func main() {
 		n, err := crand.Read(buf)
 		check(err == nil, "crand: read failed")
 		check(n == 4, "crand: wrong count")
-		if crandHooked {
+		if hooked {
 			check(buf[0] == 1 && buf[3] == 4, "crand: wrong bytes")
 		}
 	}
@@ -234,8 +235,24 @@ func main() {
 		check(cnt.Load() == 7, "atomic: wrong value")
 	}
 	{
-		// time. Now, Since and Until are missing in freestanding mode,
-		// and Format only supports named layouts.
+		// time. Now, Since, Until and Sleep draw from the target hooks
+		// so_time_wall, so_time_mono and so_time_sleep (see main.c).
+		if hooked {
+			// so_time_wall reports the Go playground date.
+			now := time.Now()
+			buf := make([]byte, time.RFC3339Len+1)
+			got := now.Format(buf, time.RFC3339, time.UTC)
+			check(got == "2009-11-10T23:00:00Z", "time: wrong time from the hook")
+
+			start := time.Now()
+			time.Sleep(10 * time.Millisecond)
+			elapsed := time.Since(start)
+			check(elapsed >= 10*time.Millisecond, "time: sleep did not elapse")
+			check(time.Until(start) <= 0, "time: start is not in the past")
+		}
+	}
+	{
+		// time. Format only supports named layouts in freestanding mode.
 		ts := time.Date(2026, time.August, 11, 12, 0, 0, 0, time.UTC)
 		check(ts.Year() == 2026, "time: wrong year")
 		buf := make([]byte, time.RFC3339Len+1)
@@ -244,7 +261,8 @@ func main() {
 	}
 	{
 		// uuid. New and NewV4 draw from crypto/crand, so they need
-		// so_crand_read. NewV7 reads the clock, so it panics.
+		// so_crand_read. NewV7 also reads the clock, so it needs
+		// so_time_wall as well.
 		u := uuid.New()
 		buf := make([]byte, uuid.UUIDLen)
 		text, err := u.MarshalText(buf)
@@ -253,6 +271,11 @@ func main() {
 		parsed, err := uuid.Parse(string(text))
 		check(err == nil, "uuid: parse failed")
 		check(parsed.Equal(u), "uuid: round trip changed the value")
+		check(u.Version() == 4, "uuid: wrong version")
+
+		v7 := uuid.NewV7()
+		check(v7.Version() == 7, "uuid: wrong v7 version")
+		check(!v7.Equal(uuid.Nil()), "uuid: v7 is the nil value")
 	}
 
 	println("ok")
