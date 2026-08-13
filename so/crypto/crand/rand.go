@@ -22,6 +22,10 @@ var rand_h string
 //
 //   - On Linux, FreeBSD, and Dragonfly, uses getrandom(2).
 //   - On macOS, NetBSD, and OpenBSD, uses arc4random_buf(3).
+//   - In a freestanding environment, uses so_crand_read from the target.
+//     See the [freestanding guide] for details.
+//
+// [freestanding guide]: https://github.com/solod-dev/solod/blob/main/doc/freestanding.md
 var Reader io.Reader = &R{}
 
 type R struct{}

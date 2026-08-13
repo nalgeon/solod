@@ -58,6 +58,12 @@ mem  path  runtime  slices  strconv  strings  sync/atomic  unicode
 unicode/utf8  unsafe
 ```
 
+The `crypto/crand` package needs an entropy source from the target:
+
+- A freestanding environment has no CSPRNG, so the target must define the C function `so_int so_crand_read(uint8_t* buf, so_int size)`. Point it at the hardware random number generator of the board or at a host import. The function fills `buf` with `size` bytes and returns the number of bytes written.
+- The declaration is weak, so a program that never calls `crypto/crand` still links. A call with no definition panics.
+- There is no deterministic fallback on purpose. A generator that quietly returns predictable bytes gives every device the same keys and identifiers, and nothing reports the failure.
+
 The `fmt` package works with these restrictions:
 
 - `Scanf`, `Sscanf`, and `Fscanf` read through the stdio of the host, so a freestanding call panics.
@@ -72,8 +78,12 @@ The `time` package works with these restrictions:
 - `Now`, `Since`, and `Until` are not available.
 - `Time.Format` and `Time.Parse` only support named layouts (such as `RFC3339` or `DateOnly`), not custom layouts.
 
+The `uuid` package works with one restriction:
+
+- `NewV7` reads the clock through `time.Now`, so a freestanding call panics. `New` and `NewV4` hold random data only, so they work as soon as `crypto/crand` has an entropy source.
+
 These packages require a hosted environment and will produce a compile-time error if imported:
 
 ```text
-conc  crypto/crand  flag  log/slog  math  net  os  sync  testing  uuid
+conc  flag  log/slog  math  net  os  sync  testing
 ```

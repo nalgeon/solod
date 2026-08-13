@@ -5,6 +5,7 @@
 #include "so/bytes/bytes.h"
 #include "so/c/c.h"
 #include "so/cmp/cmp.h"
+#include "so/crypto/crand/crand.h"
 #include "so/encoding/binary/binary.h"
 #include "so/encoding/encoding.h"
 #include "so/encoding/hex/hex.h"
@@ -26,6 +27,19 @@
 #include "so/time/time.h"
 #include "so/unicode/unicode.h"
 #include "so/unicode/utf8/utf8.h"
+#include "so/uuid/uuid.h"
+
+// -- Embeds --
+
+// begin include
+// CRAND_HOOKED reports whether crypto/crand draws from so_crand_read in main.c.
+// A hosted build draws from the CSPRNG of the operating system instead.
+#ifdef so_build_hosted
+#define CRAND_HOOKED 0
+#else
+#define CRAND_HOOKED 1
+#endif
+// end include
 
 // -- Variables and constants --
 extern so_Error main_ErrCheck;

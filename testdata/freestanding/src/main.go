@@ -14,6 +14,7 @@ import (
 	"solod.dev/so/bytes"
 	"solod.dev/so/c"
 	"solod.dev/so/cmp"
+	"solod.dev/so/crypto/crand"
 	"solod.dev/so/encoding"
 	"solod.dev/so/encoding/binary"
 	"solod.dev/so/encoding/hex"
@@ -35,7 +36,19 @@ import (
 	"solod.dev/so/time"
 	"solod.dev/so/unicode"
 	"solod.dev/so/unicode/utf8"
+	"solod.dev/so/uuid"
 )
+
+//so:embed main.h
+var main_h string
+
+//so:embed main.c
+var main_c string
+
+// crandHooked reports whether crypto/crand draws from so_crand_read in main.c.
+//
+//so:extern CRAND_HOOKED
+const crandHooked = false
 
 var ErrCheck = errors.New("check failed")
 
@@ -100,6 +113,17 @@ func main() {
 		slices.Sort(nums)
 		check(nums[0] == 1, "slices: not sorted")
 		check(slices.Contains(nums, 3), "slices: no value")
+	}
+	{
+		// crypto/crand. A freestanding host has no entropy source of its own,
+		// so the target defines so_crand_read (see main.c).
+		buf := make([]byte, 4)
+		n, err := crand.Read(buf)
+		check(err == nil, "crand: read failed")
+		check(n == 4, "crand: wrong count")
+		if crandHooked {
+			check(buf[0] == 1 && buf[3] == 4, "crand: wrong bytes")
+		}
 	}
 	{
 		// encoding
@@ -217,6 +241,18 @@ func main() {
 		buf := make([]byte, time.RFC3339Len+1)
 		got := ts.Format(buf, time.RFC3339, time.UTC)
 		check(got == "2026-08-11T12:00:00Z", "time: wrong text")
+	}
+	{
+		// uuid. New and NewV4 draw from crypto/crand, so they need
+		// so_crand_read. NewV7 reads the clock, so it panics.
+		u := uuid.New()
+		buf := make([]byte, uuid.UUIDLen)
+		text, err := u.MarshalText(buf)
+		check(err == nil, "uuid: marshal failed")
+		check(len(text) == uuid.UUIDLen, "uuid: wrong length")
+		parsed, err := uuid.Parse(string(text))
+		check(err == nil, "uuid: parse failed")
+		check(parsed.Equal(u), "uuid: round trip changed the value")
 	}
 
 	println("ok")

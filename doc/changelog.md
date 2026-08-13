@@ -268,6 +268,16 @@ so build -assert=off .
 
 ## Standard library
 
+**crypto/crand works in freestanding mode**. The package rejected a freestanding build with a compile-time error, because no freestanding environment has a CSPRNG. The build now succeeds, and the target supplies the entropy. Define the C function `so_crand_read` and point it at the hardware random number generator of the board or at a host import:
+
+```c
+so_int so_crand_read(uint8_t* buf, so_int size) {
+    return board_rng_fill(buf, size);
+}
+```
+
+The declaration is weak, so a program that never calls `crypto/crand` still links. A call with no definition panics. See [freestanding mode](freestanding.md).
+
 **fmt works in freestanding mode**. The print family used to wrap C's `vsnprintf`, so it printed C's text with C's verbs, and the `<stdio.h>` include made the whole package hosted. It now runs a formatting engine ported from Go's `fmt` and writes the bytes Go writes. Hosted and freestanding builds produce the same output.
 
 The verbs are Go's, with two differences. So has no reflection, so the verbs that need type information are absent: `%v`, `%T`, `%w`, `%q`, and `%U`. And `%u` is added for an unsigned integer, because a print call carries no type information either, so nothing else can tell a signed value from an unsigned one. `%t` for a bool and `%O` for octal with a `0o` prefix are new as well.
@@ -297,6 +307,8 @@ The data can still wait in an operating system cache, so `Sync` does not guarant
 **net/netip works in freestanding mode**. The package included `<net/if.h>` for `if_nametoindex`, and that header made the whole package hosted. The include now sits behind a hosted guard, and a freestanding build gets a stub that returns 0. A zone given as an interface name resolves to no zone, the same result a hosted `if_nametoindex` gives for a name that matches no interface. A numeric zone works everywhere. See [freestanding mode](freestanding.md).
 
 **encoding/json works in freestanding mode**. The package used `math.IsNaN` and `math.IsInf` to reject a non-finite float. The `math` package requires a hosted environment, so that import alone made `encoding/json` hosted. The package now uses a private finite check and doesn't import `math`. See [freestanding mode](freestanding.md).
+
+**uuid works in freestanding mode**. The package imports `crypto/crand`, so `New` and `NewV4` now work in a freestanding environment as soon as `so_crand_read` is defined. `NewV7` reads the clock through `time.Now`, so a freestanding call panics. See [freestanding mode](freestanding.md).
 
 ## Tooling
 
