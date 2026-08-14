@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -39,7 +40,7 @@ func TestReadPkgFile(t *testing.T) {
 	})
 	t.Run("missing file", func(t *testing.T) {
 		_, err := readPkgFile(filepath.Join(t.TempDir(), "nope.txt"))
-		be.Err(t, err, "no such file")
+		be.Err(t, err, fs.ErrNotExist)
 	})
 }
 
