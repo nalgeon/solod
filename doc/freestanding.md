@@ -50,6 +50,15 @@ The `fmt` package works with these restrictions:
 - `Scanf`, `Sscanf`, and `Fscanf` read through the stdio of the host, so a freestanding call panics.
 - `Print`, `Println`, and `Printf` drop the bytes unless you set `fmt.Output`, as [No stdio](#no-stdio) describes. `Sprintf` and `Fprintf` are unaffected.
 
+The `testing` package works with these restrictions:
+
+- The test report goes to `fmt.Output`, so it is dropped unless you set that writer, as [No stdio](#no-stdio) describes.
+- A failed run traps instead of exiting with a non-zero status, because a freestanding environment has no exit status.
+- A benchmark reads the clock, so `so bench` needs the `so_time_wall` and `so_time_mono` hooks.
+- The runner returns the heap to the position it holds before the first test, after every test.
+
+A test of your own can still need a hosted environment, even though the framework does not.
+
 The `net/netip` package works with one restriction:
 
 - A zone given as an interface name (`fe80::1%eth0`) resolves to no zone, because a freestanding environment has no network interfaces. A numeric zone (`fe80::1%2`) works.
@@ -66,7 +75,7 @@ The `uuid` package works with one restriction:
 These packages require a hosted environment and will produce a compile-time error if imported:
 
 ```text
-conc  flag  log/slog  math  net  os  sync  testing
+conc  flag  log/slog  math  net  os  sync
 ```
 
 ## Target hooks
@@ -120,6 +129,8 @@ In freestanding mode, `mem.System` is implemented as a simple bump allocator bac
 
 In this implementation `free` is a no-op; memory is never reclaimed. `realloc` allocates a new bump region and copies data from the old one; the old region is not freed.
 
+The entire program shares a single heap of `SO_HEAP_SIZE` bytes.
+
 It's best not to use `mem.System` in freestanding mode. Instead, use `mem.Arena` so you can control the heap size and reset it when needed.
 
 ### Deterministic random
@@ -133,3 +144,5 @@ Packages that depend on `runtime.Seed` (like `math/rand` and `maps`) work but pr
 `panic` silently traps instead of printing a message. `print` and `println` are no-ops.
 
 `fmt.Print`, `fmt.Println`, and `fmt.Printf` format the text and then drop the bytes, because there is no standard output to write them to. Assign another writer to `fmt.Output` — a UART or a host import — to get the output back.
+
+The `testing` package writes its report to `fmt.Output` too, so the same assignment gets the test results back.

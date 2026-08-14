@@ -310,6 +310,12 @@ The data can still wait in an operating system cache, so `Sync` does not guarant
 
 **runtime.Seed reads the target entropy in freestanding mode**. `Seed` used a deterministic generator with a fixed initial state, so `math/rand` and the hash of `maps` repeated on every run. `Seed` now reads the same `so_crand_read` hook as `crypto/crand`, so one definition covers both. A target with no hook keeps the deterministic generator: `math/rand` and `maps` promise nothing about unpredictability and must work on a board with no entropy source. See [freestanding mode](freestanding.md).
 
+**testing API changed**. `RunSuites`, `RunTests` and `RunBenchmarks` take an [Options](https://pkg.go.dev/solod.dev/so/testing#Options) value in place of the runner arguments. `so test` and `so bench` read `-run` from the command line themselves and write the value into the generated runner.
+
+⚠️ If you have a main package of your own that calls `RunTests` or `RunBenchmarks`, pass a `testing.Options` value instead of `os.Args`.
+
+**testing works in freestanding mode**. The package imported `os` for the standard output and for `os.Exit`, and that import made it hosted. The report now goes to `fmt.Output`, so the same writer carries `fmt.Print` and the test results, and a target that sets it gets both back. A failed run traps in a freestanding environment, because there is no exit status to return. The runner also returns the heap to the position it holds before the first test, after every test. See [freestanding mode](freestanding.md).
+
 **time reads the clock in freestanding mode**. `Now`, `Since`, `Until`, and `Sleep` used to panic. The target now supplies the clock through three weak hooks, the same way `crypto/crand` supplies entropy:
 
 ```c
@@ -341,6 +347,26 @@ so test ./so/...
 The whole run costs one translate, one compile and one execution, which is much faster than one run per package. Narrow the pattern to select a group of packages: `so test ./so/net/...` runs the tests of `so/net` and `so/net/netip`.
 
 The packages share a process, so a hard crash in one package stops the packages after it.
+
+**Package list for so test**. The `-pkg-file` flag limits the run to the packages a file lists:
+
+```sh
+# freestanding.txt
+so/bytes
+so/mem
+```
+
+```sh
+so test -pkg-file=freestanding.txt ./so/...
+```
+
+The file holds one package per line, as a path relative to the module root. Blank lines and the text after a `#` are ignored. The list is a filter over the packages the pattern selects, so a listed package that the pattern does not select is an error.
+
+**New command: so translate-test**. The command writes the C of the test program without a compile or a run, the way `so translate` does for an ordinary package:
+
+```sh
+so translate-test -pkg-file=freestanding.txt -run=TestBuffer -o out ./so/...
+```
 
 **Test and bench package naming**. A test or bench directory declared `package main` before. The generated runner must import the package now, so `package main` is rejected. Two test packages of one run must also have distinct names, because the So compiler prefixes an exported C name with the package name.
 

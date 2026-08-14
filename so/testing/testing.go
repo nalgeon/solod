@@ -1,11 +1,11 @@
 package testing
 
 import (
-	"solod.dev/so/flag"
+	"os" // for testing
+
 	"solod.dev/so/fmt"
 	"solod.dev/so/io"
 	"solod.dev/so/mem"
-	"solod.dev/so/os"
 	"solod.dev/so/strings"
 )
 
@@ -18,6 +18,30 @@ var testing_h string
 
 //so:embed testing.c
 var testing_c string
+
+// flushOut pushes the buffered standard output to the operating system.
+// A freestanding host has no standard output, so flushOut does nothing there.
+//
+//so:extern fmt_flushOut
+func flushOut() { os.Stdout.Sync() }
+
+// exitFail ends the program with a failure status. A freestanding host has no
+// exit status, so exitFail traps.
+//
+//so:extern testing_exitFail
+func exitFail() { os.Exit(1) }
+
+// heapMark returns the position of the next allocation in the heap in
+// freestanding mode. Returns 0 in hosted mode.
+//
+//so:extern so_heap_mark
+func heapMark() uintptr { return 0 }
+
+// heapRelease returns the heap to the position mark in freestanding mode, which
+// loses every allocation made after heapMark read the mark. No-op in hosted mode.
+//
+//so:extern so_heap_release
+func heapRelease(mark uintptr) {}
 
 // T is the context passed to a test function. It records failure and skip
 // state for a single test.
@@ -129,47 +153,51 @@ type Suite struct {
 	Tests []Test
 }
 
-// RunTests runs the given tests for package pkg, prints per-test results
-// to stdout, and exits with a non-zero status if any test failed.
-// args is the runner's os.Args; RunTests parses flags from it.
-func RunTests(pkg string, args []string, tests []Test) {
-	suite := Suite{Pkg: pkg, Tests: tests}
-	suites := []Suite{suite}
-	RunSuites(args, suites)
+// Options selects the tests or benchmarks of a run.
+type Options struct {
+	Run string // run only tests or benchmarks whose names start with this prefix
 }
 
-// RunSuites runs the tests of every suite, prints per-test results to stdout,
-// and exits with a non-zero status if any test failed. It runs every suite
-// before it reports the status, so one failed package does not hide the
-// results of the packages after it.
-//
-// args is the runner's os.Args; RunSuites parses flags from it.
-func RunSuites(args []string, suites []Suite) {
-	var run string
-	fs := flag.NewFlagSet("so test", flag.ContinueOnError)
-	fs.StringVar(&run, "run", "", "run only tests whose names start with this prefix")
-	if err := fs.Parse(args[1:]); err != nil {
-		os.Exit(2)
-	}
+// RunTests runs the given tests for package pkg, prints per-test results
+// to [fmt.Output], and exits with a non-zero status if any test failed.
+func RunTests(pkg string, opts Options, tests []Test) {
+	suite := Suite{Pkg: pkg, Tests: tests}
+	suites := []Suite{suite}
+	RunSuites(opts, suites)
+}
 
+// RunSuites runs the tests of every suite, prints per-test results to
+// [fmt.Output], and exits with a non-zero status if any test failed. It runs
+// every suite before it reports the status, so one failed package does not hide
+// the results of the packages after it.
+//
+// RunSuites reads [fmt.Output] once, at the start. A test that assigns another
+// writer changes its own output only.
+func RunSuites(opts Options, suites []Suite) {
+	w := fmt.Output
+	// The freestanding heap never reclaims memory, so every test returns it to
+	// the position it holds now. The mark keeps the allocations made before the
+	// first test, like the ones of a package level variable.
+	mark := heapMark()
 	ok := true
 	for _, suite := range suites {
-		if !runSuite(suite, run) {
+		if !runSuite(w, suite, opts.Run, mark) {
 			ok = false
 		}
 	}
 	if !ok {
-		os.Exit(1)
+		exitFail()
 	}
 }
 
 // runSuite runs the tests of one suite whose names start with run,
-// prints the results, and reports whether every test passed.
-func runSuite(suite Suite, run string) bool {
+// prints the results to w, and reports whether every test passed.
+// Every test returns the heap to the position mark.
+func runSuite(w io.Writer, suite Suite, run string, mark uintptr) bool {
 	failed := 0
 	skipped := 0
 	total := 0
-	fmt.Fprintf(os.Stdout, "%s\n", suite.Pkg)
+	fmt.Fprintf(w, "%s\n", suite.Pkg)
 
 	for _, tc := range suite.Tests {
 		if !strings.HasPrefix(tc.Name, run) {
@@ -177,12 +205,12 @@ func runSuite(suite Suite, run string) bool {
 		}
 		total++
 
-		t := &T{name: tc.Name, w: os.Stdout}
+		t := &T{name: tc.Name, w: w}
 		t.alloc.Allocator = mem.System
 		fmt.Fprintf(t.w, "=== RUN   %s\n", t.name)
 		// A test that crashes takes the whole program down. The name of the
 		// test must reach the output before the test runs.
-		os.Stdout.Sync()
+		flushOut()
 		tc.F(t)
 
 		// Fail a passing test that leaked memory allocated through t.Allocator().
@@ -199,28 +227,27 @@ func runSuite(suite Suite, run string) bool {
 		if t.skipped {
 			fmt.Fprintf(t.w, "--- SKIP: %s\n", t.name)
 			skipped++
-			continue
-		}
-		if t.failed {
+		} else if t.failed {
 			fmt.Fprintf(t.w, "--- FAIL: %s\n", t.name)
 			failed++
-			continue
+		} else {
+			fmt.Fprintf(t.w, "--- PASS: %s\n", t.name)
 		}
-		fmt.Fprintf(t.w, "--- PASS: %s\n", t.name)
+		heapRelease(mark)
 	}
 
 	if total == 0 {
-		fmt.Fprintf(os.Stdout, "ok\t%s\t%d tests [no tests to run]\n", suite.Pkg, total)
+		fmt.Fprintf(w, "ok\t%s\t%d tests [no tests to run]\n", suite.Pkg, total)
 		return true
 	}
 	if failed > 0 {
-		fmt.Fprintf(os.Stdout, "FAIL\t%s\t%d of %d failed\n", suite.Pkg, failed, total)
+		fmt.Fprintf(w, "FAIL\t%s\t%d of %d failed\n", suite.Pkg, failed, total)
 		return false
 	}
 	if skipped > 0 {
-		fmt.Fprintf(os.Stdout, "ok\t%s\t%d tests (%d skipped)\n", suite.Pkg, total, skipped)
+		fmt.Fprintf(w, "ok\t%s\t%d tests (%d skipped)\n", suite.Pkg, total, skipped)
 		return true
 	}
-	fmt.Fprintf(os.Stdout, "ok\t%s\t%d tests\n", suite.Pkg, total)
+	fmt.Fprintf(w, "ok\t%s\t%d tests\n", suite.Pkg, total)
 	return true
 }

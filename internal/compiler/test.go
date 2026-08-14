@@ -19,21 +19,31 @@ var testKind = kind{
 	dir:     ".sotest",
 }
 
+// Selection limits a test run. PkgFile is the path of a file that lists the
+// packages to run. Run is a name prefix: only the tests whose names start
+// with it run. An empty field selects everything.
+type Selection struct {
+	PkgFile string
+	Run     string
+}
+
 // Test discovers TestXxx functions in the "test" subdirectory of every package
-// the pattern selects, then compiles and runs them as one program.
-func Test(pattern string, args []string, opts Options) error {
-	src, err := testSource(pattern)
+// the pattern selects, then compiles and runs them as one program. sel limits
+// the run to some of the packages and tests.
+func Test(pattern string, sel Selection, opts Options) error {
+	src, err := testSource(pattern, sel)
 	if err != nil {
 		return err
 	}
-	return run(src, args, opts)
+	return run(src, nil, opts)
 }
 
 // TranslateTests is Test without the compile and run steps: it writes the C of
 // the test program to outDir. It returns the C libraries the program must link
-// against, deduplicated and sorted, without the -l prefix.
-func TranslateTests(pattern, outDir string, opts Options) ([]string, error) {
-	src, err := testSource(pattern)
+// against, deduplicated and sorted, without the -l prefix. sel applies when the
+// runner is generated, so the translated program runs the selected tests alone.
+func TranslateTests(pattern, outDir string, sel Selection, opts Options) ([]string, error) {
+	src, err := testSource(pattern, sel)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +53,7 @@ func TranslateTests(pattern, outDir string, opts Options) ([]string, error) {
 // testSource returns the entry package of the test program for the packages
 // the pattern selects. A pattern that ends with "..." selects every package
 // below its base directory.
-func testSource(pattern string) (source, error) {
+func testSource(pattern string, sel Selection) (source, error) {
 	dirs, err := testDirs(pattern)
 	if err != nil {
 		return source{}, err
@@ -54,12 +64,19 @@ func testSource(pattern string) (source, error) {
 		return source{}, err
 	}
 
+	if sel.PkgFile != "" {
+		dirs, err = selectPkgs(root, dirs, sel.PkgFile)
+		if err != nil {
+			return source{}, err
+		}
+	}
+
 	suites, err := collectSuites(root, modPath, dirs)
 	if err != nil {
 		return source{}, err
 	}
 
-	return testKind.source(root, emitTestRunner(suites))
+	return testKind.source(root, emitTestRunner(suites, sel.Run))
 }
 
 // testDirs returns the test directories the pattern selects, sorted.
@@ -109,6 +126,68 @@ func testDirs(pattern string) ([]string, error) {
 	return dirs, nil
 }
 
+// selectPkgs collects the test directories of the packages that the file at path
+// lists. Every listed package must have a test directory the pattern selects.
+func selectPkgs(root string, dirs []string, path string) ([]string, error) {
+	pkgs, err := readPkgFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map the package under test to its test directory,
+	// e.g. "so/sync" to "so/sync/test".
+	byPkg := make(map[string]string, len(dirs))
+	for _, dir := range dirs {
+		rel, err := moduleRel(root, filepath.Dir(dir))
+		if err != nil {
+			return nil, err
+		}
+		byPkg[packageName(root, rel)] = dir
+	}
+
+	selected := make([]string, 0, len(pkgs))
+	for _, pkg := range pkgs {
+		dir, ok := byPkg[pkg]
+		if !ok {
+			return nil, fmt.Errorf("%s lists %s, but the pattern selects no %s directory for it",
+				path, pkg, testKind.subdir)
+		}
+		selected = append(selected, dir)
+	}
+	sort.Strings(selected)
+	return selected, nil
+}
+
+// readPkgFile returns the packages that the file at path lists, as paths
+// relative to the module root (e.g. "so/sync"). A line holds one package.
+// readPkgFile ignores a blank line and the text after a "#".
+func readPkgFile(path string) ([]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var pkgs []string
+	seen := make(map[string]bool)
+	for line := range strings.Lines(string(data)) {
+		pkg, _, _ := strings.Cut(line, "#")
+		pkg = strings.TrimSpace(pkg)
+		pkg = strings.TrimSuffix(strings.TrimPrefix(pkg, "./"), "/")
+		if pkg == "" {
+			continue
+		}
+		if seen[pkg] {
+			return nil, fmt.Errorf("%s lists %s twice", path, pkg)
+		}
+		seen[pkg] = true
+		pkgs = append(pkgs, pkg)
+	}
+	if len(pkgs) == 0 {
+		return nil, fmt.Errorf("%s lists no packages", path)
+	}
+	return pkgs, nil
+}
+
 // hasGoFiles reports whether dir holds a Go file that the So compiler reads.
 // A Go test file (_test.go) is not one: `go test` runs it, `so test` does not.
 func hasGoFiles(dir string) bool {
@@ -150,14 +229,12 @@ func collectSuites(root, modPath string, dirs []string) ([]suite, error) {
 }
 
 // emitTestRunner returns the source of the runner program that dispatches
-// every suite via testing.RunSuites. The runner imports os and forwards
-// os.Args, so RunSuites can parse flags like -run.
-func emitTestRunner(suites []suite) []byte {
+// every suite via testing.RunSuites.
+func emitTestRunner(suites []suite, runPrefix string) []byte {
 	var b strings.Builder
 	b.WriteString(testKind.header())
 
 	b.WriteString("import (\n")
-	b.WriteString("\t\"solod.dev/so/os\"\n")
 	b.WriteString("\t\"solod.dev/so/testing\"\n\n")
 	for _, s := range suites {
 		fmt.Fprintf(&b, "\t%s %q\n", s.pkg, s.path)
@@ -165,7 +242,8 @@ func emitTestRunner(suites []suite) []byte {
 	b.WriteString(")\n\n")
 
 	b.WriteString("func main() {\n")
-	b.WriteString("\ttesting.RunSuites(os.Args, []testing.Suite{\n")
+	fmt.Fprintf(&b, "\topts := testing.Options{Run: %q}\n", runPrefix)
+	b.WriteString("\ttesting.RunSuites(opts, []testing.Suite{\n")
 	for _, s := range suites {
 		fmt.Fprintf(&b, "\t\t{Pkg: %q, Tests: []testing.Test{\n", s.label)
 		for _, name := range s.names {

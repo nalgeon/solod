@@ -31,8 +31,9 @@ static inline void mem_SwapByte(void* a, void* b, so_int n) {
 
 #if SO_HEAP_SIZE > 0
 
-static char so_heap[SO_HEAP_SIZE];
-static size_t so_heap_offset = 0;
+// The whole program shares a single heap.
+extern char so_heap[SO_HEAP_SIZE];
+extern size_t so_heap_offset;
 
 static inline void* malloc(size_t size) {
     if (size == 0) return NULL;
@@ -90,3 +91,33 @@ static inline void free(void* ptr) {
 }
 
 #endif  // so_build_hosted
+
+// so_heap_mark returns the position of the next allocation in the heap.
+// so_heap_release returns the heap to the position mark, which loses every
+// allocation made after so_heap_mark read the mark.
+//
+// A hosted host reclaims memory through free, so the mark is always 0 and the
+// release does nothing. The freestanding heap is a bump allocator that never
+// reclaims, so the release is the only way to reuse the memory.
+
+#if !defined(so_build_hosted) && SO_HEAP_SIZE > 0
+
+static inline size_t so_heap_mark(void) {
+    return so_heap_offset;
+}
+
+static inline void so_heap_release(size_t mark) {
+    so_heap_offset = mark;
+}
+
+#else
+
+static inline size_t so_heap_mark(void) {
+    return 0;
+}
+
+static inline void so_heap_release(size_t mark) {
+    (void)mark;
+}
+
+#endif

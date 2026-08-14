@@ -99,6 +99,8 @@ ok	so/sync	4 tests
 
 `so test` exits non-zero if any test fails. The `=== RUN` line is printed before each test, so if a test hard-crashes (a `panic` or a segfault, which cannot be recovered), the output still identifies the culprit.
 
+The report goes to `fmt.Output`, which is the standard output of the host by default. The runner reads `fmt.Output` once, before the first test, so a test that assigns another writer changes its own output only.
+
 ### Running many packages
 
 A pattern that ends with `...` selects every package with a `test` subdirectory below its base directory:
@@ -144,6 +146,21 @@ Here, `-run=TestMutex` runs all tests that start with `TestMutex`, while `-run=T
 
 To limit the run to a group of packages, narrow the pattern. `so test ./so/net/...` runs the tests of `so/net` and `so/net/netip`, and nothing else.
 
+For a set of packages a pattern cannot describe, list them in a file and pass it with `-pkg-file`:
+
+```
+# freestanding.txt
+so/bytes
+so/io
+so/strconv
+```
+
+```
+so test -pkg-file=freestanding.txt ./so/...
+```
+
+The file holds one package per line, as a path relative to the module root. Blank lines and the text after a `#` are ignored. The list is a filter over the packages the pattern selects, so a listed package that the pattern does not select is an error. `-pkg-file` and `-run` combine: the file selects the packages, the prefix selects the tests.
+
 ## How it works
 
 `so test`:
@@ -152,11 +169,21 @@ To limit the run to a group of packages, narrow the pattern. `so test ./so/net/.
 2. Generates a runner that dispatches every package through `testing.RunSuites`. No file is written: the runner goes to the Go loader as an in-memory overlay, in a `.sotest` directory of the module root that never exists on disk.
 3. Compiles and runs the generated program with the equivalent of `so run`.
 
-To keep the C instead of running it, translate the test program with `so translate -test`:
+To keep the C instead of running it, use `so translate-test`:
 
 ```
-so translate -test -o out ./so/...
+so translate-test -o out ./so/...
 ```
+
+This is what a target the host cannot run needs: translate the test program here, then compile and run the C there. See [freestanding mode](freestanding.md).
+
+`so translate-test` takes the same `-pkg-file` and `-run` flags as `so test`:
+
+```
+so translate-test -pkg-file=freestanding.txt -run=TestBuffer -o out ./so/...
+```
+
+Both flags apply when the runner is generated, so the translated program needs no argument of its own. `-pkg-file` keeps the listed packages out of the program. `-run` writes the prefix into the runner, which still links every test function but runs the matching ones alone.
 
 ## Benchmarks
 
@@ -226,7 +253,19 @@ one package: `so bench` takes no `...` pattern.
 The generated runner always uses the system allocator (`mem.System`). If a
 benchmark needs a different allocator, write a main package of your own that
 imports the bench package and calls `testing.RunBenchmarks`, then run it with
-`so run` instead of `so bench`.
+`so run` instead of `so bench`:
+
+```go
+func main() {
+	opts := testing.Options{}
+	testing.RunBenchmarks(alloc, "mypkg", opts, []testing.Benchmark{
+		{Name: "BenchmarkEqual", F: mypkg_bench.BenchmarkEqual},
+	})
+}
+```
+
+`Options` selects the benchmarks to run, the same way the `-run` flag of
+`so bench` does.
 
 ### Keeping the measured code alive
 
@@ -287,6 +326,10 @@ if err != nil {
 ```
 
 Use `Fatal` when continuing makes no sense (a precondition failed), and `Error` when you want to report several problems from one test.
+
+### Freestanding runs report differently
+
+The `testing` package works in [freestanding mode](freestanding.md), but the environment there gives it less to work with. The report goes to `fmt.Output`, which drops the bytes unless the target assigns a writer, and a failed run traps instead of exiting with a non-zero status. The runner also returns the heap to the position it holds before the first test, after every test, because the freestanding allocator never reclaims memory. The allocations made before the first test stay, so a package-level variable that allocates is safe, but a test cannot pass an allocation to the test after it. A test of your own can still need a hosted environment, even though the framework does not.
 
 ### A hard crash aborts the whole run
 

@@ -16,13 +16,20 @@ static so_int fmt_writeOut(so_Slice p) {
     return (so_int)fwrite(p.ptr, 1, (size_t)p.len, stdout);
 }
 
+// flushOut pushes the buffered standard output to the operating system.
+void fmt_flushOut(void) {
+    fflush(stdout);
+}
+
 #else
 
-// A freestanding host has no standard output, so writeOut drops the bytes. The
-// full count is what io.Discard reports as well.
+// A freestanding host has no standard output, so writeOut drops the bytes.
 static so_int fmt_writeOut(so_Slice p) {
     return p.len;
 }
+
+// A freestanding host has no standard output, so flushOut does nothing.
+void fmt_flushOut(void) {}
 
 #endif  // so_build_hosted
 

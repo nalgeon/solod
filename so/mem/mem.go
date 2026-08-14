@@ -11,6 +11,9 @@ import (
 //so:embed mem.h
 var mem_h string
 
+//so:embed mem.c
+var mem_c string
+
 // ErrOutOfMemory is returned when a memory allocation
 // fails due to insufficient memory.
 var ErrOutOfMemory = errors.New("out of memory")

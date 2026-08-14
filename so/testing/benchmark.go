@@ -5,11 +5,9 @@
 package testing
 
 import (
-	"solod.dev/so/flag"
 	"solod.dev/so/fmt"
 	"solod.dev/so/io"
 	"solod.dev/so/mem"
-	"solod.dev/so/os"
 	"solod.dev/so/runtime"
 	"solod.dev/so/strings"
 	"solod.dev/so/time"
@@ -455,25 +453,22 @@ type Benchmark struct {
 // BenchmarkFunc is a function that benchmarks a piece of code.
 type BenchmarkFunc func(b *B)
 
-// RunBenchmarks runs the given benchmarks for package pkg, prints the results
-// to stdout, and exits with a non-zero status if any benchmark failed.
-// args is the runner's os.Args; RunBenchmarks parses flags from it.
-func RunBenchmarks(a mem.Allocator, pkg string, args []string, benchmarks []Benchmark) {
-	var run string
-	fs := flag.NewFlagSet("so bench", flag.ContinueOnError)
-	fs.StringVar(&run, "run", "", "run only benchmarks whose names start with this prefix")
-	if err := fs.Parse(args[1:]); err != nil {
-		os.Exit(2)
-	}
-
-	fmt.Fprintf(os.Stdout, "goos: %s\n", runtime.GOOS)
-	fmt.Fprintf(os.Stdout, "goarch: %s\n", runtime.GOARCH)
-	fmt.Fprintf(os.Stdout, "pkg: %s\n", pkg)
+// RunBenchmarks runs the given benchmarks for package pkg with allocator a,
+// prints the results to [fmt.Output], and exits with a non-zero status if any
+// benchmark failed.
+//
+// RunBenchmarks reads [fmt.Output] once, at the start. A benchmark that assigns
+// another writer changes its own output only.
+func RunBenchmarks(a mem.Allocator, pkg string, opts Options, benchmarks []Benchmark) {
+	w := fmt.Output
+	fmt.Fprintf(w, "goos: %s\n", runtime.GOOS)
+	fmt.Fprintf(w, "goarch: %s\n", runtime.GOARCH)
+	fmt.Fprintf(w, "pkg: %s\n", pkg)
 
 	failed := 0
 	total := 0
 	for _, bench := range benchmarks {
-		if !strings.HasPrefix(bench.Name, run) {
+		if !strings.HasPrefix(bench.Name, opts.Run) {
 			continue
 		}
 		total++
@@ -481,7 +476,7 @@ func RunBenchmarks(a mem.Allocator, pkg string, args []string, benchmarks []Benc
 		b := &B{
 			name:      bench.Name,
 			a:         mem.Tracker{Allocator: a},
-			w:         os.Stdout,
+			w:         w,
 			benchFunc: bench.F,
 			benchTime: BenchTime{d: 1 * time.Second},
 		}
@@ -500,14 +495,14 @@ func RunBenchmarks(a mem.Allocator, pkg string, args []string, benchmarks []Benc
 	}
 
 	if total == 0 {
-		fmt.Fprintf(os.Stdout, "ok\t%s\t%d benchmarks [no benchmarks to run]\n", pkg, total)
+		fmt.Fprintf(w, "ok\t%s\t%d benchmarks [no benchmarks to run]\n", pkg, total)
 		return
 	}
 	if failed > 0 {
-		fmt.Fprintf(os.Stdout, "FAIL\t%s\t%d of %d failed\n", pkg, failed, total)
-		os.Exit(1)
+		fmt.Fprintf(w, "FAIL\t%s\t%d of %d failed\n", pkg, failed, total)
+		exitFail()
 	}
-	fmt.Fprintf(os.Stdout, "ok\t%s\t%d benchmarks\n", pkg, total)
+	fmt.Fprintf(w, "ok\t%s\t%d benchmarks\n", pkg, total)
 }
 
 // RunBenchmark benchmarks a single function and returns the results.

@@ -144,7 +144,7 @@ test-lang-case:
 test-std:
 	@rm -rf generated/std
 	@mkdir -p generated/std
-	@$(SO) translate -test -o generated/std ./so/...
+	@$(SO) translate-test -o generated/std ./so/...
 	@make run-c path=generated/std
 
 # Transpiles, compiles and runs a single test case in testdata/$(name),
@@ -162,7 +162,7 @@ run-case:
 run-test:
 	@rm -rf generated/$(name)/test
 	@mkdir -p generated/$(name)/test
-	@$(SO) translate -test -o generated/$(name)/test ./$(name)
+	@$(SO) translate-test -o generated/$(name)/test ./$(name)
 	@make run-c path=generated/$(name)/test
 
 run-c:

@@ -19,18 +19,19 @@ var benchKind = kind{
 }
 
 // Bench discovers BenchmarkXxx functions in the "bench" subdirectory of srcDir,
-// then compiles and runs them.
-func Bench(srcDir string, args []string, opts Options) error {
-	src, err := benchSource(srcDir)
+// then compiles and runs them. runPrefix limits the run to the benchmarks whose
+// names start with it.
+func Bench(srcDir, runPrefix string, opts Options) error {
+	src, err := benchSource(srcDir, runPrefix)
 	if err != nil {
 		return err
 	}
-	return run(src, args, opts)
+	return run(src, nil, opts)
 }
 
 // benchSource returns the entry package of the benchmark program for srcDir.
 // One run measures one package, so the pattern selects no other package.
-func benchSource(srcDir string) (source, error) {
+func benchSource(srcDir, runPrefix string) (source, error) {
 	dir := filepath.Join(srcDir, benchKind.subdir)
 	info, err := os.Stat(dir)
 	if err != nil || !info.IsDir() {
@@ -46,27 +47,26 @@ func benchSource(srcDir string) (source, error) {
 		return source{}, err
 	}
 
-	return benchKind.source(root, emitBenchRunner(s))
+	return benchKind.source(root, emitBenchRunner(s, runPrefix))
 }
 
 // emitBenchRunner returns the source of the runner program that dispatches the
-// benchmarks via testing.RunBenchmarks. The runner imports os and forwards
-// os.Args, so RunBenchmarks can parse flags like -run. Benchmarks always use
-// the system allocator; a package that needs a different one can write a main
-// package of its own and use `so run`.
-func emitBenchRunner(s suite) []byte {
+// benchmarks via testing.RunBenchmarks. Benchmarks always use the system
+// allocator; a package that needs a different one can write a main package
+// of its own and use `so run`.
+func emitBenchRunner(s suite, runPrefix string) []byte {
 	var b strings.Builder
 	b.WriteString(benchKind.header())
 
 	b.WriteString("import (\n")
 	b.WriteString("\t\"solod.dev/so/mem\"\n")
-	b.WriteString("\t\"solod.dev/so/os\"\n")
 	b.WriteString("\t\"solod.dev/so/testing\"\n\n")
 	fmt.Fprintf(&b, "\t%s %q\n", s.pkg, s.path)
 	b.WriteString(")\n\n")
 
 	b.WriteString("func main() {\n")
-	fmt.Fprintf(&b, "\ttesting.RunBenchmarks(mem.System, %q, os.Args, []testing.Benchmark{\n", s.label)
+	fmt.Fprintf(&b, "\topts := testing.Options{Run: %q}\n", runPrefix)
+	fmt.Fprintf(&b, "\ttesting.RunBenchmarks(mem.System, %q, opts, []testing.Benchmark{\n", s.label)
 	for _, name := range s.names {
 		fmt.Fprintf(&b, "\t\t{Name: %q, F: %s.%s},\n", name, s.pkg, name)
 	}

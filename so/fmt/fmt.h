@@ -52,3 +52,6 @@ so_R_int_err fmt_Sscanf(const char* str, const char* format, ...);
 // values into successive arguments as determined by the format.
 // It returns the number of items successfully scanned.
 so_R_int_err fmt_Fscanf(io_Reader r, const char* format, ...);
+
+// flushOut pushes the buffered standard output to the operating system.
+void fmt_flushOut(void);
