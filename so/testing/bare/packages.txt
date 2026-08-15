@@ -5,6 +5,7 @@ so/bytealg
 so/bytes
 so/c
 so/cmp
+so/crypto/crand
 so/encoding/binary
 so/encoding/hex
 so/encoding/json
@@ -20,6 +21,7 @@ so/runtime
 so/slices
 so/strconv
 so/strings
+so/time
 so/unicode
 so/unicode/utf8
 so/unsafe

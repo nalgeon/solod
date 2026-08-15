@@ -1,8 +1,9 @@
 package time_test
 
 import (
-	"solod.dev/so/time"
+	"solod.dev/so/runtime"
 	"solod.dev/so/testing"
+	"solod.dev/so/time"
 )
 
 // All tests use variants of 2024-03-15T14:30:45Z as the input time.
@@ -155,6 +156,10 @@ func TestParse_TimeOnly(t *testing.T) {
 }
 
 func TestParse_Custom(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("a custom layout needs a hosted environment")
+		return
+	}
 	tm, err := time.Parse("%d.%m.%Y", "15.03.2024", time.UTC)
 	if err != nil {
 		t.Fatal("unexpected Parse custom error")
@@ -171,6 +176,10 @@ func TestParse_Custom(t *testing.T) {
 }
 
 func TestParse_Error(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("a custom layout needs a hosted environment")
+		return
+	}
 	_, err := time.Parse("%Y-%m-%d", "not-a-date", time.UTC)
 	if err == nil {
 		t.Error("expected Parse error")

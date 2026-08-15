@@ -113,7 +113,7 @@ func TestFprintfLong(t *testing.T) {
 
 func TestSscanf(t *testing.T) {
 	if !runtime.Hosted {
-		t.Skip("needs a hosted environment")
+		t.Skip("Sscanf needs a hosted environment")
 		return
 	}
 	var n1, n2 int32
@@ -134,7 +134,7 @@ func TestSscanf(t *testing.T) {
 
 func TestFscanf(t *testing.T) {
 	if !runtime.Hosted {
-		t.Skip("needs a hosted environment")
+		t.Skip("Fscanf needs a hosted environment")
 		return
 	}
 	var n1, n2 int32

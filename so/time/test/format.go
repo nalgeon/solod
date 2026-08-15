@@ -1,8 +1,9 @@
 package time_test
 
 import (
-	"solod.dev/so/time"
+	"solod.dev/so/runtime"
 	"solod.dev/so/testing"
+	"solod.dev/so/time"
 )
 
 func TestFormat_RFC3339(t *testing.T) {
@@ -51,6 +52,10 @@ func TestFormat_TimeOnly(t *testing.T) {
 }
 
 func TestFormat_Custom(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("a custom layout needs a hosted environment")
+		return
+	}
 	tm := time.Date(2024, time.March, 15, 14, 30, 45, 0, time.UTC)
 	buf := make([]byte, len("15.03.2024")+1)
 	s := tm.Format(buf, "%d.%m.%Y", time.UTC)
