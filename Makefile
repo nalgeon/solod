@@ -1,7 +1,9 @@
+# Common compiler flags.
 CFLAGS_CORE = -O1 -g -std=gnu11 -Wall -Wextra -Werror -Wno-shadow -Wno-unused-label
 CFLAGS ?= $(CFLAGS_CORE) -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fstack-protector-all -fno-omit-frame-pointer
 LDLIBS ?= -lm
 
+# Toolchain commands.
 CLANG = clang
 GCC_NATIVE = gcc-15
 GCC_DOCKER = docker run --rm -v "$(shell pwd)":/src -w /src gcc:15.2.0
@@ -10,7 +12,12 @@ I386 = docker run --rm --platform linux/i386 -v "$(shell pwd)":/src -w /src solo
 EMCC = emcc
 ZIG = zig cc
 
+# Build mode (toolchain/target) to use. The default is $(CC) on the host machine.
 mode =
+# Heap size for a freestanding build in bytes.
+heap = 65536
+
+# Internal build mode helpers.
 OUT_EXT =
 RUN_PREFIX =
 RUN_SUFFIX =
@@ -32,7 +39,7 @@ else ifeq ($(mode), fast)
 	CFLAGS = $(CFLAGS_CORE)
 else ifeq ($(mode), bare)
 	CC = $(ZIG)
-	CFLAGS = $(CFLAGS_CORE) --target=wasm32-freestanding -nostdlib -Wl,--no-gc-sections -Wl,--no-entry -Wl,--export=main -DSO_HEAP_SIZE=65536
+	CFLAGS = $(CFLAGS_CORE) --target=wasm32-freestanding -nostdlib -Wl,--no-gc-sections -Wl,--no-entry -Wl,--export=main -DSO_HEAP_SIZE=$(heap)
 	LDLIBS =
 	OUT_EXT = .wasm
 	RUN_PREFIX = wasmtime --invoke main
@@ -146,6 +153,14 @@ test-std:
 	@mkdir -p generated/std
 	@$(SO) translate-test -o generated/std ./so/...
 	@make run-c path=generated/std
+
+# Runs the tests of the freestanding stdlib packages.
+test-std-bare:
+	@rm -rf generated/bare
+	@mkdir -p generated/bare
+	@$(SO) translate-test -o generated/bare -pkg-file=so/testing/bare/packages.txt ./so/...
+	@cp so/testing/bare/harness.c generated/bare/
+	@make run-c path=generated/bare mode=bare heap=$(heap)
 
 # Transpiles, compiles and runs a single test case in testdata/$(name),
 # leaving the generated C in generated/$(name) for inspection.

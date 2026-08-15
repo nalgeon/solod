@@ -1,0 +1,8 @@
+# The stdlib packages whose tests pass in freestanding mode.
+
+so/io
+so/math/bits
+so/mem
+so/strconv
+so/unicode
+so/unicode/utf8
