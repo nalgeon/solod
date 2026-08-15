@@ -347,6 +347,18 @@ A board that counts elapsed time but does not know the date returns 0 seconds fr
 
 ## Tooling
 
+**New flag: -freestanding**. The flag tells `so build`, `so test`, `so bench` and `so run` that the program targets a freestanding environment:
+
+```sh
+export CC=clang
+export CFLAGS="--target=wasm32-freestanding -nostdlib -Wl,--no-entry -Wl,--export=main"
+so build -freestanding -o main.wasm .
+```
+
+The flag drops the libc dependencies declared with `so:link` in the standard library, because a freestanding target has no host C library. It does not affect the libraries declared with `so:link` in user code.
+
+The target still comes from `CFLAGS`; the flag doesn't affect it.
+
 **Multi-package so test**. A pattern that ends with `...` selects every package with a `test` subdirectory below its base directory:
 
 ```sh

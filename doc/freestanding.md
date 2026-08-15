@@ -9,13 +9,21 @@ So can target freestanding (bare-metal) environments where no C standard library
 
 ## Compiling
 
-Set `CC` and `CFLAGS` to target a freestanding environment. For example, using `zig cc` to target bare `wasm32`:
+Set `CC` and `CFLAGS` to target a freestanding environment, and pass `-freestanding`. For example, using `zig cc` to target bare `wasm32`:
 
 ```sh
 export CC="zig cc"
 export CFLAGS="-Oz --target=wasm32-freestanding -nostdlib -Wl,--no-entry -Wl,--export=main"
-so build -o main.wasm .
+so build -freestanding -o main.wasm .
 ```
+
+`CFLAGS` names the target. The `-freestanding` flag settles the hosted or freestanding question:
+
+- It passes `-ffreestanding` to the C compiler. The compiler then sets `__STDC_HOSTED__` to 0, and the stdlib takes its freestanding branch.
+- It drops the libc dependencies declared with `so:link` in the standard library. It does not affect the libraries declared with `so:link` in user code.
+- It drops the panic trace flags, which a freestanding build has no use for.
+
+`so test`, `so bench` and `so run` take the same flag. `so translate` does not, because it never invokes the C compiler.
 
 Or transpile to C first and compile separately:
 

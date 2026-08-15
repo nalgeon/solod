@@ -112,7 +112,7 @@ type compileOptions struct {
 
 // newCompileOptions derives the C defines and flags from opts.
 func newCompileOptions(opts Options) (compileOptions, error) {
-	panicDef, panicFlags, err := panicMode(opts.PanicMode, ccName())
+	panicDef, panicFlags, err := panicMode(opts.PanicMode, ccName(), opts.Freestanding)
 	if err != nil {
 		return compileOptions{}, err
 	}
@@ -121,6 +121,12 @@ func newCompileOptions(opts Options) (compileOptions, error) {
 		return compileOptions{}, err
 	}
 	flags := append(panicFlags, sanitizeFlags(opts.Sanitize)...)
+	if opts.Freestanding {
+		// builtin.h derives so_build_hosted from __STDC_HOSTED__, which
+		// -ffreestanding sets to 0. The flag comes before CFLAGS, so the
+		// caller can still override it.
+		flags = append(flags, "-ffreestanding")
+	}
 	defines := append([]string{panicDef}, assertDefs...)
 	return compileOptions{
 		defines: defines,
@@ -158,9 +164,13 @@ func compileC(includeDir string, cFiles []string, outFile string, copts compileO
 // panicMode maps a panic mode name to the -DSO_PANIC_MODE define and any
 // extra C compiler flags the mode needs, given the C compiler cc.
 // An empty mode defaults to "trace".
-func panicMode(mode, cc string) (define string, flags []string, err error) {
+func panicMode(mode, cc string, freestanding bool) (define string, flags []string, err error) {
 	switch mode {
 	case "", "trace":
+		// A freestanding build traps whatever the mode is, so it needs no flags.
+		if freestanding {
+			return "-DSO_PANIC_MODE=SO_PANIC_TRACE", nil, nil
+		}
 		// Needs frame pointers to unwind and -rdynamic for symbol names.
 		// MinGW rejects -rdynamic, so we skip it there.
 		flags := []string{"-fno-omit-frame-pointer"}

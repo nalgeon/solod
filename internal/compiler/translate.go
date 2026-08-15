@@ -15,10 +15,11 @@ import (
 
 // Options holds the options for the compiler pipeline.
 type Options struct {
-	Assert      string // assertions: "on" (default) or "off"
-	PanicMode   string // panic termination mode: "trace" (default), "exit", or "abort"
-	Sanitize    string // comma-separated sanitizers to enable; empty disables
-	TrackSource bool   // track source locations for panics
+	Assert       string // assertions: "on" (default) or "off"
+	Freestanding bool   // compile for a freestanding environment
+	PanicMode    string // panic termination mode: "trace" (default), "exit", or "abort"
+	Sanitize     string // comma-separated sanitizers to enable; empty disables
+	TrackSource  bool   // track source locations for panics
 }
 
 // source locates the entry package to translate. Most callers name a directory
@@ -68,6 +69,13 @@ func translate(src source, outDir string, opts Options) ([]string, error) {
 		})
 		if err != nil {
 			return nil, err
+		}
+		// The stdlib links against the libraries provided by a hosted C environment
+		// (libm, pthreads). A freestanding target provides neither, so these libraries
+		// are ignored here. Libraries linked by user packages remain, because only the
+		// user knows what the target provides.
+		if opts.Freestanding && isStdlib(pkg) {
+			continue
 		}
 		for _, lib := range res.Libs {
 			libSet[lib] = true
@@ -140,6 +148,12 @@ func packageOutDir(pkg, entry *packages.Package, outDir string) string {
 	}
 	relPath := strings.TrimPrefix(pkg.PkgPath, pkg.Module.Path+"/")
 	return filepath.Join(outDir, relPath)
+}
+
+// isStdlib reports whether pkg is a So standard library package.
+func isStdlib(pkg *packages.Package) bool {
+	const stdlibPrefix = "solod.dev/so/"
+	return strings.HasPrefix(pkg.PkgPath, stdlibPrefix)
 }
 
 // shouldTranspile returns true if a package should be transpiled to C.

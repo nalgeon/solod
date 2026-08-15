@@ -38,6 +38,25 @@ func TestTranslateBad(t *testing.T) {
 	}
 }
 
+func TestFreestandingLibs(t *testing.T) {
+	// A freestanding build drops the stdlib so:link libraries,
+	// but keeps the ones a user package declares.
+
+	// so/math declares so:link m.
+	hosted, err := Translate("../../so/math", t.TempDir(), Options{})
+	be.Err(t, err, nil)
+	be.Equal(t, hosted, []string{"m"})
+
+	bare, err := Translate("../../so/math", t.TempDir(), Options{Freestanding: true})
+	be.Err(t, err, nil)
+	be.Equal(t, bare, nil)
+
+	// The link case declares so:link m and so:link pthread in its own packages.
+	user, err := Translate("../../testdata/link/src", t.TempDir(), Options{Freestanding: true})
+	be.Err(t, err, nil)
+	be.Equal(t, user, []string{"m", "pthread"})
+}
+
 func caseDirs(t *testing.T, pattern string) []string {
 	matches, err := filepath.Glob(pattern)
 	be.Err(t, err, nil)
