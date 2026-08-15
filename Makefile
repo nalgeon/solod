@@ -14,8 +14,8 @@ ZIG = zig cc
 
 # Build mode (toolchain/target) to use. The default is $(CC) on the host machine.
 mode =
-# Heap size for a freestanding build in bytes.
-heap = 65536
+# Heap size for a freestanding build in bytes (default: 256 KB).
+heap = 262144
 
 # Internal build mode helpers.
 OUT_EXT =

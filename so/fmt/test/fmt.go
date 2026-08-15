@@ -3,6 +3,7 @@ package fmt_test
 import (
 	"solod.dev/so/c"
 	"solod.dev/so/fmt"
+	"solod.dev/so/runtime"
 	"solod.dev/so/strings"
 	"solod.dev/so/testing"
 )
@@ -111,6 +112,10 @@ func TestFprintfLong(t *testing.T) {
 }
 
 func TestSscanf(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("needs a hosted environment")
+		return
+	}
 	var n1, n2 int32
 	buf := make([]byte, 32)
 	ptr := c.PtrAs[c.Char](&buf[0])
@@ -128,6 +133,10 @@ func TestSscanf(t *testing.T) {
 }
 
 func TestFscanf(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("needs a hosted environment")
+		return
+	}
 	var n1, n2 int32
 	buf := make([]byte, 32)
 	ptr := c.PtrAs[c.Char](&buf[0])

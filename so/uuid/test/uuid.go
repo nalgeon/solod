@@ -1,13 +1,18 @@
 package uuid_test
 
 import (
-	"solod.dev/so/uuid"
+	"solod.dev/so/runtime"
 	"solod.dev/so/testing"
+	"solod.dev/so/uuid"
 )
 
 const ustr = "f81d4fae-7dec-11d0-a765-00a0c91e6bf6"
 
 func TestNew(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("needs a hosted environment")
+		return
+	}
 	u4 := uuid.NewV4()
 	if u4.Version() != 4 {
 		t.Error("NewV4() version != 4")

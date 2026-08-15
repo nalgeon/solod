@@ -1,8 +1,26 @@
 # The stdlib packages whose tests pass in freestanding mode.
 
+so/bufio
+so/bytealg
+so/bytes
+so/c
+so/cmp
+so/encoding/binary
+so/encoding/hex
+so/encoding/json
+so/fmt
 so/io
+so/maps
 so/math/bits
+so/math/rand
 so/mem
+so/net/netip
+so/path
+so/runtime
+so/slices
 so/strconv
+so/strings
 so/unicode
 so/unicode/utf8
+so/unsafe
+so/uuid
