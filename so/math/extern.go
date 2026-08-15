@@ -7,13 +7,16 @@ import (
 	"solod.dev/so/c"
 )
 
-//so:embed math.h
-var math_h string
+//so:embed math.c
+var math_c string
 
-//so:include.c <float.h>
-//so:include.c <limits.h>
-//so:include.c <math.h>
-//so:include.c <stdint.h>
+// Freestanding headers provide the limit macros for both freestanding and
+// hosted environments. The libm link is ignored in a freestanding environment
+// by the compiler, so the math functions panic if called.
+
+//so:include <float.h>
+//so:include <limits.h>
+//so:include <stdint.h>
 //so:link m
 
 // Floating-point limit values.
@@ -77,9 +80,6 @@ const MaxUint = uint(^uint(0))
 // Basic operations.
 
 //so:extern
-func fabs(x float64) float64 { return math.Abs(x) }
-
-//so:extern
 func fmod(x, y float64) float64 { return math.Mod(x, y) }
 
 //so:extern
@@ -87,15 +87,6 @@ func remainder(x, y float64) float64 { return math.Remainder(x, y) }
 
 //so:extern
 func fma(x, y, z float64) float64 { return math.FMA(x, y, z) }
-
-//so:extern
-func fmax(x, y float64) float64 { return math.Max(x, y) }
-
-//so:extern
-func fmin(x, y float64) float64 { return math.Min(x, y) }
-
-//so:extern
-func fdim(x, y float64) float64 { return math.Dim(x, y) }
 
 // Exponential functions.
 
@@ -237,11 +228,3 @@ func nextafterf(x, y float32) float32 { return math.Nextafter32(x, y) }
 
 //so:extern
 func nextafter(x, y float64) float64 { return math.Nextafter(x, y) }
-
-//so:extern
-func copysign(x, y float64) float64 { return math.Copysign(x, y) }
-
-// Classification and comparison.
-
-//so:extern
-func signbit(x float64) bool { return math.Signbit(x) }

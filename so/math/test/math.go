@@ -12,6 +12,15 @@ func TestAbs(t *testing.T) {
 	if math.Abs(2) != 2 {
 		t.Error("Abs(2) != 2")
 	}
+	if math.Abs(math.Inf(-1)) != math.Inf(1) {
+		t.Error("Abs(-Inf) != +Inf")
+	}
+	if !math.IsNaN(math.Abs(math.NaN())) {
+		t.Error("Abs(NaN) != NaN")
+	}
+	if math.Signbit(math.Abs(math.Copysign(0, -1))) {
+		t.Error("Abs(-0) is negative")
+	}
 }
 
 func TestAcos(t *testing.T) {
@@ -87,6 +96,16 @@ func TestConst(t *testing.T) {
 func TestCopysign(t *testing.T) {
 	if math.Copysign(3.2, -1) != -3.2 {
 		t.Error("Copysign(3.2, -1) != -3.2")
+	}
+	if math.Copysign(-3.2, 1) != 3.2 {
+		t.Error("Copysign(-3.2, 1) != 3.2")
+	}
+	// The sign of a zero counts.
+	if !math.Signbit(math.Copysign(1, math.Copysign(0, -1))) {
+		t.Error("Copysign(1, -0) is positive")
+	}
+	if !math.IsNaN(math.Copysign(math.NaN(), 1)) {
+		t.Error("Copysign(NaN, 1) != NaN")
 	}
 }
 
@@ -171,6 +190,52 @@ func TestLog10(t *testing.T) {
 	}
 }
 
+func TestMax(t *testing.T) {
+	if math.Max(2, 3) != 3 {
+		t.Error("Max(2, 3) != 3")
+	}
+	if math.Max(-2, -3) != -2 {
+		t.Error("Max(-2, -3) != -2")
+	}
+	// +Inf beats NaN, and NaN beats every other value.
+	if math.Max(math.NaN(), math.Inf(1)) != math.Inf(1) {
+		t.Error("Max(NaN, +Inf) != +Inf")
+	}
+	if !math.IsNaN(math.Max(2, math.NaN())) {
+		t.Error("Max(2, NaN) != NaN")
+	}
+	// Max of two zeros is the positive zero, whatever the order.
+	if math.Signbit(math.Max(0, math.Copysign(0, -1))) {
+		t.Error("Max(+0, -0) is negative")
+	}
+	if math.Signbit(math.Max(math.Copysign(0, -1), 0)) {
+		t.Error("Max(-0, +0) is negative")
+	}
+}
+
+func TestMin(t *testing.T) {
+	if math.Min(2, 3) != 2 {
+		t.Error("Min(2, 3) != 2")
+	}
+	if math.Min(-2, -3) != -3 {
+		t.Error("Min(-2, -3) != -3")
+	}
+	// -Inf beats NaN, and NaN beats every other value.
+	if math.Min(math.NaN(), math.Inf(-1)) != math.Inf(-1) {
+		t.Error("Min(NaN, -Inf) != -Inf")
+	}
+	if !math.IsNaN(math.Min(2, math.NaN())) {
+		t.Error("Min(2, NaN) != NaN")
+	}
+	// Min of two zeros is the negative zero, whatever the order.
+	if !math.Signbit(math.Min(0, math.Copysign(0, -1))) {
+		t.Error("Min(+0, -0) is positive")
+	}
+	if !math.Signbit(math.Min(math.Copysign(0, -1), 0)) {
+		t.Error("Min(-0, +0) is positive")
+	}
+}
+
 func TestMod(t *testing.T) {
 	if math.Mod(7, 4) != 3 {
 		t.Error("Mod(7, 4) != 3")
@@ -227,6 +292,21 @@ func TestRoundToEven(t *testing.T) {
 	}
 	if math.RoundToEven(12.5) != 12 {
 		t.Error("RoundToEven(12.5) != 12")
+	}
+}
+
+func TestSignbit(t *testing.T) {
+	if math.Signbit(2) {
+		t.Error("Signbit(2) is true")
+	}
+	if !math.Signbit(-2) {
+		t.Error("Signbit(-2) is false")
+	}
+	if !math.Signbit(math.Copysign(0, -1)) {
+		t.Error("Signbit(-0) is false")
+	}
+	if !math.Signbit(math.Inf(-1)) {
+		t.Error("Signbit(-Inf) is false")
 	}
 }
 

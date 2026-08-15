@@ -297,6 +297,12 @@ s := fmt.Sprintf(buf, "%d apples", n)
 
 `Buffer` existed because a `[]byte` argument decayed to a bare pointer, which lost the length. The print family is nodecay now, so the slice arrives whole.
 
+**math works in freestanding mode**. The package rejected a freestanding build with a compile-time error, because a freestanding environment has no libm. The build now succeeds, and only the part that needs libm panics. `Abs`, `Copysign`, `Dim`, `Inf`, `IsInf`, `IsNaN`, `Max`, `Min`, `NaN`, `Pow10`, `RoundToEven`, `Signbit`, the `Float64bits` family and every constant work.
+
+`Abs`, `Copysign` and `Signbit` used to call libm. All three read the bits of the float now, the way Go does.
+
+⚠️ **math.Max and math.Min follow Go for NaN**. Both wrapped C's `fmax` and `fmin`, which ignore a NaN operand, so `Max(2, NaN)` returned 2. Both are ported from Go now, and they match the documented special cases: a NaN operand gives NaN, `Max` gives `+Inf` before it gives NaN, and `Min` gives `-Inf` before it gives NaN.
+
 **net/netip works in freestanding mode**. The package included `<net/if.h>` for `if_nametoindex`, and that header made the whole package hosted. The include now sits behind a hosted guard, and a freestanding build gets a stub that returns 0. A zone given as an interface name resolves to no zone, the same result a hosted `if_nametoindex` gives for a name that matches no interface. A numeric zone works everywhere.
 
 **os.File.Sync**. A `File` writes through a buffered C stream, so a program that ends abnormally loses the buffered data. `Sync` flushes the stream:

@@ -71,4 +71,3 @@ func Cosh(x float64) float64 {
 func Tanh(x float64) float64 {
 	return tanh(x)
 }
-

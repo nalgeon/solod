@@ -15,6 +15,7 @@
 #include "so/io/io.h"
 #include "so/maps/maps.h"
 #include "so/math/bits/bits.h"
+#include "so/math/math.h"
 #include "so/math/rand/rand.h"
 #include "so/mem/mem.h"
 #include "so/net/netip/netip.h"

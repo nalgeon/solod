@@ -38,7 +38,23 @@ func Dim(x, y float64) float64 {
 // Note that this differs from the built-in function max when called
 // with NaN and +Inf.
 func Max(x, y float64) float64 {
-	return fmax(x, y)
+	if IsInf(x, 1) || IsInf(y, 1) {
+		return Inf(1)
+	}
+	if IsNaN(x) || IsNaN(y) {
+		return NaN()
+	}
+	if x == 0 && x == y {
+		// Both operands are zero. Return the positive zero.
+		if Signbit(x) {
+			return y
+		}
+		return x
+	}
+	if x > y {
+		return x
+	}
+	return y
 }
 
 // Min returns the smaller of x or y.
@@ -52,5 +68,21 @@ func Max(x, y float64) float64 {
 // Note that this differs from the built-in function min when called
 // with NaN and -Inf.
 func Min(x, y float64) float64 {
-	return fmin(x, y)
+	if IsInf(x, -1) || IsInf(y, -1) {
+		return Inf(-1)
+	}
+	if IsNaN(x) || IsNaN(y) {
+		return NaN()
+	}
+	if x == 0 && x == y {
+		// Both operands are zero. Return the negative zero.
+		if Signbit(x) {
+			return x
+		}
+		return y
+	}
+	if x < y {
+		return x
+	}
+	return y
 }

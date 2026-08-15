@@ -196,6 +196,17 @@ int main(void) {
         maps_Map_Free(so_String, so_int, (&m));
     }
     {
+        // math. Only the part that needs no libm works freestanding.
+        check(math_Abs(-2.0) == 2.0, so_str("math: wrong absolute value"));
+        check(math_Copysign(2.0, -1.0) == -2.0, so_str("math: wrong sign"));
+        check(math_Max(2.0, 3.0) == 3.0, so_str("math: wrong maximum"));
+        check(math_Min(2.0, 3.0) == 2.0, so_str("math: wrong minimum"));
+        check(math_Signbit(-2.0), so_str("math: wrong sign bit"));
+        check(math_IsNaN(math_NaN()), so_str("math: NaN is not NaN"));
+        check(math_IsInf(math_Inf(1), 1), so_str("math: Inf is not Inf"));
+        check(DBL_MAX > 0.0, so_str("math: wrong float limit"));
+    }
+    {
         // math/bits, math/rand, runtime
         check(bits_Len(255) == 8, so_str("bits: wrong length"));
         check(rand_Uint64() != rand_Uint64(), so_str("rand: repeated value"));

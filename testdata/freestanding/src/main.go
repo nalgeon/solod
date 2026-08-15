@@ -23,6 +23,7 @@ import (
 	"solod.dev/so/fmt"
 	"solod.dev/so/io"
 	"solod.dev/so/maps"
+	"solod.dev/so/math"
 	"solod.dev/so/math/bits"
 	"solod.dev/so/math/rand"
 	"solod.dev/so/mem"
@@ -188,6 +189,17 @@ func main() {
 		check(m.Len() == 1, "maps: wrong length")
 		check(m.Get("one") == 1, "maps: wrong value")
 		m.Free()
+	}
+	{
+		// math. Only the part that needs no libm works freestanding.
+		check(math.Abs(-2) == 2, "math: wrong absolute value")
+		check(math.Copysign(2, -1) == -2, "math: wrong sign")
+		check(math.Max(2, 3) == 3, "math: wrong maximum")
+		check(math.Min(2, 3) == 2, "math: wrong minimum")
+		check(math.Signbit(-2), "math: wrong sign bit")
+		check(math.IsNaN(math.NaN()), "math: NaN is not NaN")
+		check(math.IsInf(math.Inf(1), 1), "math: Inf is not Inf")
+		check(math.MaxFloat64 > 0, "math: wrong float limit")
 	}
 	{
 		// math/bits, math/rand, runtime

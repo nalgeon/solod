@@ -58,6 +58,10 @@ The `fmt` package works with these restrictions:
 - `Scanf`, `Sscanf`, and `Fscanf` read through the stdio of the host, so a freestanding call panics.
 - `Print`, `Println`, and `Printf` write through the `so_write_out` hook (see [Target hooks](#target-hooks)). A target with no hook drops the bytes. `Sprintf` and `Fprintf` are unaffected.
 
+The `math` package works with one restriction:
+
+- Only the part that needs no libm works. `Abs`, `Copysign`, `Dim`, `Inf`, `IsInf`, `IsNaN`, `Max`, `Min`, `NaN`, `Pow10`, `RoundToEven`, `Signbit`, the `Float64bits` family and every constant work. Every other function panics.
+
 The `testing` package works with these restrictions:
 
 - The test report goes to the `so_write_out` hook. A target with no hook reports nothing.
@@ -83,7 +87,7 @@ The `uuid` package works with one restriction:
 These packages require a hosted environment and will produce a compile-time error if imported:
 
 ```text
-conc  flag  log/slog  math  net  os  sync
+conc  flag  log/slog  net  os  sync
 ```
 
 ## Target hooks

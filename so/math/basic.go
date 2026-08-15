@@ -11,7 +11,7 @@ package math
 //	Abs(±Inf) = +Inf
 //	Abs(NaN) = NaN
 func Abs(x float64) float64 {
-	return fabs(x)
+	return Float64frombits(Float64bits(x) &^ (1 << 63))
 }
 
 // FMA returns x * y + z, computed with only one rounding.
