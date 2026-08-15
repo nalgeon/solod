@@ -19,6 +19,13 @@ func TestGOARCH(t *testing.T) {
 	}
 }
 
+func TestHosted(t *testing.T) {
+	bare := runtime.GOOS == "bare"
+	if runtime.Hosted == bare {
+		t.Error("Hosted must disagree with a bare GOOS")
+	}
+}
+
 func TestFileName(t *testing.T) {
 	if len(runtime.FileName) == 0 {
 		t.Error("Empty FileName")

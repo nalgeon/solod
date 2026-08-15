@@ -75,6 +75,12 @@ static inline uint64_t runtime_Seed(void) {
 
 #endif  // so_build_hosted
 
+#ifdef so_build_hosted
+#define runtime_Hosted true
+#else
+#define runtime_Hosted false
+#endif
+
 #define runtime_buildVersion so_str(so_version)
 
 #if defined(so_build_darwin)
@@ -89,7 +95,7 @@ static inline uint64_t runtime_Seed(void) {
 #define runtime_GOOS so_str("openbsd")
 #elif defined(so_build_dragonfly)
 #define runtime_GOOS so_str("dragonfly")
-#elif defined(so_build_wasm)
+#elif defined(so_build_wasm) && defined(so_build_hosted)
 #define runtime_GOOS so_str("wasip1")
 #elif defined(so_build_windows)
 #define runtime_GOOS so_str("windows")

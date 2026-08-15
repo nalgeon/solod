@@ -47,6 +47,12 @@ const GOARCH string = "unknown"
 // windows	amd64
 // windows	arm64
 
+// Hosted reports whether the program runs in a hosted environment.
+// A freestanding build sets Hosted to false.
+//
+//so:extern
+const Hosted bool = true
+
 //so:extern runtime_buildVersion
 var buildVersion string
 
