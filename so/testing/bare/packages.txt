@@ -12,6 +12,7 @@ so/encoding/json
 so/fmt
 so/io
 so/maps
+so/math
 so/math/bits
 so/math/rand
 so/mem

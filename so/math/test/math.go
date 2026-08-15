@@ -2,6 +2,7 @@ package math_test
 
 import (
 	"solod.dev/so/math"
+	"solod.dev/so/runtime"
 	"solod.dev/so/testing"
 )
 
@@ -24,48 +25,80 @@ func TestAbs(t *testing.T) {
 }
 
 func TestAcos(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Acos needs a hosted environment")
+		return
+	}
 	if math.Acos(1) != 0 {
 		t.Error("Acos(1) != 0")
 	}
 }
 
 func TestAcosh(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Acosh needs a hosted environment")
+		return
+	}
 	if math.Acosh(1) != 0 {
 		t.Error("Acosh(1) != 0")
 	}
 }
 
 func TestAsin(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Asin needs a hosted environment")
+		return
+	}
 	if math.Asin(0) != 0 {
 		t.Error("Asin(0) != 0")
 	}
 }
 
 func TestAsinh(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Asinh needs a hosted environment")
+		return
+	}
 	if math.Asinh(0) != 0 {
 		t.Error("Asinh(0) != 0")
 	}
 }
 
 func TestAtan(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Atan needs a hosted environment")
+		return
+	}
 	if math.Atan(0) != 0 {
 		t.Error("Atan(0) != 0")
 	}
 }
 
 func TestAtan2(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Atan2 needs a hosted environment")
+		return
+	}
 	if math.Atan2(0, 0) != 0 {
 		t.Error("Atan2(0, 0) != 0")
 	}
 }
 
 func TestAtanh(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Atanh needs a hosted environment")
+		return
+	}
 	if math.Atanh(0) != 0 {
 		t.Error("Atanh(0) != 0")
 	}
 }
 
 func TestCbrt(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Cbrt needs a hosted environment")
+		return
+	}
 	if math.Cbrt(8) != 2 {
 		t.Error("Cbrt(8) != 2")
 	}
@@ -75,6 +108,10 @@ func TestCbrt(t *testing.T) {
 }
 
 func TestCeil(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Ceil needs a hosted environment")
+		return
+	}
 	if math.Ceil(1.49) != 2 {
 		t.Error("Ceil(1.49) != 2")
 	}
@@ -110,6 +147,10 @@ func TestCopysign(t *testing.T) {
 }
 
 func TestCos(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Cos needs a hosted environment")
+		return
+	}
 	if math.Cos(0) != 1 {
 		t.Error("Cos(0) != 1")
 	}
@@ -119,6 +160,10 @@ func TestCos(t *testing.T) {
 }
 
 func TestCosh(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Cosh needs a hosted environment")
+		return
+	}
 	if math.Cosh(0) != 1 {
 		t.Error("Cosh(0) != 1")
 	}
@@ -134,6 +179,10 @@ func TestDim(t *testing.T) {
 }
 
 func TestExp(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Exp needs a hosted environment")
+		return
+	}
 	if math.Abs(math.Exp(1)-2.7183) > 1e-4 {
 		t.Error("Exp(1) != ~2.7183")
 	}
@@ -146,6 +195,10 @@ func TestExp(t *testing.T) {
 }
 
 func TestExp2(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Exp2 needs a hosted environment")
+		return
+	}
 	if math.Exp2(1) != 2 {
 		t.Error("Exp2(1) != 2")
 	}
@@ -155,6 +208,10 @@ func TestExp2(t *testing.T) {
 }
 
 func TestExpm1(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Expm1 needs a hosted environment")
+		return
+	}
 	if math.Abs(math.Expm1(0.01)-0.010050) > 1e-6 {
 		t.Error("Expm1(0.01) != ~0.010050")
 	}
@@ -164,12 +221,20 @@ func TestExpm1(t *testing.T) {
 }
 
 func TestFloor(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Floor needs a hosted environment")
+		return
+	}
 	if math.Floor(1.51) != 1 {
 		t.Error("Floor(1.51) != 1")
 	}
 }
 
 func TestLog(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Log needs a hosted environment")
+		return
+	}
 	if math.Log(1) != 0 {
 		t.Error("Log(1) != 0")
 	}
@@ -179,12 +244,20 @@ func TestLog(t *testing.T) {
 }
 
 func TestLog2(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Log2 needs a hosted environment")
+		return
+	}
 	if math.Log2(256) != 8 {
 		t.Error("Log2(256) != 8")
 	}
 }
 
 func TestLog10(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Log10 needs a hosted environment")
+		return
+	}
 	if math.Log10(100) != 2 {
 		t.Error("Log10(100) != 2")
 	}
@@ -237,12 +310,20 @@ func TestMin(t *testing.T) {
 }
 
 func TestMod(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Mod needs a hosted environment")
+		return
+	}
 	if math.Mod(7, 4) != 3 {
 		t.Error("Mod(7, 4) != 3")
 	}
 }
 
 func TestModf(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Modf needs a hosted environment")
+		return
+	}
 	i, f := math.Modf(3.14)
 	if i != 3 {
 		t.Error("Modf(3.14) int != 3")
@@ -260,24 +341,40 @@ func TestModf(t *testing.T) {
 }
 
 func TestPow(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Pow needs a hosted environment")
+		return
+	}
 	if math.Pow(2, 3) != 8 {
 		t.Error("Pow(2, 3) != 8")
 	}
 }
 
 func TestPow10(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Pow10 needs a hosted environment")
+		return
+	}
 	if math.Pow10(2) != 100 {
 		t.Error("Pow10(2) != 100")
 	}
 }
 
 func TestRemainder(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Remainder needs a hosted environment")
+		return
+	}
 	if math.Remainder(100, 30) != 10 {
 		t.Error("Remainder(100, 30) != 10")
 	}
 }
 
 func TestRound(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Round needs a hosted environment")
+		return
+	}
 	if math.Round(10.5) != 11 {
 		t.Error("Round(10.5) != 11")
 	}
@@ -287,6 +384,10 @@ func TestRound(t *testing.T) {
 }
 
 func TestRoundToEven(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("RoundToEven needs a hosted environment")
+		return
+	}
 	if math.RoundToEven(11.5) != 12 {
 		t.Error("RoundToEven(11.5) != 12")
 	}
@@ -311,6 +412,10 @@ func TestSignbit(t *testing.T) {
 }
 
 func TestSin(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Sin needs a hosted environment")
+		return
+	}
 	if math.Sin(0) != 0 {
 		t.Error("Sin(0) != 0")
 	}
@@ -320,30 +425,50 @@ func TestSin(t *testing.T) {
 }
 
 func TestSinh(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Sinh needs a hosted environment")
+		return
+	}
 	if math.Sinh(0) != 0 {
 		t.Error("Sinh(0) != 0")
 	}
 }
 
 func TestSqrt(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Sqrt needs a hosted environment")
+		return
+	}
 	if math.Sqrt(3*3+4*4) != 5 {
 		t.Error("Sqrt(25) != 5")
 	}
 }
 
 func TestTan(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Tan needs a hosted environment")
+		return
+	}
 	if math.Tan(0) != 0 {
 		t.Error("Tan(0) != 0")
 	}
 }
 
 func TestTanh(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Tanh needs a hosted environment")
+		return
+	}
 	if math.Tanh(0) != 0 {
 		t.Error("Tanh(0) != 0")
 	}
 }
 
 func TestTrunc(t *testing.T) {
+	if !runtime.Hosted {
+		t.Skip("Trunc needs a hosted environment")
+		return
+	}
 	if math.Trunc(math.Pi) != 3 {
 		t.Error("Trunc(Pi) != 3")
 	}
