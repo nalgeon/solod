@@ -4,7 +4,11 @@ This document lists the main changes in the So version in development.
 
 ## Language
 
-**Type parameters are rejected where C has nothing to emit**. A type parameter works for Go type-checking and as a macro argument, so a type parameter can appear only inside an `so:inline` macro. A declaration with a bare `T` in C used to produce invalid output. It is now an error:
+### Type parameters
+
+Type parameters are now rejected where C has nothing to emit.
+
+A type parameter works for Go type-checking and as a macro argument, so a type parameter can appear only inside an `so:inline` macro. A declaration with a bare `T` in C used to produce invalid output. It is now an error:
 
 ```go
 type Pair[T any] struct{ a, b T } // rejected: no C type for T
@@ -16,7 +20,9 @@ A generic function or method must be `so:inline` or `so:extern`, even when the s
 
 [9501bae](https://github.com/solod-dev/solod/commit/9501baef6386471516b70c22f64ec69b442d008f)
 
-**Constraint interfaces are no longer emitted**. Go allows such an interface only as a type parameter constraint. A constraint interface is never a value type, so C has nothing to represent.
+### Constraint interfaces
+
+Constraint interfaces are no longer emitted. Go allows such an interface only as a type parameter constraint. A constraint interface is never a value type, so C has nothing to represent.
 
 ```go
 type Number interface{ ~int | ~float64 } // not emitted
@@ -24,7 +30,9 @@ type Number interface{ ~int | ~float64 } // not emitted
 
 [4f12848](https://github.com/solod-dev/solod/commit/4f12848353acb9c4564948ee05a1aa5e6342511a)
 
-**Interface methods with value receivers are rejected**. A concrete type with value receivers does not convert to an interface:
+### Interface methods
+
+Interface methods with value receivers are now rejected. A concrete type with value receivers does not convert to an interface:
 
 ```go
 func (r Rect) Area() int { // value receiver
@@ -38,43 +46,9 @@ A pointer receiver (`func (r *Rect) Area() int`) works.
 
 [7e8e8b2](https://github.com/solod-dev/solod/commit/7e8e8b2125af949db9c78d2fab9cf9c1720cfe2a)
 
-**Type embedding is rejected**. Struct embedding and interface embedding are errors now:
+### Interface comparison
 
-```go
-type number struct {
-    base // rejected: embedded field
-}
-
-type readWriter interface {
-    reader // rejected: embedded interface
-    write(v int)
-}
-```
-
-Declare a named field or list the methods.
-
-[d0e48e0](https://github.com/solod-dev/solod/commit/d0e48e0a5786e47420b9aea1477390db7f2c72fb)
-
-**Switch tag evaluation**. A switch translates to an if/else-if chain, which repeats the tag in every comparison. The tag now goes into a temporary variable first, so a call in the tag runs once, as in Go:
-
-```go
-switch inc() { // used to call inc() once per case
-case 2:
-    println("two")
-default:
-    println("other")
-}
-```
-
-A switch on a struct or an array is not supported.
-
-[06b8ab8](https://github.com/solod-dev/solod/commit/06b8ab85bf4cb065b760c5a0e750b1bf6658d076)
-
-**Switch case bodies reject break and fallthrough**. A case body used to keep both statements as written. The emitted C gave incorrect behavior or did not compile. Both statements are errors now.
-
-[fd8659b](https://github.com/solod-dev/solod/commit/fd8659b66bbb2e24f2b70062c5b08b84abffe551)
-
-**Interface comparison**. Two interfaces are equal when they hold the same pointer. An interface compares with `nil` as expected. Comparing an interface to a concrete type is not supported:
+Two interfaces are equal when they hold the same pointer. An interface compares with `nil` as expected. Comparing an interface to a concrete type is not supported:
 
 ```go
 r := Rect{2, 4}
@@ -95,7 +69,72 @@ if a == n { }    // not supported
 
 [06b8ab8](https://github.com/solod-dev/solod/commit/06b8ab85bf4cb065b760c5a0e750b1bf6658d076)
 
-**String and character literals**. A literal is decoded to its value and encoded again for C. The output no longer keeps the literal as written. A string keeps printable ASCII and UTF-8 as is, and escapes other bytes in octal. A byte or rune literal stays a character literal for printable ASCII. Any other value becomes a number:
+### Type embedding
+
+Type embedding is rejected. Struct embedding and interface embedding are errors now:
+
+```go
+type number struct {
+    base // rejected: embedded field
+}
+
+type readWriter interface {
+    reader // rejected: embedded interface
+    write(v int)
+}
+```
+
+Declare a named field or list the methods.
+
+[d0e48e0](https://github.com/solod-dev/solod/commit/d0e48e0a5786e47420b9aea1477390db7f2c72fb)
+
+### Switch statement
+
+A switch translates to an if/else-if chain, which repeats the tag in every comparison. The tag now goes into a temporary variable first, so a call in the tag runs once, as in Go:
+
+```go
+switch inc() { // used to call inc() once per case
+case 2:
+    println("two")
+default:
+    println("other")
+}
+```
+
+A switch on a struct or an array is not supported.
+
+[06b8ab8](https://github.com/solod-dev/solod/commit/06b8ab85bf4cb065b760c5a0e750b1bf6658d076)
+
+Switch case bodies reject `break` and `fallthrough`. A case body used to keep both statements as written. The emitted C gave incorrect behavior or did not compile. Both statements are errors now.
+
+[fd8659b](https://github.com/solod-dev/solod/commit/fd8659b66bbb2e24f2b70062c5b08b84abffe551)
+
+### Empty structs
+
+A struct with no fields now works as a value, as a slice element, and as a map value:
+
+```go
+type empty struct{}
+
+var e empty   // was invalid C, now empty e = {};
+p := new(empty)
+
+set := make(map[string]empty, 4)
+set["a"] = empty{}
+v := set["a"]
+
+es := make([]empty, 1, 4)
+es[0] = empty{}
+es = append(es, empty{})
+```
+
+The zero value of an aggregate is now the empty initializer `{}`. It used to be `{0}`, which sets the first member of the aggregate. A struct with no fields has no member to set, so C rejected `{0}` for an `empty` value, an `[N]empty` array, and any struct with an `empty` first field.
+
+A struct with no fields has a size of zero, like in Go.
+
+### String and character literals
+
+A literal is decoded to its value and encoded again for C. The output no longer keeps the literal as written. A string keeps printable ASCII and UTF-8 as is, and escapes other bytes in octal. A byte or rune literal stays a character literal for printable ASCII. Any other value becomes a number:
 
 ```text
 "日本語"   ->  "日本語"
@@ -106,7 +145,9 @@ if a == n { }    // not supported
 
 [f5a91b1](https://github.com/solod-dev/solod/commit/f5a91b1c4902d19787f83b5d8ccc5804d69f2c08)
 
-**Integer constants**. A constant integer expression is now emitted as its value (folded) when C cannot do the arithmetic step by step:
+### Integer constants
+
+A constant integer expression is now emitted as its value (folded) when C cannot do the arithmetic step by step:
 
 ```go
 var mask uint64 = 1<<64 - 1 // was ((int64_t)1 << 64) - 1, now 18446744073709551615u
@@ -136,7 +177,9 @@ const huge = 1 << 200 // rejected: constant huge does not fit in int64 or uint64
 
 [bca0714](https://github.com/solod-dev/solod/commit/bca071476d5d5d09eb1a9097f8ddba07847bdcc9)
 
-**Integer literals**. An integer literal above `MaxInt64` now gets a `u` suffix in C:
+### Integer literals
+
+An integer literal above `MaxInt64` now gets a `u` suffix in C:
 
 ```go
 var n uint64 = 18446744073709551615 // -> 18446744073709551615u
@@ -146,7 +189,9 @@ C gives an unsuffixed decimal literal a signed type. Without the suffix the comp
 
 [d18d68d](https://github.com/solod-dev/solod/commit/d18d68d92b65cd37c1cdd096e2a97fc957f629d3)
 
-**Float constants**. A constant float expression is emitted as its value (folded). The output no longer shows the operators:
+### Float constants
+
+A constant float expression is emitted as its value (folded). The output no longer shows the operators:
 
 ```go
 const pi = 3.14159
@@ -164,7 +209,9 @@ A constant that does not fit the C float type is rejected:
 const huge = 1e200 * 1e200 // rejected: constant 1e+400 overflows float64
 ```
 
-**Float32 literals**. A `float32` literal now gets an `f` suffix in C:
+### Float32 literals
+
+A `float32` literal now gets an `f` suffix in C:
 
 ```go
 var x float32 = 0.1
@@ -175,30 +222,11 @@ Without the suffix the literal was a `double`. C then promoted the other operand
 
 [0d81c8b](https://github.com/solod-dev/solod/commit/0d81c8b88c96d569f0e1428ed0ef9c1d5a22d4ce)
 
-**Empty struct**. A struct with no fields now works as a value, as a slice element, and as a map value:
-
-```go
-type empty struct{}
-
-var e empty   // was invalid C, now empty e = {};
-p := new(empty)
-
-set := make(map[string]empty, 4)
-set["a"] = empty{}
-v := set["a"]
-
-es := make([]empty, 1, 4)
-es[0] = empty{}
-es = append(es, empty{})
-```
-
-The zero value of an aggregate is now the empty initializer `{}`. It used to be `{0}`, which sets the first member of the aggregate. A struct with no fields has no member to set, so C rejected `{0}` for an `empty` value, an `[N]empty` array, and any struct with an `empty` first field.
-
-A struct with no fields has a size of zero, like in Go.
-
 ## Interop
 
-**C field name override**. A `c:"..."` struct tag sets the C name of a field. An extern struct can then match a C header field with a Go keyword as the name:
+### C field name override
+
+A `c:"..."` struct tag sets the C name of a field. An extern struct can then match a C header field with a Go keyword as the name:
 
 ```go
 //so:extern SDL_CommonEvent
@@ -209,7 +237,9 @@ type SDL_CommonEvent struct {
 
 [fc25bb8](https://github.com/solod-dev/solod/commit/fc25bb875b10e4d64a6f223ad3f5ec647ed2733e)
 
-**Nodecay on a variadic passes So types**. A plain extern variadic is a C variadic: every argument decays, and the callee reads C types. A nodecay extern variadic is not. Each argument goes to the C `...` on its own, at its So type, and every scalar widens:
+### Variadic nodecay
+
+Nodecay on a variadic passes So types. A plain extern variadic is a C variadic: every argument decays, and the callee reads C types. A nodecay extern variadic is not. Each argument goes to the C `...` on its own, at its So type, and every scalar widens:
 
 | So type                            | C type read by `va_arg` |
 | ---------------------------------- | ----------------------- |
@@ -230,7 +260,9 @@ measure("is", n, "abc")
 
 The call must list its arguments explicitly rather than using spread syntax. An `any` argument is an error.
 
-**Target-width C types**. `so/c` now supports more common C types:
+### Target-width C types
+
+`so/c` now supports more common C types:
 
 ```text
 size_t      - c.Size
@@ -242,7 +274,9 @@ long double - c.LongDouble
 
 [c06b294](https://github.com/solod-dev/solod/commit/c06b29494cda8c822a4191843120fb6a6091a25d)
 
-**c.Assume states a fact for the C compiler**. It generates no code in any build, and `-assert` does not affect it:
+### Assume
+
+`c.Assume` states a fact for the C compiler. It generates no code in any build, and `-assert` does not affect it:
 
 ```go
 for i < len(hdib) {
@@ -256,7 +290,9 @@ The behavior is undefined if the condition is false. Use `c.Assume` only for con
 
 ## Safety
 
-**Assertions are no longer tied to NDEBUG**. Assertions are on by default. The new `-assert` flag removes them:
+### Assertions
+
+Assertions are no longer tied to `NDEBUG`. Assertions are on by default. The new `-assert` flag removes them:
 
 ```sh
 so build -assert=off .
@@ -268,7 +304,9 @@ so build -assert=off .
 
 ## Standard library
 
-**crypto/crand works in freestanding mode**. The package rejected a freestanding build with a compile-time error, because no freestanding environment has a CSPRNG. The build now succeeds, and the target supplies the entropy. Define the C function `so_crand_read` and point it at the hardware random number generator of the board or at a host import:
+### crypto/crand
+
+The package now works in freestanding mode. It rejected a freestanding build with a compile-time error, because no freestanding environment has a CSPRNG. The build now succeeds, and the target supplies the entropy. Define the C function `so_crand_read` and point it at the hardware random number generator of the board or at a host import:
 
 ```c
 so_int so_crand_read(uint8_t* buf, so_int size) {
@@ -278,9 +316,13 @@ so_int so_crand_read(uint8_t* buf, so_int size) {
 
 The declaration is weak, so a program that never calls `crypto/crand` still links. A call with no definition panics.
 
-**encoding/json works in freestanding mode**. The package used `math.IsNaN` and `math.IsInf` to reject a non-finite float. The `math` package requires a hosted environment, so that import alone made `encoding/json` hosted. The package now uses a private finite check and doesn't import `math`.
+### encoding/json
 
-**fmt works in freestanding mode**. The print family used to wrap C's `vsnprintf`, so it printed C's text with C's verbs, and the `<stdio.h>` include made the whole package hosted. It now runs a formatting engine ported from Go's `fmt` and writes the bytes Go writes. Hosted and freestanding builds produce the same output.
+The package now works in freestanding mode. It used `math.IsNaN` and `math.IsInf` to reject a non-finite float. The `math` package requires a hosted environment, so that import alone made `encoding/json` hosted. The package now uses a private finite check and doesn't import `math`.
+
+### fmt
+
+The package now works in freestanding mode. The print family used to wrap C's `vsnprintf`, so it printed C's text with C's verbs, and the `<stdio.h>` include made the whole package hosted. It now runs a formatting engine ported from Go's `fmt` and writes the bytes Go writes. Hosted and freestanding builds produce the same output.
 
 The verbs are Go's, with two differences. So has no reflection, so the verbs that need type information are absent: `%v`, `%T`, `%w`, `%q`, and `%U`. And `%u` is added for an unsigned integer, because a print call carries no type information either, so nothing else can tell a signed value from an unsigned one. `%t` for a bool and `%O` for octal with a `0o` prefix are new as well.
 
@@ -297,15 +339,21 @@ s := fmt.Sprintf(buf, "%d apples", n)
 
 `Buffer` existed because a `[]byte` argument decayed to a bare pointer, which lost the length. The print family is nodecay now, so the slice arrives whole.
 
-**math works in freestanding mode**. The package rejected a freestanding build with a compile-time error, because a freestanding environment has no libm. The build now succeeds, and only the part that needs libm panics. `Abs`, `Copysign`, `Dim`, `Inf`, `IsInf`, `IsNaN`, `Max`, `Min`, `NaN`, `Pow10`, `RoundToEven`, `Signbit`, the `Float64bits` family and every constant work.
+### math
+
+The package now works in freestanding mode. It rejected a freestanding build with a compile-time error, because a freestanding environment has no libm. The build now succeeds, and only the part that needs libm panics. `Abs`, `Copysign`, `Dim`, `Inf`, `IsInf`, `IsNaN`, `Max`, `Min`, `NaN`, `Pow10`, `RoundToEven`, `Signbit`, the `Float64bits` family and every constant work.
 
 `Abs`, `Copysign` and `Signbit` used to call libm. All three read the bits of the float now, the way Go does.
 
-⚠️ **math.Max and math.Min follow Go for NaN**. Both wrapped C's `fmax` and `fmin`, which ignore a NaN operand, so `Max(2, NaN)` returned 2. Both are ported from Go now, and they match the documented special cases: a NaN operand gives NaN, `Max` gives `+Inf` before it gives NaN, and `Min` gives `-Inf` before it gives NaN.
+⚠️ `Max` and `Min` follow Go for NaN. Both wrapped C's `fmax` and `fmin`, which ignore a NaN operand, so `Max(2, NaN)` returned 2. Both are ported from Go now, and they match the documented special cases: a NaN operand gives NaN, `Max` gives `+Inf` before it gives NaN, and `Min` gives `-Inf` before it gives NaN.
 
-**net/netip works in freestanding mode**. The package included `<net/if.h>` for `if_nametoindex`, and that header made the whole package hosted. The include now sits behind a hosted guard, and a freestanding build gets a stub that returns 0. A zone given as an interface name resolves to no zone, the same result a hosted `if_nametoindex` gives for a name that matches no interface. A numeric zone works everywhere.
+### net/netip
 
-**os.File.Sync**. A `File` writes through a buffered C stream, so a program that ends abnormally loses the buffered data. `Sync` flushes the stream:
+The package now works in freestanding mode. It included `<net/if.h>` for `if_nametoindex`, and that header made the whole package hosted. The include now sits behind a hosted guard, and a freestanding build gets a stub that returns 0. A zone given as an interface name resolves to no zone, the same result a hosted `if_nametoindex` gives for a name that matches no interface. A numeric zone works everywhere.
+
+### os
+
+A `File` writes through a buffered C stream, so a program that ends abnormally loses the buffered data. The new `File.Sync` method flushes the stream:
 
 ```go
 f.WriteString("progress\n")
@@ -314,7 +362,9 @@ f.Sync() // the line is out of the buffer now
 
 The data can still wait in an operating system cache, so `Sync` does not guarantee that the data reached the storage device.
 
-**runtime.Hosted**. The new constant reports whether the program is running in a hosted environment (one with a C standard library). Use it to skip tests in freestanding mode:
+### runtime
+
+The new `Hosted` constant reports whether the program is running in a hosted environment (one with a C standard library). Use it to skip tests in freestanding mode:
 
 ```go
 if !runtime.Hosted {
@@ -323,15 +373,19 @@ if !runtime.Hosted {
 }
 ```
 
-**runtime.Seed reads the target entropy in freestanding mode**. `Seed` used a deterministic generator with a fixed initial state, so `math/rand` and the hash of `maps` repeated on every run. `Seed` now reads the same `so_crand_read` hook as `crypto/crand`, so one definition covers both. A target with no hook keeps the deterministic generator: `math/rand` and `maps` promise nothing about unpredictability and must work on a board with no entropy source.
+`Seed` now reads the target entropy in freestanding mode. `Seed` used a deterministic generator with a fixed initial state, so `math/rand` and the hash of `maps` repeated on every run. `Seed` now reads the same `so_crand_read` hook as `crypto/crand`, so one definition covers both. A target with no hook keeps the deterministic generator: `math/rand` and `maps` promise nothing about unpredictability and must work on a board with no entropy source.
 
-**testing API changed**. `RunSuites`, `RunTests` and `RunBenchmarks` take an [Options](https://pkg.go.dev/solod.dev/so/testing#Options) value in place of the runner arguments. `so test` and `so bench` read `-run` from the command line themselves and write the value into the generated runner.
+### testing
+
+The package now works in freestanding mode. It imported `os` for the standard output and for `os.Exit`, and that import made it hosted. The test report goes to the standard output (in a hosted environment) or to the `so_write_out` hook (in a freestanding environment). The runner also resets the heap (a static buffer in a freestanding environment) after every test.
+
+`RunSuites`, `RunTests` and `RunBenchmarks` take an [Options](https://pkg.go.dev/solod.dev/so/testing#Options) value in place of the runner arguments. `so test` and `so bench` read `-run` from the command line themselves and write the value into the generated runner.
 
 ⚠️ If you have a main package of your own that calls `RunTests` or `RunBenchmarks`, pass a `testing.Options` value instead of `os.Args`.
 
-**testing works in freestanding mode**. The package imported `os` for the standard output and for `os.Exit`, and that import made it hosted. The test report goes to the standard output (in a hosted environment) or to the `so_write_out` hook (in a freestanding environment). The runner also resets the heap (a static buffer in a freestanding environment) after every test.
+### time
 
-**time reads the clock in freestanding mode**. `Now`, `Since`, `Until`, and `Sleep` used to panic. The target now supplies the clock through three weak hooks, the same way `crypto/crand` supplies entropy:
+The package now reads the clock in freestanding mode. `Now`, `Since`, `Until`, and `Sleep` used to panic. The target now supplies the clock through three weak hooks, the same way `crypto/crand` supplies entropy:
 
 ```c
 so_R_i64_i32 so_time_wall(void) {
@@ -349,23 +403,15 @@ void so_time_sleep(int64_t ns) {
 
 A board that counts elapsed time but does not know the date returns 0 seconds from `so_time_wall`. Every `Time` then dates at the epoch, and `Since` and `Until` stay exact, because they measure with the monotonic clock. A target with no `so_time_mono` still works: `time.Now` returns a wall clock reading alone.
 
-**uuid works in freestanding mode**. The package imports `crypto/crand`, so `New` and `NewV4` now work in a freestanding environment as soon as `so_crand_read` is defined, and `NewV7` works once `so_time_wall` is defined too.
+### uuid
+
+The package now works in freestanding mode. It imports `crypto/crand`, so `New` and `NewV4` now work in a freestanding environment as soon as `so_crand_read` is defined, and `NewV7` works once `so_time_wall` is defined too.
 
 ## Tooling
 
-**New flag: -freestanding**. The flag tells `so build`, `so test`, `so bench` and `so run` that the program targets a freestanding environment:
+### so test
 
-```sh
-export CC=clang
-export CFLAGS="--target=wasm32-freestanding -nostdlib -Wl,--no-entry -Wl,--export=main"
-so build -freestanding -o main.wasm .
-```
-
-The flag drops the libc dependencies declared with `so:link` in the standard library, because a freestanding target has no host C library. It does not affect the libraries declared with `so:link` in user code.
-
-The target still comes from `CFLAGS`; the flag doesn't affect it.
-
-**Multi-package so test**. A pattern that ends with `...` selects every package with a `test` subdirectory below its base directory:
+`so test` can now run tests from multiple packages in a single run. A pattern that ends with `...` selects every package with a `test` subdirectory below its base directory:
 
 ```sh
 so test ./so/...
@@ -375,7 +421,7 @@ The whole run costs one translate, one compile and one execution, which is much 
 
 The packages share a process, so a hard crash in one package stops the packages after it.
 
-**Package list for so test**. The `-pkg-file` flag limits the run to the packages a file lists:
+The `-pkg-file` flag limits the run to the packages a file lists:
 
 ```sh
 # freestanding.txt
@@ -389,13 +435,31 @@ so test -pkg-file=freestanding.txt ./so/...
 
 The file holds one package per line, as a path relative to the module root. Blank lines and the text after a `#` are ignored. The list is a filter over the packages the pattern selects, so a listed package that the pattern does not select is an error.
 
-**New command: so translate-test**. The command writes the C of the test program without a compile or a run, the way `so translate` does for an ordinary package:
+### so translate-test
+
+The new `translate-test` command writes the C of the test program without a compile or a run, the way `so translate` does for an ordinary package:
 
 ```sh
 so translate-test -pkg-file=freestanding.txt -run=TestBuffer -o out ./so/...
 ```
 
-**Test and bench package naming**. A test or bench directory declared `package main` before. The generated runner must import the package now, so `package main` is rejected. Two test packages of one run must also have distinct names, because the So compiler prefixes an exported C name with the package name.
+### Freestanding flag
+
+The new `-freestanding` flag tells `so build`, `so test`, `so bench` and `so run` that the program targets a freestanding environment:
+
+```sh
+export CC=clang
+export CFLAGS="--target=wasm32-freestanding -nostdlib -Wl,--no-entry -Wl,--export=main"
+so build -freestanding -o main.wasm .
+```
+
+The flag drops the libc dependencies declared with `so:link` in the standard library, because a freestanding target has no host C library. It does not affect the libraries declared with `so:link` in user code.
+
+The target still comes from `CFLAGS`; the flag doesn't affect it.
+
+### Test and bench package naming
+
+A test or bench directory declared `package main` before. The generated runner must import the package now, so `package main` is rejected. Two test packages of one run must also have distinct names, because the So compiler prefixes an exported C name with the package name.
 
 A common convention is to name a test package after the package under test, with a `_test` or `_bench` suffix: `so/sync/test` declares `package sync_test`, and `so/sync/bench` declares `package sync_bench`.
 

@@ -40,6 +40,8 @@ zig cc -Oz \
 
 ## Stdlib packages
 
+### Fully freestanding
+
 These packages work in freestanding mode with no restrictions:
 
 ```text
@@ -49,40 +51,47 @@ mem  path  runtime  slices  strconv  strings  sync/atomic  unicode
 unicode/utf8  unsafe
 ```
 
-The `crypto/crand` package works with one restriction:
+### Freestanding with restrictions
 
-- A freestanding environment has no CSPRNG, so the package draws from the `so_crand_read` hook. See [Target hooks](#target-hooks).
+**crypto/crand**
 
-The `fmt` package works with these restrictions:
+A freestanding environment has no CSPRNG, so the package draws from the `so_crand_read` hook. See [Target hooks](#target-hooks).
 
-- `Scanf`, `Sscanf`, and `Fscanf` read through the stdio of the host, so a freestanding call panics.
-- `Print`, `Println`, and `Printf` write through the `so_write_out` hook (see [Target hooks](#target-hooks)). A target with no hook drops the bytes. `Sprintf` and `Fprintf` are unaffected.
+**fmt**
 
-The `math` package works with one restriction:
+`Scanf`, `Sscanf`, and `Fscanf` read through the stdio of the host, so a freestanding call panics.
 
-- Only the part that needs no libm works. `Abs`, `Copysign`, `Dim`, `Inf`, `IsInf`, `IsNaN`, `Max`, `Min`, `NaN`, `Pow10`, `RoundToEven`, `Signbit`, the `Float64bits` family and every constant work. Every other function panics.
+`Print`, `Println`, and `Printf` write through the `so_write_out` hook (see [Target hooks](#target-hooks)). A target with no hook drops the bytes. `Sprintf` and `Fprintf` are unaffected.
 
-The `testing` package works with these restrictions:
+**math**
 
-- The test report goes to the `so_write_out` hook. A target with no hook reports nothing.
-- A failed run traps instead of exiting with a non-zero status, because a freestanding environment has no exit status.
-- A benchmark reads the clock, so `so bench` needs the `so_time_wall` and `so_time_mono` hooks.
-- The runner returns the heap to the position it holds before the first test, after every test.
+Only the part that needs no libm works. `Abs`, `Copysign`, `Dim`, `Inf`, `IsInf`, `IsNaN`, `Max`, `Min`, `NaN`, `Pow10`, `RoundToEven`, `Signbit`, the `Float64bits` family and every constant work. Every other function panics.
 
-A test of your own can still need a hosted environment, even though the framework does not.
+**net/netip**
 
-The `net/netip` package works with one restriction:
+A zone given as an interface name (`fe80::1%eth0`) resolves to no zone, because a freestanding environment has no network interfaces. A numeric zone (`fe80::1%2`) works.
 
-- A zone given as an interface name (`fe80::1%eth0`) resolves to no zone, because a freestanding environment has no network interfaces. A numeric zone (`fe80::1%2`) works.
+**testing**
 
-The `time` package works with these restrictions:
+The test report goes to the `so_write_out` hook. A target with no hook reports nothing.
 
-- `Now`, `Since`, `Until`, and `Sleep` read the clock through the `so_time_wall`, `so_time_mono`, and `so_time_sleep` hooks. See [Target hooks](#target-hooks).
-- `Time.Format` and `Time.Parse` only support named layouts (such as `RFC3339` or `DateOnly`), not custom layouts.
+A failed run traps instead of exiting with a non-zero status, because a freestanding environment has no exit status.
 
-The `uuid` package works with one restriction:
+A benchmark reads the clock, so `so bench` needs the `so_time_wall` and `so_time_mono` hooks.
 
-- `New` and `NewV4` hold random data only, so they need the `so_crand_read` hook. `NewV7` also reads the clock, so it needs `so_time_wall` as well. See [Target hooks](#target-hooks).
+The runner returns the heap to the position it holds before the first test, after every test.
+
+**time**
+
+`Now`, `Since`, `Until`, and `Sleep` read the clock through the `so_time_wall`, `so_time_mono`, and `so_time_sleep` hooks. See [Target hooks](#target-hooks).
+
+`Time.Format` and `Time.Parse` only support named layouts (such as `RFC3339` or `DateOnly`), not custom layouts.
+
+**uuid**
+
+`New` and `NewV4` hold random data only, so they need the `so_crand_read` hook. `NewV7` also reads the clock, so it needs `so_time_wall` as well. See [Target hooks](#target-hooks).
+
+### Hosted only
 
 These packages require a hosted environment and will produce a compile-time error if imported:
 
