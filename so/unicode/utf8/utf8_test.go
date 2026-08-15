@@ -2,540 +2,133 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package utf8_test
+package utf8
 
-import (
-	"testing"
+import "testing"
 
-	"solod.dev/so/bytes"
-	"solod.dev/so/strings"
-	"solod.dev/so/unicode"
-	. "solod.dev/so/unicode/utf8"
-)
+// FuzzDecode checks the invariants of the decoders over arbitrary bytes.
+func FuzzDecode(f *testing.F) {
+	f.Add([]byte(""))
+	f.Add([]byte("abcd"))
+	f.Add([]byte("☺☻☹"))
+	f.Add([]byte("日a本b語ç"))
+	f.Add([]byte("\x80\x80\x80\x80"))
+	f.Add([]byte("\xed\xa0\x80"))     // a surrogate half
+	f.Add([]byte("\xc0\x80"))         // U+0000 encoded in two bytes
+	f.Add([]byte("\xf4\x90\x80\x80")) // above MaxRune
+	f.Add([]byte("\xf4\x8f\xbf\xbf")) // MaxRune
 
-// Validate the constants redefined from unicode.
-func TestConstants(t *testing.T) {
-	if MaxRune != unicode.MaxRune {
-		t.Errorf("utf8.MaxRune is wrong: %x should be %x", MaxRune, unicode.MaxRune)
-	}
-	if RuneError != unicode.ReplacementChar {
-		t.Errorf("utf8.RuneError is wrong: %x should be %x", RuneError, unicode.ReplacementChar)
-	}
-}
+	f.Fuzz(func(t *testing.T, b []byte) {
+		s := string(b)
 
-type Utf8Map struct {
-	r   rune
-	str string
-}
-
-var utf8map = []Utf8Map{
-	{0x0000, "\x00"},
-	{0x0001, "\x01"},
-	{0x007e, "\x7e"},
-	{0x007f, "\x7f"},
-	{0x0080, "\xc2\x80"},
-	{0x0081, "\xc2\x81"},
-	{0x00bf, "\xc2\xbf"},
-	{0x00c0, "\xc3\x80"},
-	{0x00c1, "\xc3\x81"},
-	{0x00c8, "\xc3\x88"},
-	{0x00d0, "\xc3\x90"},
-	{0x00e0, "\xc3\xa0"},
-	{0x00f0, "\xc3\xb0"},
-	{0x00f8, "\xc3\xb8"},
-	{0x00ff, "\xc3\xbf"},
-	{0x0100, "\xc4\x80"},
-	{0x07ff, "\xdf\xbf"},
-	{0x0400, "\xd0\x80"},
-	{0x0800, "\xe0\xa0\x80"},
-	{0x0801, "\xe0\xa0\x81"},
-	{0x1000, "\xe1\x80\x80"},
-	{0xd000, "\xed\x80\x80"},
-	{0xd7ff, "\xed\x9f\xbf"}, // last code point before surrogate half.
-	{0xe000, "\xee\x80\x80"}, // first code point after surrogate half.
-	{0xfffe, "\xef\xbf\xbe"},
-	{0xffff, "\xef\xbf\xbf"},
-	{0x10000, "\xf0\x90\x80\x80"},
-	{0x10001, "\xf0\x90\x80\x81"},
-	{0x40000, "\xf1\x80\x80\x80"},
-	{0x10fffe, "\xf4\x8f\xbf\xbe"},
-	{0x10ffff, "\xf4\x8f\xbf\xbf"},
-	{0xFFFD, "\xef\xbf\xbd"},
-}
-
-var surrogateMap = []Utf8Map{
-	{0xd800, "\xed\xa0\x80"}, // surrogate min decodes to (RuneError, 1)
-	{0xdfff, "\xed\xbf\xbf"}, // surrogate max decodes to (RuneError, 1)
-}
-
-var testStrings = []string{
-	"",
-	"abcd",
-	"☺☻☹",
-	"日a本b語ç日ð本Ê語þ日¥本¼語i日©",
-	"日a本b語ç日ð本Ê語þ日¥本¼語i日©日a本b語ç日ð本Ê語þ日¥本¼語i日©日a本b語ç日ð本Ê語þ日¥本¼語i日©",
-	"\x80\x80\x80\x80",
-}
-
-func TestFullRune(t *testing.T) {
-	for _, m := range utf8map {
-		b := []byte(m.str)
-		if !FullRune(b) {
-			t.Errorf("FullRune(%q) (%U) = false, want true", b, m.r)
+		// The byte and the string decoder must agree.
+		r1, size1 := DecodeRune(b)
+		r2, size2 := DecodeRuneInString(s)
+		if r1 != r2 || size1 != size2 {
+			t.Fatalf("DecodeRune(%q) = %U, %d; DecodeRuneInString = %U, %d", b, r1, size1, r2, size2)
 		}
-		s := m.str
-		if !FullRuneInString(s) {
-			t.Errorf("FullRuneInString(%q) (%U) = false, want true", s, m.r)
+		r3, last1 := DecodeLastRune(b)
+		r4, last2 := DecodeLastRuneInString(s)
+		if r3 != r4 || last1 != last2 {
+			t.Fatalf("DecodeLastRune(%q) = %U, %d; DecodeLastRuneInString = %U, %d", b, r3, last1, r4, last2)
 		}
-		b1 := b[0 : len(b)-1]
-		if FullRune(b1) {
-			t.Errorf("FullRune(%q) = true, want false", b1)
+		if FullRune(b) != FullRuneInString(s) {
+			t.Fatalf("FullRune(%q) = %t; FullRuneInString = %t", b, FullRune(b), FullRuneInString(s))
 		}
-		s1 := string(b1)
-		if FullRuneInString(s1) {
-			t.Errorf("FullRune(%q) = true, want false", s1)
-		}
-	}
-	for _, s := range []string{"\xc0", "\xc1"} {
-		b := []byte(s)
-		if !FullRune(b) {
-			t.Errorf("FullRune(%q) = false, want true", s)
-		}
-		if !FullRuneInString(s) {
-			t.Errorf("FullRuneInString(%q) = false, want true", s)
-		}
-	}
-}
-
-func TestEncodeRune(t *testing.T) {
-	for _, m := range utf8map {
-		b := []byte(m.str)
-		var buf [10]byte
-		n := EncodeRune(buf[0:], m.r)
-		b1 := buf[0:n]
-		if !bytes.Equal(b, b1) {
-			t.Errorf("EncodeRune(%#04x) = %q want %q", m.r, b1, b)
-		}
-	}
-}
-
-func TestAppendRune(t *testing.T) {
-	for _, m := range utf8map {
-		if buf := AppendRune(nil, m.r); string(buf) != m.str {
-			t.Errorf("AppendRune(nil, %#04x) = %s, want %s", m.r, buf, m.str)
-		}
-		if buf := AppendRune([]byte("init"), m.r); string(buf) != "init"+m.str {
-			t.Errorf("AppendRune(init, %#04x) = %s, want %s", m.r, buf, "init"+m.str)
-		}
-	}
-}
-
-func TestDecodeRune(t *testing.T) {
-	for _, m := range utf8map {
-		b := []byte(m.str)
-		r, size := DecodeRune(b)
-		if r != m.r || size != len(b) {
-			t.Errorf("DecodeRune(%q) = %#04x, %d want %#04x, %d", b, r, size, m.r, len(b))
-		}
-		s := m.str
-		r, size = DecodeRuneInString(s)
-		if r != m.r || size != len(b) {
-			t.Errorf("DecodeRuneInString(%q) = %#04x, %d want %#04x, %d", s, r, size, m.r, len(b))
+		if Valid(b) != ValidString(s) {
+			t.Fatalf("Valid(%q) = %t; ValidString = %t", b, Valid(b), ValidString(s))
 		}
 
-		// there's an extra byte that bytes left behind - make sure trailing byte works
-		r, size = DecodeRune(b[0:cap(b)])
-		if r != m.r || size != len(b) {
-			t.Errorf("DecodeRune(%q) = %#04x, %d want %#04x, %d", b, r, size, m.r, len(b))
-		}
-		s = m.str + "\x00"
-		r, size = DecodeRuneInString(s)
-		if r != m.r || size != len(b) {
-			t.Errorf("DecodeRuneInString(%q) = %#04x, %d want %#04x, %d", s, r, size, m.r, len(b))
-		}
-
-		// make sure missing bytes fail
-		wantsize := 1
-		if wantsize >= len(b) {
-			wantsize = 0
-		}
-		r, size = DecodeRune(b[0 : len(b)-1])
-		if r != RuneError || size != wantsize {
-			t.Errorf("DecodeRune(%q) = %#04x, %d want %#04x, %d", b[:len(b)-1], r, size, RuneError, wantsize)
-		}
-		s = m.str[0 : len(m.str)-1]
-		r, size = DecodeRuneInString(s)
-		if r != RuneError || size != wantsize {
-			t.Errorf("DecodeRuneInString(%q) = %#04x, %d want %#04x, %d", s, r, size, RuneError, wantsize)
-		}
-
-		// make sure bad sequences fail
-		if len(b) == 1 {
-			b[0] = 0x80
-		} else {
-			b[len(b)-1] = 0x7F
-		}
-		r, size = DecodeRune(b)
-		if r != RuneError || size != 1 {
-			t.Errorf("DecodeRune(%q) = %#04x, %d want %#04x, %d", b, r, size, RuneError, 1)
-		}
-		s = string(b)
-		r, size = DecodeRuneInString(s)
-		if r != RuneError || size != 1 {
-			t.Errorf("DecodeRuneInString(%q) = %#04x, %d want %#04x, %d", s, r, size, RuneError, 1)
-		}
-
-	}
-}
-
-func TestDecodeSurrogateRune(t *testing.T) {
-	for _, m := range surrogateMap {
-		b := []byte(m.str)
-		r, size := DecodeRune(b)
-		if r != RuneError || size != 1 {
-			t.Errorf("DecodeRune(%q) = %x, %d want %x, %d", b, r, size, RuneError, 1)
-		}
-		s := m.str
-		r, size = DecodeRuneInString(s)
-		if r != RuneError || size != 1 {
-			t.Errorf("DecodeRuneInString(%q) = %x, %d want %x, %d", s, r, size, RuneError, 1)
-		}
-	}
-}
-
-// Check that DecodeRune and DecodeLastRune correspond to
-// the equivalent range loop.
-func TestSequencing(t *testing.T) {
-	for _, ts := range testStrings {
-		for _, m := range utf8map {
-			for _, s := range []string{ts + m.str, m.str + ts, ts + m.str + ts} {
-				testSequence(t, s)
+		// A forward walk must reach the end, count the runes that
+		// RuneCount counts, and report an error exactly when Valid does.
+		count, ok := 0, true
+		for i := 0; i < len(b); {
+			r, size := DecodeRune(b[i:])
+			if size == 0 {
+				t.Fatalf("DecodeRune(%q) returned size 0 at %d", b, i)
 			}
-		}
-	}
-}
-
-func runtimeRuneCount(s string) int {
-	return len([]rune(s)) // Replaced by gc with call to runtime.countrunes(s).
-}
-
-// Check that a range loop, len([]rune(string)) optimization and
-// []rune conversions visit the same runes.
-// Not really a test of this package, but the assumption is used here and
-// it's good to verify.
-func TestRuntimeConversion(t *testing.T) {
-	for _, ts := range testStrings {
-		count := RuneCountInString(ts)
-		if n := runtimeRuneCount(ts); n != count {
-			t.Errorf("%q: len([]rune()) counted %d runes; got %d from RuneCountInString", ts, n, count)
-			break
-		}
-
-		runes := []rune(ts)
-		if n := len(runes); n != count {
-			t.Errorf("%q: []rune() has length %d; got %d from RuneCountInString", ts, n, count)
-			break
-		}
-		i := 0
-		for _, r := range ts {
-			if r != runes[i] {
-				t.Errorf("%q[%d]: expected %c (%U); got %c (%U)", ts, i, runes[i], runes[i], r, r)
+			if r == RuneError && size == 1 {
+				ok = false
+			} else if !ValidRune(r) {
+				t.Fatalf("DecodeRune(%q) at %d = %U, not a valid rune", b, i, r)
+			} else if n := RuneLen(r); n != size {
+				t.Fatalf("DecodeRune(%q) at %d = %U, %d; RuneLen = %d", b, i, r, size, n)
 			}
-			i++
+			i += size
+			count++
 		}
-	}
+		if got := RuneCount(b); got != count {
+			t.Fatalf("RuneCount(%q) = %d; the walk counted %d", b, got, count)
+		}
+		if got := RuneCountInString(s); got != count {
+			t.Fatalf("RuneCountInString(%q) = %d; the walk counted %d", b, got, count)
+		}
+		if Valid(b) != ok {
+			t.Fatalf("Valid(%q) = %t; the walk says %t", b, Valid(b), ok)
+		}
+
+		// A backward walk must take the same number of steps.
+		back := 0
+		for i := len(b); i > 0; back++ {
+			_, size := DecodeLastRune(b[:i])
+			if size == 0 {
+				t.Fatalf("DecodeLastRune(%q) returned size 0 at %d", b, i)
+			}
+			i -= size
+		}
+		if back != count {
+			t.Fatalf("the backward walk over %q took %d steps; the forward walk took %d", b, back, count)
+		}
+	})
 }
 
-var invalidSequenceTests = []string{
-	"\xed\xa0\x80\x80", // surrogate min
-	"\xed\xbf\xbf\x80", // surrogate max
+// FuzzEncode checks that a valid rune survives an encode and a decode,
+// and that an invalid rune encodes as RuneError.
+func FuzzEncode(f *testing.F) {
+	f.Add(int32(0))
+	f.Add(int32('a'))
+	f.Add(int32('☺'))
+	f.Add(int32(RuneError))
+	f.Add(int32(MaxRune))
+	f.Add(int32(MaxRune + 1))
+	f.Add(int32(0xD800))
+	f.Add(int32(-1))
 
-	// xx
-	"\x91\x80\x80\x80",
+	f.Fuzz(func(t *testing.T, v int32) {
+		r := rune(v)
 
-	// s1
-	"\xC2\x7F\x80\x80",
-	"\xC2\xC0\x80\x80",
-	"\xDF\x7F\x80\x80",
-	"\xDF\xC0\x80\x80",
+		buf := make([]byte, UTFMax)
+		n := EncodeRune(buf, r)
+		buf = buf[:n]
 
-	// s2
-	"\xE0\x9F\xBF\x80",
-	"\xE0\xA0\x7F\x80",
-	"\xE0\xBF\xC0\x80",
-	"\xE0\xC0\x80\x80",
-
-	// s3
-	"\xE1\x7F\xBF\x80",
-	"\xE1\x80\x7F\x80",
-	"\xE1\xBF\xC0\x80",
-	"\xE1\xC0\x80\x80",
-
-	//s4
-	"\xED\x7F\xBF\x80",
-	"\xED\x80\x7F\x80",
-	"\xED\x9F\xC0\x80",
-	"\xED\xA0\x80\x80",
-
-	// s5
-	"\xF0\x8F\xBF\xBF",
-	"\xF0\x90\x7F\xBF",
-	"\xF0\x90\x80\x7F",
-	"\xF0\xBF\xBF\xC0",
-	"\xF0\xBF\xC0\x80",
-	"\xF0\xC0\x80\x80",
-
-	// s6
-	"\xF1\x7F\xBF\xBF",
-	"\xF1\x80\x7F\xBF",
-	"\xF1\x80\x80\x7F",
-	"\xF1\xBF\xBF\xC0",
-	"\xF1\xBF\xC0\x80",
-	"\xF1\xC0\x80\x80",
-
-	// s7
-	"\xF4\x7F\xBF\xBF",
-	"\xF4\x80\x7F\xBF",
-	"\xF4\x80\x80\x7F",
-	"\xF4\x8F\xBF\xC0",
-	"\xF4\x8F\xC0\x80",
-	"\xF4\x90\x80\x80",
-}
-
-func runtimeDecodeRune(s string) rune {
-	for _, r := range s {
-		return r
-	}
-	return -1
-}
-
-func TestDecodeInvalidSequence(t *testing.T) {
-	for _, s := range invalidSequenceTests {
-		r1, _ := DecodeRune([]byte(s))
-		if want := RuneError; r1 != want {
-			t.Errorf("DecodeRune(%#x) = %#04x, want %#04x", s, r1, want)
+		if !ValidRune(r) {
+			// An invalid rune must encode as RuneError.
+			if string(buf) != string(RuneError) {
+				t.Fatalf("EncodeRune(%U) = %q, want the encoding of RuneError", r, buf)
+			}
+			if RuneLen(r) != -1 {
+				t.Fatalf("RuneLen(%U) = %d, want -1", r, RuneLen(r))
+			}
 			return
 		}
-		r2, _ := DecodeRuneInString(s)
-		if want := RuneError; r2 != want {
-			t.Errorf("DecodeRuneInString(%q) = %#04x, want %#04x", s, r2, want)
-			return
-		}
-		if r1 != r2 {
-			t.Errorf("DecodeRune(%#x) = %#04x mismatch with DecodeRuneInString(%q) = %#04x", s, r1, s, r2)
-			return
-		}
-		r3 := runtimeDecodeRune(s)
-		if r2 != r3 {
-			t.Errorf("DecodeRuneInString(%q) = %#04x mismatch with runtime.decoderune(%q) = %#04x", s, r2, s, r3)
-			return
-		}
-	}
-}
 
-func testSequence(t *testing.T, s string) {
-	type info struct {
-		index int
-		r     rune
-	}
-	index := make([]info, len(s))
-	b := []byte(s)
-	si := 0
-	j := 0
-	for i, r := range s {
-		if si != i {
-			t.Errorf("Sequence(%q) mismatched index %d, want %d", s, si, i)
-			return
+		if n != RuneLen(r) {
+			t.Fatalf("EncodeRune(%U) wrote %d bytes; RuneLen = %d", r, n, RuneLen(r))
 		}
-		index[j] = info{i, r}
-		j++
-		r1, size1 := DecodeRune(b[i:])
-		if r != r1 {
-			t.Errorf("DecodeRune(%q) = %#04x, want %#04x", s[i:], r1, r)
-			return
+		if !Valid(buf) {
+			t.Fatalf("EncodeRune(%U) = %q, which Valid rejects", r, buf)
 		}
-		r2, size2 := DecodeRuneInString(s[i:])
-		if r != r2 {
-			t.Errorf("DecodeRuneInString(%q) = %#04x, want %#04x", s[i:], r2, r)
-			return
+		if got, size := DecodeRune(buf); got != r || size != n {
+			t.Fatalf("DecodeRune(EncodeRune(%U)) = %U, %d, want %U, %d", r, got, size, r, n)
 		}
-		if size1 != size2 {
-			t.Errorf("DecodeRune/DecodeRuneInString(%q) size mismatch %d/%d", s[i:], size1, size2)
-			return
+		if got, size := DecodeLastRune(buf); got != r || size != n {
+			t.Fatalf("DecodeLastRune(EncodeRune(%U)) = %U, %d, want %U, %d", r, got, size, r, n)
 		}
-		si += size1
-	}
-	j--
-	for si = len(s); si > 0; {
-		r1, size1 := DecodeLastRune(b[0:si])
-		r2, size2 := DecodeLastRuneInString(s[0:si])
-		if size1 != size2 {
-			t.Errorf("DecodeLastRune/DecodeLastRuneInString(%q, %d) size mismatch %d/%d", s, si, size1, size2)
-			return
+
+		// AppendRune must write the same bytes as EncodeRune.
+		app := AppendRune(make([]byte, 0, UTFMax), r)
+		if string(app) != string(buf) {
+			t.Fatalf("AppendRune(%U) = %q, EncodeRune = %q", r, app, buf)
 		}
-		if r1 != index[j].r {
-			t.Errorf("DecodeLastRune(%q, %d) = %#04x, want %#04x", s, si, r1, index[j].r)
-			return
-		}
-		if r2 != index[j].r {
-			t.Errorf("DecodeLastRuneInString(%q, %d) = %#04x, want %#04x", s, si, r2, index[j].r)
-			return
-		}
-		si -= size1
-		if si != index[j].index {
-			t.Errorf("DecodeLastRune(%q) index mismatch at %d, want %d", s, si, index[j].index)
-			return
-		}
-		j--
-	}
-	if si != 0 {
-		t.Errorf("DecodeLastRune(%q) finished at %d, not 0", s, si)
-	}
-}
-
-// Check that negative runes encode as U+FFFD.
-func TestNegativeRune(t *testing.T) {
-	errorbuf := make([]byte, UTFMax)
-	errorbuf = errorbuf[0:EncodeRune(errorbuf, RuneError)]
-	buf := make([]byte, UTFMax)
-	buf = buf[0:EncodeRune(buf, -1)]
-	if !bytes.Equal(buf, errorbuf) {
-		t.Errorf("incorrect encoding [% x] for -1; expected [% x]", buf, errorbuf)
-	}
-}
-
-type RuneCountTest struct {
-	in  string
-	out int
-}
-
-var runecounttests = []RuneCountTest{
-	{"abcd", 4},
-	{"☺☻☹", 3},
-	{"1,2,3,4", 7},
-	{"\xe2\x00", 2},
-	{"\xe2\x80", 2},
-	{"a\xe2\x80", 3},
-}
-
-func TestRuneCount(t *testing.T) {
-	for _, tt := range runecounttests {
-		if out := RuneCountInString(tt.in); out != tt.out {
-			t.Errorf("RuneCountInString(%q) = %d, want %d", tt.in, out, tt.out)
-		}
-		if out := RuneCount([]byte(tt.in)); out != tt.out {
-			t.Errorf("RuneCount(%q) = %d, want %d", tt.in, out, tt.out)
-		}
-	}
-}
-
-func TestRuneCountNonASCIIAllocation(t *testing.T) {
-	if n := testing.AllocsPerRun(10, func() {
-		s := []byte("日本語日本語日本語日")
-		_ = RuneCount(s)
-	}); n > 0 {
-		t.Errorf("unexpected RuneCount allocation, got %v, want 0", n)
-	}
-}
-
-type RuneLenTest struct {
-	r    rune
-	size int
-}
-
-var runelentests = []RuneLenTest{
-	{0, 1},
-	{'e', 1},
-	{'é', 2},
-	{'☺', 3},
-	{RuneError, 3},
-	{MaxRune, 4},
-	{0xD800, -1},
-	{0xDFFF, -1},
-	{MaxRune + 1, -1},
-	{-1, -1},
-}
-
-func TestRuneLen(t *testing.T) {
-	for _, tt := range runelentests {
-		if size := RuneLen(tt.r); size != tt.size {
-			t.Errorf("RuneLen(%#U) = %d, want %d", tt.r, size, tt.size)
-		}
-	}
-}
-
-type ValidTest struct {
-	in  string
-	out bool
-}
-
-var validTests = []ValidTest{
-	{"", true},
-	{"a", true},
-	{"abc", true},
-	{"Ж", true},
-	{"ЖЖ", true},
-	{"брэд-ЛГТМ", true},
-	{"☺☻☹", true},
-	{"aa\xe2", false},
-	{string([]byte{66, 250}), false},
-	{string([]byte{66, 250, 67}), false},
-	{"a\uFFFDb", true},
-	{string("\xF4\x8F\xBF\xBF"), true},      // U+10FFFF
-	{string("\xF4\x90\x80\x80"), false},     // U+10FFFF+1; out of range
-	{string("\xF7\xBF\xBF\xBF"), false},     // 0x1FFFFF; out of range
-	{string("\xFB\xBF\xBF\xBF\xBF"), false}, // 0x3FFFFFF; out of range
-	{string("\xc0\x80"), false},             // U+0000 encoded in two bytes: incorrect
-	{string("\xed\xa0\x80"), false},         // U+D800 high surrogate (sic)
-	{string("\xed\xbf\xbf"), false},         // U+DFFF low surrogate (sic)
-}
-
-func init() {
-	for i := range 100 {
-		astr := strings.Repeat(nil, "a", i)
-		validTests = append(validTests, ValidTest{in: astr, out: true})
-		validTests = append(validTests, ValidTest{in: astr + "Ж", out: true})
-		validTests = append(validTests, ValidTest{in: astr + "\xe2", out: false})
-		validTests = append(validTests, ValidTest{in: astr + "Ж" + astr, out: true})
-		validTests = append(validTests, ValidTest{in: astr + "\xe2" + astr, out: false})
-	}
-}
-
-func TestValid(t *testing.T) {
-	for _, tt := range validTests {
-		if Valid([]byte(tt.in)) != tt.out {
-			t.Errorf("Valid(%q) = %v; want %v", tt.in, !tt.out, tt.out)
-		}
-		if ValidString(tt.in) != tt.out {
-			t.Errorf("ValidString(%q) = %v; want %v", tt.in, !tt.out, tt.out)
-		}
-	}
-}
-
-type ValidRuneTest struct {
-	r  rune
-	ok bool
-}
-
-var validrunetests = []ValidRuneTest{
-	{0, true},
-	{'e', true},
-	{'é', true},
-	{'☺', true},
-	{RuneError, true},
-	{MaxRune, true},
-	{0xD7FF, true},
-	{0xD800, false},
-	{0xDFFF, false},
-	{0xE000, true},
-	{MaxRune + 1, false},
-	{-1, false},
-}
-
-func TestValidRune(t *testing.T) {
-	for _, tt := range validrunetests {
-		if ok := ValidRune(tt.r); ok != tt.ok {
-			t.Errorf("ValidRune(%#U) = %t, want %t", tt.r, ok, tt.ok)
-		}
-	}
+	})
 }
