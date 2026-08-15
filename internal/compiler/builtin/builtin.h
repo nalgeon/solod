@@ -255,6 +255,8 @@ static inline bool so_string_gte(so_String s1, so_String s2) {
 })
 
 // utf8_encode encodes a single rune into buf (up to 4 bytes).
+// Encodes 0xFFFD for a rune that UTF-8 cannot represent: a negative rune,
+// a surrogate half, or a rune above 0x10FFFF.
 // Returns the number of bytes written.
 so_int so_utf8_encode(so_rune r, char* buf);
 

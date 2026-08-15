@@ -96,26 +96,41 @@ so_rune so_utf8_decode(so_String s, so_int i, so_int* w) {
     }
     if ((b & 0xE0) == 0xC0 && remaining >= 2 &&
         (p[1] & 0xC0) == 0x80) {
-        *w = 2;
-        return ((so_rune)(b & 0x1F) << 6) |
-               ((so_rune)(p[1] & 0x3F));
+        so_rune r = ((so_rune)(b & 0x1F) << 6) |
+                    ((so_rune)(p[1] & 0x3F));
+        // A two byte sequence must not encode a one byte value.
+        if (r >= 0x80) {
+            *w = 2;
+            return r;
+        }
     }
     if ((b & 0xF0) == 0xE0 && remaining >= 3 &&
         (p[1] & 0xC0) == 0x80 && (p[2] & 0xC0) == 0x80) {
-        *w = 3;
-        return ((so_rune)(b & 0x0F) << 12) |
-               ((so_rune)(p[1] & 0x3F) << 6) |
-               ((so_rune)(p[2] & 0x3F));
+        so_rune r = ((so_rune)(b & 0x0F) << 12) |
+                    ((so_rune)(p[1] & 0x3F) << 6) |
+                    ((so_rune)(p[2] & 0x3F));
+        // A three byte sequence must not encode a shorter value.
+        // UTF-8 has no encoding for a surrogate half.
+        if (r >= 0x800 && (r < 0xD800 || r > 0xDFFF)) {
+            *w = 3;
+            return r;
+        }
     }
     if ((b & 0xF8) == 0xF0 && remaining >= 4 &&
         (p[1] & 0xC0) == 0x80 &&
         (p[2] & 0xC0) == 0x80 &&
         (p[3] & 0xC0) == 0x80) {
-        *w = 4;
-        return ((so_rune)(b & 0x07) << 18) |
-               ((so_rune)(p[1] & 0x3F) << 12) |
-               ((so_rune)(p[2] & 0x3F) << 6) |
-               ((so_rune)(p[3] & 0x3F));
+        so_rune r = ((so_rune)(b & 0x07) << 18) |
+                    ((so_rune)(p[1] & 0x3F) << 12) |
+                    ((so_rune)(p[2] & 0x3F) << 6) |
+                    ((so_rune)(p[3] & 0x3F));
+        // A four byte sequence must not encode a shorter value.
+        // The check also rejects the start bytes 0xF5 to 0xF7,
+        // which give a rune above 0x10FFFF.
+        if (r >= 0x10000 && r <= 0x10FFFF) {
+            *w = 4;
+            return r;
+        }
     }
 
     *w = 1;
@@ -134,8 +149,13 @@ so_Slice so_string_runes_impl(so_String s, so_rune* buf) {
 }
 
 // utf8_encode encodes a single rune into buf (up to 4 bytes).
+// Encodes 0xFFFD for a rune that UTF-8 cannot represent: a negative rune,
+// a surrogate half, or a rune above 0x10FFFF.
 // Returns the number of bytes written.
 so_int so_utf8_encode(so_rune r, char* buf) {
+    if (r < 0 || (r >= 0xD800 && r <= 0xDFFF) || r > 0x10FFFF) {
+        r = 0xFFFD;
+    }
     if (r < 0x80) {
         buf[0] = (char)r;
         return 1;
