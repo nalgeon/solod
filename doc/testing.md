@@ -99,8 +99,6 @@ ok	so/sync	4 tests
 
 `so test` exits non-zero if any test fails. The `=== RUN` line is printed before each test, so if a test hard-crashes (a `panic` or a segfault, which cannot be recovered), the output still identifies the culprit.
 
-The report goes to `fmt.Output`, which is the standard output of the host by default. The runner reads `fmt.Output` once, before the first test, so a test that assigns another writer changes its own output only.
-
 ### Running many packages
 
 A pattern that ends with `...` selects every package with a `test` subdirectory below its base directory:
@@ -327,9 +325,20 @@ if err != nil {
 
 Use `Fatal` when continuing makes no sense (a precondition failed), and `Error` when you want to report several problems from one test.
 
-### Freestanding runs report differently
+### Freestanding mode behaves differently
 
-The `testing` package works in [freestanding mode](freestanding.md), but the environment there gives it less to work with. The report goes to `fmt.Output`, which drops the bytes unless the target assigns a writer, and a failed run traps instead of exiting with a non-zero status. The runner also returns the heap to the position it holds before the first test, after every test, because the freestanding allocator never reclaims memory. The allocations made before the first test stay, so a package-level variable that allocates is safe, but a test cannot pass an allocation to the test after it. A test of your own can still need a hosted environment, even though the framework does not.
+The `testing` package works in [freestanding mode](freestanding.md), but the environment there gives it less to work with. The test report goes through the `so_write_out` hook, so a target with no hook reports nothing. A failed run traps instead of exiting with a non-zero status.
+
+The runner also resets the heap (a static buffer in a freestanding environment) after every test.
+
+Use `runtime.Hosted` to skip hosted-only tests in freestanding mode:
+
+```go
+if !runtime.Hosted {
+	t.Skip("needs a clock")
+	return
+}
+```
 
 ### A hard crash aborts the whole run
 

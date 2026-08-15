@@ -7,8 +7,9 @@ import (
 )
 
 // writeOut writes p to the standard output of the host, and returns the number
-// of bytes written. A freestanding host has no standard output, so it drops
-// the bytes and reports a full write.
+// of bytes written. A freestanding host has no standard output, so it writes
+// through the so_write_out hook of the target. A target with no hook drops the
+// bytes and reports a full write.
 //
 //so:extern fmt_writeOut nodecay
 func writeOut(p []byte) int {
@@ -28,8 +29,8 @@ func (*stdoutWriter) Write(p []byte) (int, error) {
 	return n, nil
 }
 
-// Output is the destination of [Print], [Println] and [Printf]. Its default is
-// the standard output of the host. A freestanding host has no standard output,
-// so the default drops the bytes there. Assign another writer, a UART or a host
-// import, to get the output back.
+// Output is the destination of [Print], [Println] and [Printf].
+// In a hosted environment, it writes to the standard output of the host.
+// In a freestanding environment, it uses the target's so_write_out hook.
+// A target with no hook drops the bytes.
 var Output io.Writer = &stdoutWriter{}

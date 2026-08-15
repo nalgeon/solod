@@ -454,11 +454,7 @@ type Benchmark struct {
 type BenchmarkFunc func(b *B)
 
 // RunBenchmarks runs the given benchmarks for package pkg with allocator a,
-// prints the results to [fmt.Output], and exits with a non-zero status if any
-// benchmark failed.
-//
-// RunBenchmarks reads [fmt.Output] once, at the start. A benchmark that assigns
-// another writer changes its own output only.
+// prints the results, and exits with a non-zero status if any benchmark failed.
 func RunBenchmarks(a mem.Allocator, pkg string, opts Options, benchmarks []Benchmark) {
 	w := fmt.Output
 	fmt.Fprintf(w, "goos: %s\n", runtime.GOOS)

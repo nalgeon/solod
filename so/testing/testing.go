@@ -158,21 +158,18 @@ type Options struct {
 	Run string // run only tests or benchmarks whose names start with this prefix
 }
 
-// RunTests runs the given tests for package pkg, prints per-test results
-// to [fmt.Output], and exits with a non-zero status if any test failed.
+// RunTests runs the given tests for package pkg, prints per-test results,
+// and exits with a non-zero status if any test failed.
 func RunTests(pkg string, opts Options, tests []Test) {
 	suite := Suite{Pkg: pkg, Tests: tests}
 	suites := []Suite{suite}
 	RunSuites(opts, suites)
 }
 
-// RunSuites runs the tests of every suite, prints per-test results to
-// [fmt.Output], and exits with a non-zero status if any test failed. It runs
-// every suite before it reports the status, so one failed package does not hide
-// the results of the packages after it.
-//
-// RunSuites reads [fmt.Output] once, at the start. A test that assigns another
-// writer changes its own output only.
+// RunSuites runs the tests of every suite, prints per-test results, and exits
+// with a non-zero status if any test failed. It runs every suite before it
+// reports the status, so one failed package does not hide the results of
+// the packages after it.
 func RunSuites(opts Options, suites []Suite) {
 	w := fmt.Output
 	// The freestanding heap never reclaims memory, so every test returns it to

@@ -529,6 +529,25 @@ static inline so_String so_error_error(void* self) {
     _err_str;                                          \
 })
 
+#ifndef so_build_hosted
+
+// so_write_out is the target's output hook for a freestanding environment.
+__attribute__((weak)) so_int so_write_out(const uint8_t* buf, so_int size);
+
+// so_write_str writes a null-terminated string through so_write_out.
+static inline void so_write_str(const char* s) {
+    if (so_write_out == NULL) {
+        return;
+    }
+    so_write_out((const uint8_t*)s, (so_int)strlen(s));
+}
+
+// so_stringify expands x and makes a string literal of the result.
+#define so_stringify_(x) #x
+#define so_stringify(x) so_stringify_(x)
+
+#endif  // !so_build_hosted
+
 // panic aborts the program with the given message.
 //
 // SO_PANIC_MODE selects how a hosted build terminates after printing
@@ -538,7 +557,7 @@ static inline so_String so_error_error(void* self) {
 //   - SO_PANIC_EXIT:  exit(1). Clean, deterministic exit code.
 //   - SO_PANIC_ABORT: abort(). Raises SIGABRT for a core dump or debugger.
 //   - SO_PANIC_TRACE: print a backtrace, then exit(1).
-// Freestanding builds ignore the mode and always trap.
+// A freestanding build ignores the mode and always traps.
 #define SO_PANIC_EXIT 0
 #define SO_PANIC_ABORT 1
 #define SO_PANIC_TRACE 2
@@ -572,10 +591,14 @@ void so_print_trace(void);
 
 #else
 
-#define so_panic(msg)     \
-    do {                  \
-        (void)msg;        \
-        __builtin_trap(); \
+#define so_panic(msg)                                                       \
+    do {                                                                    \
+        so_write_str("panic: ");                                            \
+        so_write_str(msg);                                                  \
+        so_write_str("\n  " __FILE__ ":" so_stringify(__LINE__) " (func "); \
+        so_write_str(__func__);                                             \
+        so_write_str(")\n");                                                \
+        __builtin_trap();                                                   \
     } while (0)
 
 #endif  // so_build_hosted

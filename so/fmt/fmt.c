@@ -23,9 +23,14 @@ void fmt_flushOut(void) {
 
 #else
 
-// A freestanding host has no standard output, so writeOut drops the bytes.
+// A freestanding host has no standard output, so writeOut writes through the
+// so_write_out hook of the target. A target with no hook drops the bytes and
+// reports a full write.
 static so_int fmt_writeOut(so_Slice p) {
-    return p.len;
+    if (so_write_out == NULL) {
+        return p.len;
+    }
+    return so_write_out(p.ptr, p.len);
 }
 
 // A freestanding host has no standard output, so flushOut does nothing.

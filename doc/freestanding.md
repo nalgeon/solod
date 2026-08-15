@@ -48,11 +48,11 @@ The `crypto/crand` package works with one restriction:
 The `fmt` package works with these restrictions:
 
 - `Scanf`, `Sscanf`, and `Fscanf` read through the stdio of the host, so a freestanding call panics.
-- `Print`, `Println`, and `Printf` drop the bytes unless you set `fmt.Output`, as [No stdio](#no-stdio) describes. `Sprintf` and `Fprintf` are unaffected.
+- `Print`, `Println`, and `Printf` write through the `so_write_out` hook (see [Target hooks](#target-hooks)). A target with no hook drops the bytes. `Sprintf` and `Fprintf` are unaffected.
 
 The `testing` package works with these restrictions:
 
-- The test report goes to `fmt.Output`, so it is dropped unless you set that writer, as [No stdio](#no-stdio) describes.
+- The test report goes to the `so_write_out` hook. A target with no hook reports nothing.
 - A failed run traps instead of exiting with a non-zero status, because a freestanding environment has no exit status.
 - A benchmark reads the clock, so `so bench` needs the `so_time_wall` and `so_time_mono` hooks.
 - The runner returns the heap to the position it holds before the first test, after every test.
@@ -80,14 +80,15 @@ conc  flag  log/slog  math  net  os  sync
 
 ## Target hooks
 
-A freestanding environment has no entropy source and no clock, and only the target knows how to reach its own hardware. The stdlib declares a weak C function for each of these, and the target defines the ones its program needs:
+A freestanding environment has no standard output, no entropy source and no clock, and only the target knows how to reach its own hardware. The stdlib declares a weak C function for each of these, and the target defines the ones its program needs:
 
-| Hook            | Signature                                         | With no definition                            |
-| --------------- | ------------------------------------------------- | --------------------------------------------- |
-| `so_crand_read` | `so_int so_crand_read(uint8_t* buf, so_int size)` | `crypto/crand` panics, `runtime.Seed` repeats |
-| `so_time_wall`  | `so_R_i64_i32 so_time_wall(void)`                 | `time.Now` panics                             |
-| `so_time_mono`  | `int64_t so_time_mono(void)`                      | no monotonic clock                            |
-| `so_time_sleep` | `void so_time_sleep(int64_t ns)`                  | `time.Sleep` panics                           |
+| Hook            | Signature                                              | With no definition                            |
+| --------------- | ------------------------------------------------------ | --------------------------------------------- |
+| `so_crand_read` | `so_int so_crand_read(uint8_t* buf, so_int size)`      | `crypto/crand` panics, `runtime.Seed` repeats |
+| `so_time_wall`  | `so_R_i64_i32 so_time_wall(void)`                      | `time.Now` panics                             |
+| `so_time_mono`  | `int64_t so_time_mono(void)`                           | no monotonic clock                            |
+| `so_time_sleep` | `void so_time_sleep(int64_t ns)`                       | `time.Sleep` panics                           |
+| `so_write_out`  | `so_int so_write_out(const uint8_t* buf, so_int size)` | `panic` and `fmt` print nothing               |
 
 Every declaration is weak, so a program that never calls the package still links. Define the hooks in a C file and add it to the build, or embed it with `so:embed`:
 
@@ -107,6 +108,10 @@ int64_t so_time_mono(void) {
 void so_time_sleep(int64_t ns) {
     board_delay_ms(ns / 1000000);
 }
+
+so_int so_write_out(const uint8_t* buf, so_int size) {
+    return board_uart_write(buf, size);
+}
 ```
 
 Notes on each hook:
@@ -120,6 +125,8 @@ Notes on each hook:
 `so_time_mono` returns nanoseconds from an arbitrary origin. The count must never decrease and must never be 0, because `time.Now` reads 0 as the absence of a monotonic clock. Convert the tick of the board to nanoseconds here, and widen a counter that wraps: a 32-bit counter at 1 kHz wraps after 49 days.
 
 A target with no `so_time_mono` still works. `time.Now` returns a wall clock reading alone, and `Since` and `Until` measure with the wall clock.
+
+`so_write_out` writes `size` bytes from `buf` and returns the number of bytes written. `panic` and the `fmt` package share the hook, so one definition gives the program both a panic message and printed output.
 
 ## Limitations
 
@@ -141,8 +148,8 @@ Packages that depend on `runtime.Seed` (like `math/rand` and `maps`) work but pr
 
 ### No stdio
 
-`panic` silently traps instead of printing a message. `print` and `println` are no-ops.
+A freestanding environment has no standard output, so text goes to the `so_write_out` hook of the target. Define it and point it at a UART or a host import.
 
-`fmt.Print`, `fmt.Println`, and `fmt.Printf` format the text and then drop the bytes, because there is no standard output to write them to. Assign another writer to `fmt.Output` — a UART or a host import — to get the output back.
+`panic` prints its message and location through the hook, then traps. `fmt.Print`, `fmt.Println`, and `fmt.Printf` format the text and write it through the hook. The `testing` package writes its report through the hook too. A target with no hook drops every one of these. A panic then traps with no message.
 
-The `testing` package writes its report to `fmt.Output` too, so the same assignment gets the test results back.
+`print` and `println` are no-ops in a freestanding build, whatever the hook does. Both format with the stdio of the host, which the environment does not have.

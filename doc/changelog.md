@@ -12,7 +12,7 @@ type Pair[T any] struct{ a, b T } // rejected: no C type for T
 type Stack[T any] struct{ items []T } // OK: so_Slice is type-erased
 ```
 
-A generic function or method must be `so:inline` or `so:extern`, even when the signature does not mention the type parameter. See the [generics guide](./generics.md) for details.
+A generic function or method must be `so:inline` or `so:extern`, even when the signature does not mention the type parameter.
 
 [9501bae](https://github.com/solod-dev/solod/commit/9501baef6386471516b70c22f64ec69b442d008f)
 
@@ -228,7 +228,7 @@ measure("is", n, "abc")
 // measure(so_str("is"), (so_int)(n), so_str("abc"))
 ```
 
-The call must list its arguments explicitly rather than using spread syntax. An `any` argument is an error. See the [interop guide](./interop.md) for details.
+The call must list its arguments explicitly rather than using spread syntax. An `any` argument is an error.
 
 **Target-width C types**. `so/c` now supports more common C types:
 
@@ -276,15 +276,15 @@ so_int so_crand_read(uint8_t* buf, so_int size) {
 }
 ```
 
-The declaration is weak, so a program that never calls `crypto/crand` still links. A call with no definition panics. See [freestanding mode](freestanding.md).
+The declaration is weak, so a program that never calls `crypto/crand` still links. A call with no definition panics.
 
-**encoding/json works in freestanding mode**. The package used `math.IsNaN` and `math.IsInf` to reject a non-finite float. The `math` package requires a hosted environment, so that import alone made `encoding/json` hosted. The package now uses a private finite check and doesn't import `math`. See [freestanding mode](freestanding.md).
+**encoding/json works in freestanding mode**. The package used `math.IsNaN` and `math.IsInf` to reject a non-finite float. The `math` package requires a hosted environment, so that import alone made `encoding/json` hosted. The package now uses a private finite check and doesn't import `math`.
 
 **fmt works in freestanding mode**. The print family used to wrap C's `vsnprintf`, so it printed C's text with C's verbs, and the `<stdio.h>` include made the whole package hosted. It now runs a formatting engine ported from Go's `fmt` and writes the bytes Go writes. Hosted and freestanding builds produce the same output.
 
 The verbs are Go's, with two differences. So has no reflection, so the verbs that need type information are absent: `%v`, `%T`, `%w`, `%q`, and `%U`. And `%u` is added for an unsigned integer, because a print call carries no type information either, so nothing else can tell a signed value from an unsigned one. `%t` for a bool and `%O` for octal with a `0o` prefix are new as well.
 
-`Print`, `Println`, and `Printf` write to the new `fmt.Output`, whose default is the standard output of the host. A freestanding host has no standard output, so the default drops the bytes there. Assign another writer to `fmt.Output` to get the output back. The scan family (`Scanf`, `Sscanf`, `Fscanf`) reads through the stdio of the host, so it stays hosted and a freestanding call panics. See [freestanding mode](freestanding.md).
+`Print`, `Println`, and `Printf` write to the the standard output of the host, or to the `so_write_out` hook in a freestanding environment. The scan family (`Scanf`, `Sscanf`, `Fscanf`) reads through the stdio of the host, so it stays hosted and a freestanding call panics.
 
 ⚠️ `BufSize` and `ErrSize` are gone. The output has no size limit any more, so `Fprintf` never returns `ErrSize`.
 
@@ -297,7 +297,7 @@ s := fmt.Sprintf(buf, "%d apples", n)
 
 `Buffer` existed because a `[]byte` argument decayed to a bare pointer, which lost the length. The print family is nodecay now, so the slice arrives whole.
 
-**net/netip works in freestanding mode**. The package included `<net/if.h>` for `if_nametoindex`, and that header made the whole package hosted. The include now sits behind a hosted guard, and a freestanding build gets a stub that returns 0. A zone given as an interface name resolves to no zone, the same result a hosted `if_nametoindex` gives for a name that matches no interface. A numeric zone works everywhere. See [freestanding mode](freestanding.md).
+**net/netip works in freestanding mode**. The package included `<net/if.h>` for `if_nametoindex`, and that header made the whole package hosted. The include now sits behind a hosted guard, and a freestanding build gets a stub that returns 0. A zone given as an interface name resolves to no zone, the same result a hosted `if_nametoindex` gives for a name that matches no interface. A numeric zone works everywhere.
 
 **os.File.Sync**. A `File` writes through a buffered C stream, so a program that ends abnormally loses the buffered data. `Sync` flushes the stream:
 
@@ -308,13 +308,22 @@ f.Sync() // the line is out of the buffer now
 
 The data can still wait in an operating system cache, so `Sync` does not guarantee that the data reached the storage device.
 
-**runtime.Seed reads the target entropy in freestanding mode**. `Seed` used a deterministic generator with a fixed initial state, so `math/rand` and the hash of `maps` repeated on every run. `Seed` now reads the same `so_crand_read` hook as `crypto/crand`, so one definition covers both. A target with no hook keeps the deterministic generator: `math/rand` and `maps` promise nothing about unpredictability and must work on a board with no entropy source. See [freestanding mode](freestanding.md).
+**runtime.Hosted**. The new constant reports whether the program is running in a hosted environment (one with a C standard library). Use it to skip tests in freestanding mode:
+
+```go
+if !runtime.Hosted {
+    t.Skip("needs a clock")
+    return
+}
+```
+
+**runtime.Seed reads the target entropy in freestanding mode**. `Seed` used a deterministic generator with a fixed initial state, so `math/rand` and the hash of `maps` repeated on every run. `Seed` now reads the same `so_crand_read` hook as `crypto/crand`, so one definition covers both. A target with no hook keeps the deterministic generator: `math/rand` and `maps` promise nothing about unpredictability and must work on a board with no entropy source.
 
 **testing API changed**. `RunSuites`, `RunTests` and `RunBenchmarks` take an [Options](https://pkg.go.dev/solod.dev/so/testing#Options) value in place of the runner arguments. `so test` and `so bench` read `-run` from the command line themselves and write the value into the generated runner.
 
 ⚠️ If you have a main package of your own that calls `RunTests` or `RunBenchmarks`, pass a `testing.Options` value instead of `os.Args`.
 
-**testing works in freestanding mode**. The package imported `os` for the standard output and for `os.Exit`, and that import made it hosted. The report now goes to `fmt.Output`, so the same writer carries `fmt.Print` and the test results, and a target that sets it gets both back. A failed run traps in a freestanding environment, because there is no exit status to return. The runner also returns the heap to the position it holds before the first test, after every test. See [freestanding mode](freestanding.md).
+**testing works in freestanding mode**. The package imported `os` for the standard output and for `os.Exit`, and that import made it hosted. The test report goes to the standard output (in a hosted environment) or to the `so_write_out` hook (in a freestanding environment). The runner also resets the heap (a static buffer in a freestanding environment) after every test.
 
 **time reads the clock in freestanding mode**. `Now`, `Since`, `Until`, and `Sleep` used to panic. The target now supplies the clock through three weak hooks, the same way `crypto/crand` supplies entropy:
 
@@ -332,9 +341,9 @@ void so_time_sleep(int64_t ns) {
 }
 ```
 
-A board that counts elapsed time but does not know the date returns 0 seconds from `so_time_wall`. Every `Time` then dates at the epoch, and `Since` and `Until` stay exact, because they measure with the monotonic clock. A target with no `so_time_mono` still works: `time.Now` returns a wall clock reading alone. See [freestanding mode](freestanding.md).
+A board that counts elapsed time but does not know the date returns 0 seconds from `so_time_wall`. Every `Time` then dates at the epoch, and `Since` and `Until` stay exact, because they measure with the monotonic clock. A target with no `so_time_mono` still works: `time.Now` returns a wall clock reading alone.
 
-**uuid works in freestanding mode**. The package imports `crypto/crand`, so `New` and `NewV4` now work in a freestanding environment as soon as `so_crand_read` is defined, and `NewV7` works once `so_time_wall` is defined too. See [freestanding mode](freestanding.md).
+**uuid works in freestanding mode**. The package imports `crypto/crand`, so `New` and `NewV4` now work in a freestanding environment as soon as `so_crand_read` is defined, and `NewV7` works once `so_time_wall` is defined too.
 
 ## Tooling
 
