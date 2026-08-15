@@ -177,6 +177,17 @@ const huge = 1 << 200 // rejected: constant huge does not fit in int64 or uint64
 
 [bca0714](https://github.com/solod-dev/solod/commit/bca071476d5d5d09eb1a9097f8ddba07847bdcc9)
 
+An untyped integer constant is now converted to the type of the use, to give C the correct Go type used by the expression:
+
+```go
+const deBruijn32 = 0x077CB531 // declared as int64_t
+
+func TrailingZeros32(x uint32) int {
+    // was x * deBruijn32 in int64, now (uint32_t)deBruijn32 wraps in uint32
+    return int(deBruijn32tab[(x&-x)*deBruijn32>>(32-5)])
+}
+```
+
 ### Integer literals
 
 An integer literal above `MaxInt64` now gets a `u` suffix in C:

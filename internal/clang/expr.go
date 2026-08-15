@@ -466,6 +466,9 @@ func (g *Generator) emitIdent(w io.Writer, n *ast.Ident) {
 			// and extern overrides are applied (e.g. maxInt64 -> INT64_MAX).
 			name = g.symbolName(obj)
 		}
+		if cast, ok := g.constCast(n, obj); ok {
+			fmt.Fprintf(w, "(%s)", cast)
+		}
 	}
 	if g.state.macroParams[name] {
 		fmt.Fprintf(w, "%s_", name)
@@ -497,6 +500,9 @@ func (g *Generator) emitSelectorExpr(w io.Writer, n *ast.SelectorExpr) {
 			}
 			// Imported symbols are prefixed with the
 			// package name (e.g. fmt.Println → fmt_Println).
+			if cast, ok := g.constCast(n, g.types.Uses[n.Sel]); ok {
+				fmt.Fprintf(w, "(%s)", cast)
+			}
 			fmt.Fprintf(w, "%s_%s", pkgName.Name(), n.Sel.Name)
 			return
 		}

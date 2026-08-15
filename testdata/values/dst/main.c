@@ -132,7 +132,7 @@ int main(void) {
         (void)n2;
         const so_unused int64_t mask2 = 0b00011111;
         so_byte p0 = 'x';
-        so_rune r = (so_rune)(p0 & mask2);
+        so_rune r = (so_rune)(p0 & (so_byte)mask2);
         (void)r;
     }
     return 0;

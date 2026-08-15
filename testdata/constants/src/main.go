@@ -53,6 +53,9 @@ const bigMask = 1<<64 - 1
 const bigQuo = bigMask / 3
 const smallMask = 1<<20 - 1
 
+// An untyped constant is converted to the type of the use.
+const deBruijn = 0x077CB531
+
 // Float constant expressions are folded.
 const (
 	ln10   = 2.30258509299404568401799145468436420760110148862877297603332790
@@ -187,6 +190,14 @@ func main() {
 		var flags int64 = 1<<20 | 1<<10
 		if flags != 1049600 {
 			panic("1<<20 | 1<<10")
+		}
+	}
+	{
+		// An untyped constant takes the type of the use, so the product wraps
+		// in uint32. The declared type of the constant is wider.
+		var x uint32 = 0x40
+		if (x&-x)*deBruijn>>27 != 27 {
+			panic("(x&-x) * deBruijn >> 27")
 		}
 	}
 	{

@@ -16,6 +16,9 @@ static const so_unused uint64_t bigMask = 18446744073709551615u;
 static const so_unused int64_t bigQuo = bigMask / 3;
 static const so_unused int64_t smallMask = ((int64_t)1 << 20) - 1;
 
+// An untyped constant is converted to the type of the use.
+static const so_unused int64_t deBruijn = 0x077CB531;
+
 // Float constant expressions are folded.
 static const so_unused double ln10 = 2.30258509299404568401799145468436420760110148862877297603332790;
 static const so_unused double log10E = 0.4342944819032518;
@@ -103,7 +106,7 @@ int main(void) {
         if (neg != INT64_MIN) {
             so_panic("-(1 << 63)");
         }
-        uint64_t quo = bigQuo;
+        uint64_t quo = (uint64_t)bigQuo;
         if (quo != 6148914691236517205) {
             so_panic("bigMask / 3");
         }
@@ -140,6 +143,14 @@ int main(void) {
         int64_t flags = (((int64_t)1 << 20) | ((int64_t)1 << 10));
         if (flags != 1049600) {
             so_panic("1<<20 | 1<<10");
+        }
+    }
+    {
+        // An untyped constant takes the type of the use, so the product wraps
+        // in uint32. The declared type of the constant is wider.
+        uint32_t x = 0x40;
+        if (((x & -x) * (uint32_t)deBruijn >> 27) != 27) {
+            so_panic("(x&-x) * deBruijn >> 27");
         }
     }
     {
