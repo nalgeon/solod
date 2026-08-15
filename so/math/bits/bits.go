@@ -181,7 +181,9 @@ func RotateLeft(x uint, k int) uint {
 func RotateLeft8(x uint8, k int) uint8 {
 	const n = 8
 	s := uint(k) & (n - 1)
-	return x<<s | x>>(n-s)
+	// Go gives zero for a shift by n, but C does not define such a shift.
+	// The mask turns the count n into zero, which gives x again.
+	return x<<s | x>>((n-s)&(n-1))
 }
 
 // RotateLeft16 returns the value of x rotated left by (k mod 16) bits.
@@ -191,7 +193,9 @@ func RotateLeft8(x uint8, k int) uint8 {
 func RotateLeft16(x uint16, k int) uint16 {
 	const n = 16
 	s := uint(k) & (n - 1)
-	return x<<s | x>>(n-s)
+	// Go gives zero for a shift by n, but C does not define such a shift.
+	// The mask turns the count n into zero, which gives x again.
+	return x<<s | x>>((n-s)&(n-1))
 }
 
 // RotateLeft32 returns the value of x rotated left by (k mod 32) bits.
@@ -201,7 +205,9 @@ func RotateLeft16(x uint16, k int) uint16 {
 func RotateLeft32(x uint32, k int) uint32 {
 	const n = 32
 	s := uint(k) & (n - 1)
-	return x<<s | x>>(n-s)
+	// Go gives zero for a shift by n, but C does not define such a shift.
+	// The mask turns the count n into zero, which gives x again.
+	return x<<s | x>>((n-s)&(n-1))
 }
 
 // RotateLeft64 returns the value of x rotated left by (k mod 64) bits.
@@ -211,7 +217,9 @@ func RotateLeft32(x uint32, k int) uint32 {
 func RotateLeft64(x uint64, k int) uint64 {
 	const n = 64
 	s := uint(k) & (n - 1)
-	return x<<s | x>>(n-s)
+	// Go gives zero for a shift by n, but C does not define such a shift.
+	// The mask turns the count n into zero, which gives x again.
+	return x<<s | x>>((n-s)&(n-1))
 }
 
 // --- Reverse ---
@@ -534,7 +542,9 @@ func Div64(hi, lo, y uint64) (uint64, uint64) {
 	)
 	yn1 := y >> 32
 	yn0 := y & mask32
-	un32 := hi<<s | lo>>(64-s)
+	// Go gives zero for a shift by 64, but C does not define such a shift.
+	// Two shifts keep every count below 64, and give zero when s is zero.
+	un32 := hi<<s | lo>>1>>(63-s)
 	un10 := lo << s
 	un1 := un10 >> 32
 	un0 := un10 & mask32
