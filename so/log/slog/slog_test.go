@@ -1,426 +1,334 @@
 package slog
 
 import (
+	stdstrconv "strconv"
+	stdstrings "strings"
 	"testing"
+	stdtime "time"
 
 	"github.com/nalgeon/be"
+	"solod.dev/so/math"
 	"solod.dev/so/strings"
 	"solod.dev/so/time"
 )
 
-func TestLevel(t *testing.T) {
-	t.Run("String", func(t *testing.T) {
-		be.Equal(t, LevelDebug.String(), "DEBUG")
-		be.Equal(t, LevelInfo.String(), "INFO")
-		be.Equal(t, LevelWarn.String(), "WARN")
-		be.Equal(t, LevelError.String(), "ERROR")
+// The accessors of Value. Each one accepts a single kind and panics on any
+// other kind.
+const (
+	accString = iota
+	accInt
+	accInt64
+	accUint64
+	accFloat64
+	accBool
+	accTime
+	accDuration
+	nAccessors
+)
+
+// accNames holds the name of each accessor.
+var accNames = [nAccessors]string{
+	"String", "Int", "Int64", "Uint64", "Float64", "Bool", "Time", "Duration",
+}
+
+// accKinds holds the kind each accessor accepts.
+var accKinds = [nAccessors]Kind{
+	KindString, KindInt64, KindInt64, KindUint64,
+	KindFloat64, KindBool, KindTime, KindDuration,
+}
+
+// allKinds holds every kind.
+var allKinds = []Kind{
+	KindAny, KindBool, KindDuration, KindFloat64,
+	KindInt64, KindString, KindTime, KindUint64,
+}
+
+// valueOfKind returns a value of the kind.
+func valueOfKind(k Kind) Value {
+	switch k {
+	case KindBool:
+		return BoolValue(true)
+	case KindDuration:
+		return DurationValue(time.Second)
+	case KindFloat64:
+		return Float64Value(1.5)
+	case KindInt64:
+		return Int64Value(42)
+	case KindString:
+		return StringValue("s")
+	case KindTime:
+		return TimeValue(time.Unix(1, 0))
+	case KindUint64:
+		return Uint64Value(7)
+	}
+	return Value{}
+}
+
+// callAccessor calls the accessor on v.
+func callAccessor(v Value, acc int) {
+	switch acc {
+	case accString:
+		_ = v.String()
+	case accInt:
+		_ = v.Int()
+	case accInt64:
+		_ = v.Int64()
+	case accUint64:
+		_ = v.Uint64()
+	case accFloat64:
+		_ = v.Float64()
+	case accBool:
+		_ = v.Bool()
+	case accTime:
+		_ = v.Time()
+	case accDuration:
+		_ = v.Duration()
+	}
+}
+
+func TestValueAccessorPanic(t *testing.T) {
+	for _, kind := range allKinds {
+		for acc := range nAccessors {
+			checkAccessor(t, kind, acc)
+		}
+	}
+}
+
+// checkAccessor calls the accessor on a value of the kind and checks the
+// panic.
+func checkAccessor(t *testing.T, kind Kind, acc int) {
+	t.Helper()
+	want := accKinds[acc] != kind
+	defer func() {
+		got := recover() != nil
+		if got != want {
+			t.Errorf("kind %d, %s(): panic = %t, want %t", int(kind), accNames[acc], got, want)
+		}
+	}()
+	callAccessor(valueOfKind(kind), acc)
+}
+
+func TestTimeValuePanic(t *testing.T) {
+	t.Run("zero", func(t *testing.T) {
+		defer func() {
+			be.True(t, recover() != nil)
+		}()
+		TimeValue(time.Time{})
 	})
 
-	t.Run("unknown", func(t *testing.T) {
-		be.Equal(t, Level(42).String(), "UNKNOWN")
+	t.Run("overflow", func(t *testing.T) {
+		defer func() {
+			be.True(t, recover() != nil)
+		}()
+		TimeValue(time.Date(3000, time.January, 1, 0, 0, 0, 0, time.UTC))
 	})
 }
 
-func TestValue(t *testing.T) {
-	t.Run("String", func(t *testing.T) {
-		v := StringValue("hello")
-		be.Equal(t, v.Kind(), KindString)
-		be.Equal(t, v.String(), "hello")
-	})
-
-	t.Run("Int", func(t *testing.T) {
-		v := IntValue(42)
-		be.Equal(t, v.Kind(), KindInt64)
-		be.Equal(t, v.Int(), 42)
-	})
-
-	t.Run("Int64", func(t *testing.T) {
-		v := Int64Value(-100)
-		be.Equal(t, v.Kind(), KindInt64)
-		be.Equal(t, v.Int64(), int64(-100))
-	})
-
-	t.Run("Uint64", func(t *testing.T) {
-		v := Uint64Value(999)
-		be.Equal(t, v.Kind(), KindUint64)
-		be.Equal(t, v.Uint64(), uint64(999))
-	})
-
-	t.Run("Float64", func(t *testing.T) {
-		v := Float64Value(3.14)
-		be.Equal(t, v.Kind(), KindFloat64)
-		be.Equal(t, v.Float64(), 3.14)
-	})
-
-	t.Run("Bool/true", func(t *testing.T) {
-		v := BoolValue(true)
-		be.Equal(t, v.Kind(), KindBool)
-		be.True(t, v.Bool())
-	})
-
-	t.Run("Bool/false", func(t *testing.T) {
-		v := BoolValue(false)
-		be.True(t, !v.Bool())
-	})
-
-	t.Run("Time", func(t *testing.T) {
-		ts := time.Unix(1234567890, 0)
-		v := TimeValue(ts)
-		be.Equal(t, v.Kind(), KindTime)
-		be.True(t, v.Time().Equal(ts))
-	})
-
-	t.Run("Duration", func(t *testing.T) {
-		d := 5 * time.Second
-		v := DurationValue(d)
-		be.Equal(t, v.Kind(), KindDuration)
-		be.Equal(t, v.Duration(), d)
-	})
+func TestNewPanic(t *testing.T) {
+	defer func() {
+		be.True(t, recover() != nil)
+	}()
+	New(nil)
 }
 
-func TestAttr(t *testing.T) {
-	t.Run("String", func(t *testing.T) {
-		a := String("name", "alice")
-		be.Equal(t, a.Key, "name")
-		be.Equal(t, a.Value.String(), "alice")
-	})
-
-	t.Run("Int", func(t *testing.T) {
-		a := Int("count", 5)
-		be.Equal(t, a.Key, "count")
-		be.Equal(t, a.Value.Int(), 5)
-	})
-
-	t.Run("Int64", func(t *testing.T) {
-		a := Int64("big", int64(-9999))
-		be.Equal(t, a.Key, "big")
-		be.Equal(t, a.Value.Int64(), int64(-9999))
-	})
-
-	t.Run("Uint64", func(t *testing.T) {
-		a := Uint64("id", uint64(12345))
-		be.Equal(t, a.Key, "id")
-		be.Equal(t, a.Value.Uint64(), uint64(12345))
-	})
-
-	t.Run("Float64", func(t *testing.T) {
-		a := Float64("score", 9.5)
-		be.Equal(t, a.Key, "score")
-		be.Equal(t, a.Value.Float64(), 9.5)
-	})
-
-	t.Run("Bool", func(t *testing.T) {
-		a := Bool("ok", false)
-		be.Equal(t, a.Key, "ok")
-		be.True(t, !a.Value.Bool())
-	})
-
-	t.Run("Time", func(t *testing.T) {
-		ts := time.Unix(1234567890, 0)
-		a := Time("timestamp", ts)
-		be.Equal(t, a.Key, "timestamp")
-		be.True(t, a.Value.Time().Equal(ts))
-	})
-
-	t.Run("Duration", func(t *testing.T) {
-		d := 5 * time.Second
-		a := Duration("timeout", d)
-		be.Equal(t, a.Key, "timeout")
-		be.Equal(t, a.Value.Duration(), d)
-	})
+func TestFloatBits(t *testing.T) {
+	vals := []float64{
+		0, 1, -1, 0.5, 3.14, 1e300, 1e-300,
+		math.MaxFloat64, math.SmallestNonzeroFloat64,
+		math.Copysign(0, -1), math.Inf(1), math.Inf(-1), math.NaN(),
+	}
+	for _, f := range vals {
+		bits := math.Float64bits(f)
+		be.Equal(t, float64bits(f), bits)
+		// NaN is not equal to itself, so compare the bits.
+		be.Equal(t, math.Float64bits(float64frombits(bits)), bits)
+	}
+	// Every NaN payload must survive the round trip.
+	for i := range uint64(64) {
+		bits := math.Float64bits(math.NaN()) | i
+		be.Equal(t, float64bits(float64frombits(bits)), bits)
+	}
 }
 
-func TestTextHandler(t *testing.T) {
-	t.Run("Enabled", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelWarn)
-		be.True(t, !h.Enabled(LevelInfo))
-		be.True(t, h.Enabled(LevelWarn))
-		be.True(t, h.Enabled(LevelError))
-		sb.Free()
-	})
-
-	t.Run("basic", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		r := Record{
-			Time:    time.Unix(1700000000, 0),
-			Message: "hello",
-			Level:   LevelInfo,
-		}
-		err := h.Handle(r)
-		be.Err(t, err, nil)
-		be.Equal(t, sb.String(), "2023-11-14T22:13:20Z INFO hello\n")
-		sb.Free()
-	})
-
-	t.Run("attrs", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		r := Record{
-			Time:    time.Unix(1700000000, 0),
-			Message: "request",
-			Level:   LevelWarn,
-			Attrs:   []Attr{String("method", "GET"), Int("status", 200)},
-		}
-		err := h.Handle(r)
-		be.Err(t, err, nil)
-		be.Equal(t, sb.String(), "2023-11-14T22:13:20Z WARN request method=GET status=200\n")
-		sb.Free()
-	})
-
-	t.Run("quoted string", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		r := Record{
-			Time:    time.Unix(1700000000, 0),
-			Message: "test",
-			Level:   LevelInfo,
-			Attrs:   []Attr{String("msg", "hello world")},
-		}
-		_ = h.Handle(r)
-		be.Equal(t, sb.String(), "2023-11-14T22:13:20Z INFO test msg=\"hello world\"\n")
-		sb.Free()
-	})
-
-	t.Run("bool attr", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		r := Record{
-			Time:    time.Unix(1700000000, 0),
-			Message: "flags",
-			Level:   LevelInfo,
-			Attrs:   []Attr{Bool("yes", true), Bool("no", false)},
-		}
-		_ = h.Handle(r)
-		be.Equal(t, sb.String(), "2023-11-14T22:13:20Z INFO flags yes=true no=false\n")
-		sb.Free()
-	})
-
-	t.Run("float64 attr", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		r := Record{
-			Time:    time.Unix(1700000000, 0),
-			Message: "metric",
-			Level:   LevelInfo,
-			Attrs:   []Attr{Float64("elapsed", 1.5)},
-		}
-		_ = h.Handle(r)
-		be.Equal(t, sb.String(), "2023-11-14T22:13:20Z INFO metric elapsed=1.5\n")
-		sb.Free()
-	})
-
-	t.Run("uint64 attr", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		r := Record{
-			Time:    time.Unix(1700000000, 0),
-			Message: "id",
-			Level:   LevelInfo,
-			Attrs:   []Attr{Uint64("val", uint64(42))},
-		}
-		_ = h.Handle(r)
-		be.Equal(t, sb.String(), "2023-11-14T22:13:20Z INFO id val=42\n")
-		sb.Free()
-	})
-
-	t.Run("time attr", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		r := Record{
-			Time:    time.Unix(1700000000, 0),
-			Message: "event",
-			Level:   LevelInfo,
-			Attrs:   []Attr{Time("at", time.Unix(1700000000, 0))},
-		}
-		_ = h.Handle(r)
-		be.Equal(t, sb.String(), "2023-11-14T22:13:20Z INFO event at=2023-11-14T22:13:20Z\n")
-		sb.Free()
-	})
-
-	t.Run("duration attr", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		r := Record{
-			Time:    time.Unix(1700000000, 0),
-			Message: "timing",
-			Level:   LevelInfo,
-			Attrs:   []Attr{Duration("took", 3*time.Second+500*time.Millisecond)},
-		}
-		_ = h.Handle(r)
-		be.Equal(t, sb.String(), "2023-11-14T22:13:20Z INFO timing took=3.5s\n")
-		sb.Free()
-	})
-
-	t.Run("empty attr", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		r := Record{
-			Time:    time.Unix(1700000000, 0),
-			Message: "test",
-			Level:   LevelInfo,
-			Attrs:   []Attr{String("val", "")},
-		}
-		_ = h.Handle(r)
-		be.Equal(t, sb.String(), "2023-11-14T22:13:20Z INFO test val=\"\"\n")
-		sb.Free()
-	})
-
-	t.Run("quoted attr", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		r := Record{
-			Time:    time.Unix(1700000000, 0),
-			Message: "test",
-			Level:   LevelInfo,
-			Attrs:   []Attr{String("expr", "a=b")},
-		}
-		_ = h.Handle(r)
-		be.Equal(t, sb.String(), "2023-11-14T22:13:20Z INFO test expr=\"a=b\"\n")
-		sb.Free()
-	})
-}
-
-func TestLogger(t *testing.T) {
-	t.Run("New", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		l := New(&h)
-		be.Equal(t, l.Handler(), Handler(&h))
-		sb.Free()
-	})
-
-	t.Run("Enabled", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelWarn)
-		l := New(&h)
-		be.True(t, !l.Enabled(LevelInfo))
-		be.True(t, l.Enabled(LevelWarn))
-		sb.Free()
-	})
-
-	t.Run("Info", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		l := New(&h)
-		l.Info("hello", String("key", "val"))
-		got := sb.String()
-		// Check suffix (time prefix varies).
-		be.True(t, len(got) > 20)
-		be.True(t, strings.Contains(got, "INFO hello key=val\n"))
-		sb.Free()
-	})
-
-	t.Run("Debug/filtered", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		l := New(&h)
-		l.Debug("hidden")
-		be.Equal(t, sb.String(), "")
-		sb.Free()
-	})
-
-	t.Run("Warn", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		l := New(&h)
-		l.Warn("caution")
-		be.True(t, strings.Contains(sb.String(), "WARN caution\n"))
-		sb.Free()
-	})
-
-	t.Run("Error", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		l := New(&h)
-		l.Error("fail", Int("code", 500))
-		be.True(t, strings.Contains(sb.String(), "ERROR fail code=500\n"))
-		sb.Free()
-	})
-
-	t.Run("Log", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		l := New(&h)
-		l.Log(LevelInfo, "via log")
-		be.True(t, strings.Contains(sb.String(), "INFO via log\n"))
-		sb.Free()
-	})
-}
-
-func TestDefault(t *testing.T) {
-	// Save and restore default logger.
+func TestDefaultLazyInit(t *testing.T) {
 	saved := defaultLogger
 	defer func() { defaultLogger = saved }()
 
-	t.Run("ensureDefault", func(t *testing.T) {
-		// Reset the lazy-init guard so the default is rebuilt from scratch.
-		defaultOnce.Init()
-		defaultLogger = nil
-		d := Default()
-		be.True(t, d != nil)
-		be.True(t, d.Enabled(LevelInfo))
-		be.True(t, !d.Enabled(LevelDebug))
-	})
+	defaultOnce.Init()
+	defaultLogger = nil
+	d := Default()
+	be.True(t, d != nil)
+	be.True(t, d.Enabled(LevelInfo))
+	be.True(t, !d.Enabled(LevelDebug))
+	be.True(t, Default() == d)
+}
 
-	t.Run("SetDefault", func(t *testing.T) {
+func TestSetDefaultConsumesOnce(t *testing.T) {
+	// Check that SetDefault stops the lazy init, so a later
+	// top-level call keeps the logger of the caller.
+	saved := defaultLogger
+	defer func() { defaultLogger = saved }()
+
+	defaultOnce.Init()
+	defaultLogger = nil
+
+	var sb strings.Builder
+	defer sb.Free()
+	h := NewTextHandler(&sb, LevelInfo)
+	l := New(&h)
+	SetDefault(&l)
+
+	Info("hello")
+	be.True(t, Default() == &l)
+	be.True(t, strings.Contains(sb.String(), "INFO hello\n"))
+}
+
+// -- Fuzzing.
+
+// The kinds the fuzzer builds an attr of.
+const nFuzzKinds = 7
+
+// maxFuzzAttrs is the number of the attrs the fuzzer builds.
+const maxFuzzAttrs = 8
+
+// The bounds of the instant of a fuzzed record. UnixNano holds every instant
+// inside the bounds, and Go and So write the same year for it.
+const (
+	minFuzzSec = -8000000000
+	maxFuzzSec = 8000000000
+)
+
+// cursor reads the values of a fuzzer from a byte string.
+type cursor struct {
+	b []byte
+}
+
+// empty reports whether the cursor has no byte left.
+func (c *cursor) empty() bool { return len(c.b) == 0 }
+
+// byte reads one byte. It gives 0 at the end of the input.
+func (c *cursor) byte() byte {
+	if len(c.b) == 0 {
+		return 0
+	}
+	v := c.b[0]
+	c.b = c.b[1:]
+	return v
+}
+
+// uint64 reads eight bytes, big endian.
+func (c *cursor) uint64() uint64 {
+	var v uint64
+	for range 8 {
+		v = v<<8 | uint64(c.byte())
+	}
+	return v
+}
+
+// str reads a length-prefixed string of up to 255 bytes.
+func (c *cursor) str() string {
+	n := min(int(c.byte()), len(c.b))
+	s := string(c.b[:n])
+	c.b = c.b[n:]
+	return s
+}
+
+// fuzzAttr builds an attr from the cursor, and returns the attr and the text
+// a handler must write for it.
+func fuzzAttr(c *cursor) (Attr, string) {
+	kind := int(c.byte()) % nFuzzKinds
+	key := c.str()
+	switch kind {
+	case 0:
+		v := c.str()
+		return String(key, v), key + "=" + quoteRef(v)
+	case 1:
+		v := int64(c.uint64())
+		return Int64(key, v), key + "=" + stdstrconv.FormatInt(v, 10)
+	case 2:
+		v := c.uint64()
+		return Uint64(key, v), key + "=" + stdstrconv.FormatUint(v, 10)
+	case 3:
+		v := math.Float64frombits(c.uint64())
+		return Float64(key, v), key + "=" + stdstrconv.FormatFloat(v, 'g', -1, 64)
+	case 4:
+		v := c.byte()%2 == 0
+		return Bool(key, v), key + "=" + stdstrconv.FormatBool(v)
+	case 5:
+		sec := clampSec(int64(c.uint64()))
+		v := time.Unix(sec, 0)
+		return Time(key, v), key + "=" + stdtime.Unix(sec, 0).UTC().Format(stdtime.RFC3339)
+	}
+	v := time.Duration(int64(c.uint64()))
+	return Duration(key, v), key + "=" + stdtime.Duration(v).String()
+}
+
+// clampSec brings a Unix second inside the bounds of a fuzzed instant.
+func clampSec(sec int64) int64 {
+	const span = maxFuzzSec - minFuzzSec + 1
+	return minFuzzSec + (sec%span+span)%span
+}
+
+// quoteRef returns the text a handler must write for a string value.
+func quoteRef(s string) string {
+	quote := len(s) == 0
+	for i := range len(s) {
+		if s[i] == ' ' || s[i] == '"' || s[i] == '=' {
+			quote = true
+		}
+	}
+	if quote {
+		return `"` + s + `"`
+	}
+	return s
+}
+
+// levelRef returns the name a handler must write for a level.
+func levelRef(level Level) string {
+	switch level {
+	case LevelDebug:
+		return "DEBUG"
+	case LevelInfo:
+		return "INFO"
+	case LevelWarn:
+		return "WARN"
+	case LevelError:
+		return "ERROR"
+	}
+	return "UNKNOWN"
+}
+
+func FuzzHandle(f *testing.F) {
+	f.Add([]byte("\x00\x03msg\x00\x01k\x05value"))
+	f.Add([]byte("\x04\x2a\x01a\x01\x01b\x00\x00\x00\x00\x00\x00\x00\x2a"))
+	f.Add([]byte{})
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		c := &cursor{b: data}
+		level := Level(int8(c.byte()))
+		sec := clampSec(int64(c.uint64()))
+		msg := c.str()
+
+		var attrs []Attr
+		var want stdstrings.Builder
+		want.WriteString(stdtime.Unix(sec, 0).UTC().Format(stdtime.RFC3339) +
+			" " + levelRef(level) + " " + msg)
+		for !c.empty() && len(attrs) < maxFuzzAttrs {
+			a, text := fuzzAttr(c)
+			attrs = append(attrs, a)
+			want.WriteString(" " + text)
+		}
+		want.WriteString("\n")
+
 		var sb strings.Builder
+		defer sb.Free()
 		h := NewTextHandler(&sb, LevelDebug)
-		l := New(&h)
-		SetDefault(&l)
-		be.True(t, Default() == &l)
-		be.True(t, Default().Enabled(LevelDebug))
-		sb.Free()
-	})
-
-	t.Run("Info", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		l := New(&h)
-		SetDefault(&l)
-		Info("pkg info", Int("port", 8080))
-		be.True(t, strings.Contains(sb.String(), "INFO pkg info port=8080\n"))
-		sb.Free()
-	})
-
-	t.Run("Debug", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelDebug)
-		l := New(&h)
-		SetDefault(&l)
-		Debug("pkg debug")
-		be.True(t, strings.Contains(sb.String(), "DEBUG pkg debug\n"))
-		sb.Free()
-	})
-
-	t.Run("Warn", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		l := New(&h)
-		SetDefault(&l)
-		Warn("pkg warn")
-		be.True(t, strings.Contains(sb.String(), "WARN pkg warn\n"))
-		sb.Free()
-	})
-
-	t.Run("Error", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		l := New(&h)
-		SetDefault(&l)
-		Error("pkg error")
-		be.True(t, strings.Contains(sb.String(), "ERROR pkg error\n"))
-		sb.Free()
-	})
-
-	t.Run("Log", func(t *testing.T) {
-		var sb strings.Builder
-		h := NewTextHandler(&sb, LevelInfo)
-		l := New(&h)
-		SetDefault(&l)
-		Log(LevelInfo, "pkg log")
-		be.True(t, strings.Contains(sb.String(), "INFO pkg log\n"))
-		sb.Free()
+		r := Record{Time: time.Unix(sec, 0), Message: msg, Level: level, Attrs: attrs}
+		if err := h.Handle(r); err != nil {
+			t.Fatalf("Handle() = %v", err)
+		}
+		if got := sb.String(); got != want.String() {
+			t.Errorf("Handle() wrote %q, want %q", got, want.String())
+		}
 	})
 }
