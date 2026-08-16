@@ -358,6 +358,16 @@ The package now works in freestanding mode. It rejected a freestanding build wit
 
 ⚠️ `Max` and `Min` follow Go for NaN. Both wrapped C's `fmax` and `fmin`, which ignore a NaN operand, so `Max(2, NaN)` returned 2. Both are ported from Go now, and they match the documented special cases: a NaN operand gives NaN, `Max` gives `+Inf` before it gives NaN, and `Min` gives `-Inf` before it gives NaN.
 
+### math/rand
+
+The new `NormFloat64` function returns a normally distributed value with a mean of 0 and a standard deviation of 1. It is available as a method of `Rand` and as a top-level function over the global generator:
+
+```go
+sample := rand.NormFloat64()*desiredStdDev + desiredMean
+```
+
+`NormFloat64` calls `math.Log` and `math.Exp` for a small part of the results, so it requires a hosted environment.
+
 ### net/netip
 
 The package now works in freestanding mode. It included `<net/if.h>` for `if_nametoindex`, and that header made the whole package hosted. The include now sits behind a hosted guard, and a freestanding build gets a stub that returns 0. A zone given as an interface name resolves to no zone, the same result a hosted `if_nametoindex` gives for a name that matches no interface. A numeric zone works everywhere.
