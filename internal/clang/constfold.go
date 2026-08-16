@@ -56,10 +56,12 @@ func (f constFolder) fitsCLiteral(n ast.Expr) bool {
 //   - the operation mixes an untyped value above int64 with a negative one;
 //   - the shift count reaches the width of the type the shift evaluates in.
 //     C does not define such a shift.
+//   - the node is a float literal of an integer expression. C reads such a
+//     literal as a double and computes the whole expression in double.
 //
 // Otherwise the result is false, and C can compute the value.
 func (f constFolder) beyondC(n ast.Expr) bool {
-	if !f.fitsCType(n) || f.mixesSignedness(n) || f.shiftExceedsWidth(n) {
+	if !f.fitsCType(n) || f.mixesSignedness(n) || f.shiftExceedsWidth(n) || isFloatLit(n) {
 		return true
 	}
 	for _, child := range exprChildren(n) {
@@ -139,6 +141,12 @@ func (f constFolder) shiftExceedsWidth(n ast.Expr) bool {
 		return true // the count is above int64, so it exceeds every width
 	}
 	return bits >= cIntWidth(f.cTypeOf(bin))
+}
+
+// isFloatLit reports whether an expression is a float literal, for example 1e9.
+func isFloatLit(n ast.Expr) bool {
+	lit, ok := n.(*ast.BasicLit)
+	return ok && lit.Kind == token.FLOAT
 }
 
 // cTypeOf returns the Go type that decides the C type of an integer expression.

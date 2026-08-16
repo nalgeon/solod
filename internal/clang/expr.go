@@ -66,6 +66,13 @@ func (g *Generator) emitNumericLit(w io.Writer, n *ast.BasicLit) {
 		g.emitFloatLit(w, n, val, tv)
 		return
 	}
+	if n.Kind == token.FLOAT {
+		// The literal is a float in an integer context, for example 1e9 in
+		// sec * 1e9 with an int64 sec. C reads 1e9 as a double and promotes
+		// the other operand to match, which loses the low bits of an int64.
+		g.emitIntLitOfFloat(w, n, tv)
+		return
+	}
 	if n.Kind == token.INT && (strings.HasPrefix(val, "0o") || strings.HasPrefix(val, "0O")) {
 		val = "0" + val[2:]
 	}

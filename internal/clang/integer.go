@@ -24,6 +24,17 @@ func (g *Generator) emitIntConst(w io.Writer, n ast.Expr) bool {
 	return true
 }
 
+// emitIntLitOfFloat emits a float literal of an integer type
+// as an integer literal.
+func (g *Generator) emitIntLitOfFloat(w io.Writer, n *ast.BasicLit, tv types.TypeAndValue) {
+	val := constant.ToInt(tv.Value)
+	if val.Kind() != constant.Int {
+		g.fail(n, "float literal %s is not an integer", n.Value)
+		return
+	}
+	fmt.Fprint(w, intLit(val))
+}
+
 // constCast returns the C type to which an untyped integer constant should be
 // converted at a particular use, and reports whether the use requires the
 // conversion.

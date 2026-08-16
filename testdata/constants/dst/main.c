@@ -202,6 +202,23 @@ int main(void) {
         }
     }
     {
+        // A float literal in an integer context. C reads 1e9 as a double and
+        // promotes the other operand to match, which loses the low bits.
+        int64_t sec = 1323195642;
+        int64_t nsec = sec * 1000000000 + 80043132;
+        if (nsec != 1323195642080043132) {
+            so_panic("sec * 1e9");
+        }
+        so_int count = 3000000;
+        if (count != 3000000) {
+            so_panic("3 * 1e6");
+        }
+        int64_t neg = -1000000000;
+        if (neg != -1000000000) {
+            so_panic("-1e9");
+        }
+    }
+    {
         // Same for constants narrowed to float32.
         float sum = 0.3f;
         if (sum != 0.3f) {

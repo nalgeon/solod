@@ -249,6 +249,23 @@ func main() {
 		}
 	}
 	{
+		// A float literal in an integer context. C reads 1e9 as a double and
+		// promotes the other operand to match, which loses the low bits.
+		var sec int64 = 1323195642
+		var nsec int64 = sec*1e9 + 80043132
+		if nsec != 1323195642080043132 {
+			panic("sec * 1e9")
+		}
+		var count int = 3 * 1e6
+		if count != 3000000 {
+			panic("3 * 1e6")
+		}
+		var neg int64 = -1e9
+		if neg != -1000000000 {
+			panic("-1e9")
+		}
+	}
+	{
 		// Same for constants narrowed to float32.
 		var sum float32 = 0.1 + 0.2
 		if sum != 0.3 {
