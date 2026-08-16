@@ -34,3 +34,11 @@ typedef struct main_Stringer {
 #define same(T, v_) ({ \
     v_; \
 })
+
+// equal copies both arguments into local variables before the comparison.
+//
+#define equal(T, a_, b_) ({ \
+    T _a = a_; \
+    T _b = b_; \
+    _a == _b; \
+})

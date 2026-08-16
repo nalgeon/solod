@@ -63,6 +63,14 @@ func same[T named](v T) T {
 	return v
 }
 
+// equal copies both arguments into local variables before the comparison.
+//
+//so:inline
+func equal[T comparable](a, b T) bool {
+	_a, _b := a, b
+	return _a == _b
+}
+
 type step int
 
 func (s step) String() string {
@@ -101,6 +109,18 @@ func main() {
 		s := same(step(1))
 		if s != 1 || s.String() != "step" {
 			panic("unexpected step")
+		}
+	}
+	{
+		// A macro that copies its arguments, called with a value type
+		// and with a pointer type.
+		if !equal(1, 1) || equal(1, 2) {
+			panic("unexpected int result")
+		}
+		v1, v2 := 1, 1
+		p1, p2 := &v1, &v2
+		if !equal(p1, p1) || equal(p1, p2) {
+			panic("unexpected pointer result")
 		}
 	}
 	{

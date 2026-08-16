@@ -161,10 +161,11 @@ func (g *Generator) emitDefine(w io.Writer, stmt *ast.AssignStmt) {
 		g.emitExpr(w, stmt.Rhs[i])
 		i++
 
-		// Pointer types and anonymous structs can't be grouped:
+		// Pointer types, anonymous structs and type parameters can't be grouped:
 		//  - `T* a, b` declares a as T* but b as T
 		//  - __auto_type allows only one declarator per statement
-		if ct.IsPointer() || isAnonStruct(typ) {
+		//  - a macro takes a pointer type for a type parameter, which gives `T* a, b`
+		if ct.IsPointer() || isAnonStruct(typ) || isTypeParam(typ) {
 			fmt.Fprint(w, ";\n")
 			continue
 		}
@@ -300,4 +301,10 @@ func collectIdents(exprs ...ast.Expr) map[string]bool {
 		ast.Inspect(expr, visit)
 	}
 	return names
+}
+
+// isTypeParam reports whether typ is a type parameter of a generic function.
+func isTypeParam(typ types.Type) bool {
+	_, ok := types.Unalias(typ).(*types.TypeParam)
+	return ok
 }
