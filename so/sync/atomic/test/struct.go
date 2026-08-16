@@ -2,7 +2,6 @@ package atomic_test
 
 import (
 	"solod.dev/so/conc"
-	"solod.dev/so/mem"
 	"solod.dev/so/sync/atomic"
 	"solod.dev/so/testing"
 )
@@ -32,7 +31,7 @@ func TestStructFields(t *testing.T) {
 	b.tail = 7
 
 	opts := conc.PoolOptions{NumThreads: 8}
-	p := conc.NewPool(mem.System, opts)
+	p := conc.NewPool(t.Allocator(), opts)
 	for range n {
 		p.Go(bumpFields, &b)
 	}

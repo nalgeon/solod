@@ -2,7 +2,6 @@ package atomic_test
 
 import (
 	"solod.dev/so/conc"
-	"solod.dev/so/mem"
 	"solod.dev/so/sync/atomic"
 	"solod.dev/so/testing"
 )
@@ -53,7 +52,7 @@ func TestBool_Concurrent(t *testing.T) {
 	var flag atomic.Bool
 	claims := make([]claim, n)
 	opts := conc.PoolOptions{NumThreads: 8}
-	p := conc.NewPool(mem.System, opts)
+	p := conc.NewPool(t.Allocator(), opts)
 	for i := range claims {
 		claims[i].flag = &flag
 		p.Go(claimFlag, &claims[i])

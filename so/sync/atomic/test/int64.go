@@ -3,7 +3,6 @@ package atomic_test
 import (
 	"solod.dev/so/conc"
 	"solod.dev/so/math"
-	"solod.dev/so/mem"
 	"solod.dev/so/sync/atomic"
 	"solod.dev/so/testing"
 )
@@ -19,7 +18,7 @@ func TestInt64_Concurrent(t *testing.T) {
 	const n = 1000
 	var cnt atomic.Int64
 	opts := conc.PoolOptions{NumThreads: 8}
-	p := conc.NewPool(mem.System, opts)
+	p := conc.NewPool(t.Allocator(), opts)
 	for range n {
 		p.Go(addOne, &cnt)
 	}

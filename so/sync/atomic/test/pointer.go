@@ -2,7 +2,6 @@ package atomic_test
 
 import (
 	"solod.dev/so/conc"
-	"solod.dev/so/mem"
 	"solod.dev/so/sync/atomic"
 	"solod.dev/so/testing"
 )
@@ -157,7 +156,7 @@ func TestPointer_Concurrent(t *testing.T) {
 
 	jobs := make([]publisher, n)
 	opts := conc.PoolOptions{NumThreads: 8}
-	pool := conc.NewPool(mem.System, opts)
+	pool := conc.NewPool(t.Allocator(), opts)
 	for i := range jobs {
 		jobs[i].p = &p
 		jobs[i].nodes = nodes

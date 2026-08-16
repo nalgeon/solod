@@ -2,7 +2,6 @@ package atomic_bench
 
 import (
 	"solod.dev/so/conc"
-	"solod.dev/so/mem"
 	"solod.dev/so/sync/atomic"
 	"solod.dev/so/testing"
 )
@@ -66,7 +65,7 @@ func BenchmarkAtomicAddContended_So(b *testing.B) {
 	var x atomic.Uint64
 
 	opts := conc.PoolOptions{NumThreads: numWorkers}
-	p := conc.NewPool(mem.System, opts)
+	p := conc.NewPool(b.Allocator(), opts)
 	defer p.Free()
 
 	for b.Loop() {
