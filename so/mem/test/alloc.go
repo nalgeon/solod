@@ -161,6 +161,95 @@ func TestReallocSlice(t *testing.T) {
 	}
 }
 
+func TestAllocStats(t *testing.T) {
+	// Alloc reports the size of the value to the allocator.
+	tr := t.Allocator().(*mem.Tracker)
+	p := mem.Alloc[int32](tr)
+
+	stats := tr.Stats()
+	if stats.Alloc != 4 {
+		t.Error("Alloc: Stats.Alloc != 4")
+	}
+	if stats.Mallocs != 1 {
+		t.Error("Alloc: Stats.Mallocs != 1")
+	}
+
+	mem.Free(tr, p)
+	stats = tr.Stats()
+	if stats.Alloc != 0 {
+		t.Error("Free: Stats.Alloc != 0")
+	}
+	if stats.Frees != 1 {
+		t.Error("Free: Stats.Frees != 1")
+	}
+}
+
+func TestAllocSliceStats(t *testing.T) {
+	// AllocSlice reports the capacity in bytes, not the length.
+	tr := t.Allocator().(*mem.Tracker)
+	s := mem.AllocSlice[int32](tr, 2, 4)
+
+	stats := tr.Stats()
+	if stats.Alloc != 16 {
+		t.Error("AllocSlice: Stats.Alloc != 16")
+	}
+
+	mem.FreeSlice(tr, s)
+	stats = tr.Stats()
+	if stats.Alloc != 0 {
+		t.Error("FreeSlice: Stats.Alloc != 0")
+	}
+	if stats.TotalAlloc != 16 {
+		t.Error("FreeSlice: Stats.TotalAlloc != 16")
+	}
+	if stats.Mallocs != 1 || stats.Frees != 1 {
+		t.Error("FreeSlice: unexpected Mallocs/Frees")
+	}
+}
+
+func TestAllocSlice_LenLessThanCap(t *testing.T) {
+	// A length below the capacity allocates the whole capacity.
+	alloc := t.Allocator()
+	s := mem.AllocSlice[int](alloc, 2, 4)
+	if len(s) != 2 || cap(s) != 4 {
+		t.Error("AllocSlice: unexpected len/cap")
+	}
+	s[0] = 11
+	s[1] = 22
+
+	// Growing the length into the capacity keeps the data.
+	s = mem.ReallocSlice(alloc, s, 4, 4)
+	defer mem.FreeSlice(alloc, s)
+	if len(s) != 4 || cap(s) != 4 {
+		t.Error("ReallocSlice: unexpected len/cap")
+	}
+	if s[0] != 11 || s[1] != 22 {
+		t.Error("ReallocSlice: data not preserved")
+	}
+	if s[2] != 0 || s[3] != 0 {
+		t.Error("ReallocSlice: the capacity was not zeroed")
+	}
+}
+
+func TestReallocSlice_Shrink(t *testing.T) {
+	alloc := t.Allocator()
+	s := mem.AllocSlice[int](alloc, 4, 4)
+	s[0] = 11
+	s[1] = 22
+	s[2] = 33
+	s[3] = 44
+
+	s = mem.ReallocSlice(alloc, s, 2, 2)
+	defer mem.FreeSlice(alloc, s)
+
+	if len(s) != 2 || cap(s) != 2 {
+		t.Error("ReallocSlice shrink: unexpected len/cap")
+	}
+	if s[0] != 11 || s[1] != 22 {
+		t.Error("ReallocSlice shrink: data not preserved")
+	}
+}
+
 func TestReallocSlice_Empty(t *testing.T) {
 	alloc := t.Allocator()
 	var empty []int

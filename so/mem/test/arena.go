@@ -62,6 +62,160 @@ func TestArena(t *testing.T) {
 	p4.y = 88
 }
 
+func TestArena_Placement(t *testing.T) {
+	// The arena places each block at a known offset in the buffer,
+	// so the returned pointer tells where the block starts.
+	buf := make([]byte, 256)
+	arena := mem.NewArena(buf)
+
+	p1, err := arena.Alloc(1, 1)
+	if err != nil {
+		t.Fatal("Alloc(1, 1) failed")
+		return
+	}
+	if p1.(*byte) != &buf[0] {
+		t.Error("Alloc(1, 1): want the block at offset 0")
+	}
+
+	// The offset is 1 now, so an 8-byte alignment pads it to 8.
+	p2, err := arena.Alloc(8, 8)
+	if err != nil {
+		t.Fatal("Alloc(8, 8) failed")
+		return
+	}
+	if p2.(*byte) != &buf[8] {
+		t.Error("Alloc(8, 8): want the block at offset 8")
+	}
+
+	// The offset is 16 now, which a 4-byte alignment does not pad.
+	p3, err := arena.Alloc(4, 4)
+	if err != nil {
+		t.Fatal("Alloc(4, 4) failed")
+		return
+	}
+	if p3.(*byte) != &buf[16] {
+		t.Error("Alloc(4, 4): want the block at offset 16")
+	}
+
+	// A failed allocation keeps the offset.
+	_, err = arena.Alloc(1024, 1)
+	if err != mem.ErrOutOfMemory {
+		t.Error("Alloc(1024, 1): want ErrOutOfMemory")
+	}
+	p4, err := arena.Alloc(1, 1)
+	if err != nil {
+		t.Fatal("Alloc(1, 1) after a failed allocation failed")
+		return
+	}
+	if p4.(*byte) != &buf[20] {
+		t.Error("the failed allocation moved the offset")
+	}
+
+	// Reset returns the offset to 0.
+	arena.Reset()
+	p5, err := arena.Alloc(1, 1)
+	if err != nil {
+		t.Fatal("Alloc(1, 1) after Reset failed")
+		return
+	}
+	if p5.(*byte) != &buf[0] {
+		t.Error("Reset: want the block at offset 0")
+	}
+}
+
+func TestArena_ExactFit(t *testing.T) {
+	// A block as large as the buffer fits.
+	buf := make([]byte, 256)
+	arena := mem.NewArena(buf)
+
+	p, err := arena.Alloc(256, 1)
+	if err != nil {
+		t.Fatal("Alloc(256, 1) failed")
+		return
+	}
+	if p.(*byte) != &buf[0] {
+		t.Error("Alloc(256, 1): want the block at offset 0")
+	}
+
+	// The arena is full now.
+	_, err = arena.Alloc(1, 1)
+	if err != mem.ErrOutOfMemory {
+		t.Error("want ErrOutOfMemory when full")
+	}
+}
+
+func TestArena_EmptyBuffer(t *testing.T) {
+	// An arena over an empty buffer allocates nothing.
+	var buf []byte
+	arena := mem.NewArena(buf)
+	_, err := arena.Alloc(1, 1)
+	if err != mem.ErrOutOfMemory {
+		t.Error("want ErrOutOfMemory")
+	}
+}
+
+func TestArena_FreeSize(t *testing.T) {
+	// The arena reclaims the last block only if the freed size
+	// matches the allocated size.
+	buf := make([]byte, 16)
+	arena := mem.NewArena(buf)
+
+	p, err := arena.Alloc(8, 1)
+	if err != nil {
+		t.Fatal("Alloc(8, 1) failed")
+		return
+	}
+
+	// A size that does not match keeps the block.
+	arena.Free(p, 4, 1)
+	p2, err := arena.Alloc(8, 1)
+	if err != nil {
+		t.Fatal("Alloc(8, 1) after a mismatched free failed")
+		return
+	}
+	if p2.(*byte) != &buf[8] {
+		t.Error("a mismatched free reclaimed the block")
+	}
+
+	// The matching size reclaims the block.
+	arena.Free(p2, 8, 1)
+	p3, err := arena.Alloc(8, 1)
+	if err != nil {
+		t.Fatal("Alloc(8, 1) after a matching free failed")
+		return
+	}
+	if p3.(*byte) != &buf[8] {
+		t.Error("a matching free did not reclaim the block")
+	}
+}
+
+func TestArena_FreeNotLast(t *testing.T) {
+	// Freeing a block that is not the last one is a no-op.
+	buf := make([]byte, 24)
+	arena := mem.NewArena(buf)
+
+	p1, err := arena.Alloc(8, 1)
+	if err != nil {
+		t.Fatal("Alloc for p1 failed")
+		return
+	}
+	_, err = arena.Alloc(8, 1)
+	if err != nil {
+		t.Fatal("Alloc for p2 failed")
+		return
+	}
+
+	arena.Free(p1, 8, 1)
+	p3, err := arena.Alloc(8, 1)
+	if err != nil {
+		t.Fatal("Alloc for p3 failed")
+		return
+	}
+	if p3.(*byte) != &buf[16] {
+		t.Error("the arena reused a block that is not the last one")
+	}
+}
+
 func TestArena_OutOfMemory(t *testing.T) {
 	buf := make([]byte, 16)
 	arena := mem.NewArena(buf)

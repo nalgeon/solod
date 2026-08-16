@@ -1,6 +1,7 @@
 package mem_test
 
 import (
+	"solod.dev/so/c"
 	"solod.dev/so/mem"
 	"solod.dev/so/testing"
 )
@@ -43,6 +44,26 @@ func TestCompare(t *testing.T) {
 	}
 }
 
+func TestCompareUnsigned(t *testing.T) {
+	// Compare reads the bytes as unsigned values.
+	low := [1]byte{0x01}
+	high := [1]byte{0xff}
+
+	if mem.Compare(&high[0], &low[0], 1) != 1 {
+		t.Error("Compare(0xff, 0x01) != +1")
+	}
+	if mem.Compare(&low[0], &high[0], 1) != -1 {
+		t.Error("Compare(0x01, 0xff) != -1")
+	}
+
+	// The first byte that differs decides the result.
+	a := [3]byte{0x00, 0xff, 0x00}
+	b := [3]byte{0x00, 0x01, 0xff}
+	if mem.Compare(&a[0], &b[0], 3) != 1 {
+		t.Error("Compare(a, b) != +1")
+	}
+}
+
 func TestCopy(t *testing.T) {
 	src := [4]byte{11, 22, 33, 44}
 	dst := [4]byte{0, 0, 0, 0}
@@ -62,6 +83,12 @@ func TestCopy(t *testing.T) {
 	mem.Copy(&part[0], &src[0], 2)
 	if part != [4]byte{11, 22, 9, 9} {
 		t.Error("Copy: wrote past the given size")
+	}
+
+	// A zero size copies nothing.
+	mem.Copy(&part[0], &src[0], 0)
+	if part != [4]byte{11, 22, 9, 9} {
+		t.Error("Copy: a zero size wrote a byte")
 	}
 }
 
@@ -84,6 +111,19 @@ func TestMove(t *testing.T) {
 	if back != [6]byte{3, 4, 5, 6, 5, 6} {
 		t.Error("Move backward: unexpected buffer")
 	}
+
+	// The source and the destination are the same.
+	same := [4]byte{1, 2, 3, 4}
+	mem.Move(&same[0], &same[0], 4)
+	if same != [4]byte{1, 2, 3, 4} {
+		t.Error("Move to itself: unexpected buffer")
+	}
+
+	// A zero size moves nothing.
+	mem.Move(&same[0], &same[2], 0)
+	if same != [4]byte{1, 2, 3, 4} {
+		t.Error("Move: a zero size wrote a byte")
+	}
 }
 
 func TestSwap(t *testing.T) {
@@ -101,6 +141,19 @@ func TestSwap(t *testing.T) {
 	}
 	if p2.x != 11 || p2.y != 22 {
 		t.Error("Swap(Point): unexpected p2")
+	}
+
+	// Swapping a value with itself keeps the value.
+	mem.Swap(&x, &x)
+	if x != 22 {
+		t.Error("Swap(x, x): unexpected value")
+	}
+
+	// Swap works on a byte-sized type.
+	b1, b2 := byte(1), byte(2)
+	mem.Swap(&b1, &b2)
+	if b1 != 2 || b2 != 1 {
+		t.Error("Swap(byte): unexpected values")
 	}
 }
 
@@ -123,5 +176,25 @@ func TestSwapByte(t *testing.T) {
 	}
 	if b != [4]byte{5, 6, 3, 4} {
 		t.Error("SwapByte: swapped past the given size")
+	}
+
+	// A zero size swaps nothing.
+	mem.SwapByte(&a[0], &b[0], 0)
+	if a != [4]byte{1, 2, 7, 8} || b != [4]byte{5, 6, 3, 4} {
+		t.Error("SwapByte: a zero size swapped a byte")
+	}
+}
+
+func TestSwapByteStruct(t *testing.T) {
+	// SwapByte works on any type, not only on bytes.
+	p1 := Point{x: 11, y: 22}
+	p2 := Point{x: 33, y: 44}
+
+	mem.SwapByte(&p1, &p2, c.Sizeof[Point]())
+	if p1.x != 33 || p1.y != 44 {
+		t.Error("SwapByte(Point): unexpected p1")
+	}
+	if p2.x != 11 || p2.y != 22 {
+		t.Error("SwapByte(Point): unexpected p2")
 	}
 }
