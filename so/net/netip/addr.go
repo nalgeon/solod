@@ -11,11 +11,12 @@ import (
 )
 
 // Maximum length of an IP address string.
+// A zone is a decimal scope id, so it takes up to [MaxZoneLen] characters.
 const (
-	MaxZoneLen     = 10 // 4294967295
-	MaxAddr4Len    = 15 // 255.255.255.255
-	MaxAddr4In6Len = 29 // ::ffff:255.255.255.255%enp5s0
-	MaxAddr6Len    = 46 // ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff%enp5s0
+	MaxZoneLen     = 10                  // 4294967295
+	MaxAddr4Len    = 15                  // 255.255.255.255
+	MaxAddr4In6Len = 22 + 1 + MaxZoneLen // ::ffff:255.255.255.255%4294967295
+	MaxAddr6Len    = 39 + 1 + MaxZoneLen // ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff%4294967295
 	MaxAddrLen     = MaxAddr6Len
 )
 
@@ -483,11 +484,12 @@ func (ip Addr) WithZone(zone string) Addr {
 		return ip
 	}
 	if zone == "" {
-		ip.bitlen = z6
+		ip.scopeID = 0
 		return ip
 	}
-	// Try parsing zone as a number first.
-	scopeID, err := strconv.Atoi(zone)
+	// Try parsing zone as a number first. The scope id is a 32-bit value,
+	// so a wider number is not a zone number.
+	scopeID, err := strconv.ParseUint(zone, 10, 32)
 	if err == nil {
 		ip.scopeID = uint32(scopeID)
 		return ip
@@ -895,20 +897,13 @@ func (ip Addr) appendTo4In6(ret []byte) []byte {
 // zeros, use :: to elide the longest run of zeros, and don't use ::
 // to compact a single zero field.
 func (ip Addr) string6(buf []byte) string {
-	// Use a zone with a "plausibly long" name, so that most zone-ful
-	// IP addresses won't require additional allocation.
-	//
-	// The compiler does a cool optimization here, where ret ends up
-	// stack-allocated and so the only allocation this function does
-	// is to construct the returned string. As such, it's okay to be a
-	// bit greedy here, size-wise.
 	ret := ip.appendTo6(buf[:0])
 	return string(ret)
 }
 
 func (ip Addr) appendTo6(ret []byte) []byte {
 	zeroStart, zeroEnd := uint8(255), uint8(255)
-	for i := uint8(0); i < 8; i++ {
+	for i := range uint8(8) {
 		j := i
 		for j < 8 && ip.v6u16(j) == 0 {
 			j++

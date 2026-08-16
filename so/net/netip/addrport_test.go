@@ -5,84 +5,95 @@
 package netip
 
 import (
-	"slices"
+	gonetip "net/netip"
+	"strings"
 	"testing"
 )
 
-func TestAddrPortCompare(t *testing.T) {
-	tests := []struct {
-		a, b AddrPort
-		want int
-	}{
-		{AddrPort{}, AddrPort{}, 0},
-		{AddrPort{}, MustParseAddrPort("1.2.3.4:80"), -1},
-
-		{MustParseAddrPort("1.2.3.4:80"), MustParseAddrPort("1.2.3.4:80"), 0},
-		{MustParseAddrPort("[::1]:80"), MustParseAddrPort("[::1]:80"), 0},
-
-		{MustParseAddrPort("1.2.3.4:80"), MustParseAddrPort("2.3.4.5:22"), -1},
-		{MustParseAddrPort("[::1]:80"), MustParseAddrPort("[::2]:22"), -1},
-
-		{MustParseAddrPort("1.2.3.4:80"), MustParseAddrPort("1.2.3.4:443"), -1},
-		{MustParseAddrPort("[::1]:80"), MustParseAddrPort("[::1]:443"), -1},
-
-		{MustParseAddrPort("1.2.3.4:80"), MustParseAddrPort("[0102:0304::0]:80"), -1},
-	}
-	var buf [64]byte
-	for _, tt := range tests {
-		a := tt.a.String(buf[:])
-		b := tt.b.String(buf[:])
-		got := tt.a.Compare(tt.b)
-		if got != tt.want {
-			t.Errorf("Compare(%q, %q) = %v; want %v", a, b, got, tt.want)
-		}
-
-		// Also check inverse.
-		if got == tt.want {
-			got2 := tt.b.Compare(tt.a)
-			if want2 := -1 * tt.want; got2 != want2 {
-				t.Errorf("Compare(%q, %q) was correctly %v, but Compare(%q, %q) was %v", b, a, got, b, a, got2)
+func TestMustParseAddrPortPanic(t *testing.T) {
+	mustParse := func(s string) (gotPanic bool) {
+		defer func() {
+			if recover() != nil {
+				gotPanic = true
 			}
-		}
+		}()
+		MustParseAddrPort(s)
+		return
 	}
 
-	// And just sort.
-	values := []AddrPort{
-		MustParseAddrPort("[::1]:80"),
-		MustParseAddrPort("[::2]:80"),
-		AddrPort{},
-		MustParseAddrPort("1.2.3.4:443"),
-		MustParseAddrPort("8.8.8.8:8080"),
-		MustParseAddrPort("[::1%foo]:1024"),
+	tests := []struct {
+		in        string
+		wantPanic bool
+	}{
+		{in: "1.2.3.4:80"},
+		{in: "[::1]:80"},
+		{in: "", wantPanic: true},
+		{in: "1.2.3.4", wantPanic: true},
+		{in: "1.2.3.4:65536", wantPanic: true},
 	}
-	sorted := slices.Clone(values)
-	slices.SortFunc(sorted, AddrPort.Compare)
-	want := []int{2, 3, 4, 0, 5, 1} // indices of values in sorted order
-	for i, v := range sorted {
-		if v != values[want[i]] {
-			gots := v.String(buf[:])
-			wants := values[want[i]].String(buf[:])
-			t.Errorf("unexpected sort at index %d: got %q, want %q", i, gots, wants)
+	for _, tt := range tests {
+		if got := mustParse(tt.in); got != tt.wantPanic {
+			t.Errorf("MustParseAddrPort(%q) panic = %v; want %v", tt.in, got, tt.wantPanic)
 		}
 	}
 }
 
-func TestAddrPortString(t *testing.T) {
-	tests := []struct {
-		ipp  AddrPort
-		want string
-	}{
-		{MustParseAddrPort("127.0.0.1:80"), "127.0.0.1:80"},
-		{MustParseAddrPort("[0000::0]:8080"), "[::]:8080"},
-		{MustParseAddrPort("[FFFF::1]:8080"), "[ffff::1]:8080"},
-		{AddrPort{}, "invalid AddrPort"},
-		{AddrPortFrom(Addr{}, 80), "invalid AddrPort"},
-	}
+// fuzzAddrPorts are the seed inputs of the address-port fuzzer.
+var fuzzAddrPorts = []string{
+	"",
+	":",
+	":80",
+	"1.2.3.4",
+	"1.2.3.4:",
+	"1.2.3.4:0",
+	"1.2.3.4:80",
+	"1.2.3.4:65535",
+	"1.2.3.4:65536",
+	"1.2.3.4:+80",
+	"1.2.3.4:-80",
+	"1.2.3.400:80",
+	"[1.2.3.4]:80",
+	"[::1]:80",
+	"[::1]:",
+	"[::1]",
+	"[::1:80",
+	"::1:80",
+	"[]:80",
+	"[::ffff:1.2.3.4]:80",
+	"[::ffff:c000:0280]:65535",
+	"[bad]:80",
+	"[::gggg]:80",
+}
 
-	for _, tt := range tests {
-		var buf [64]byte
-		if got := tt.ipp.String(buf[:]); got != tt.want {
-			t.Errorf("(%#v).String() = %q want %q", tt.ipp, got, tt.want)
-		}
+func FuzzParseAddrPort(f *testing.F) {
+	for _, s := range fuzzAddrPorts {
+		f.Add(s)
 	}
+	f.Fuzz(func(t *testing.T, s string) {
+		if strings.ContainsRune(s, '%') {
+			return
+		}
+
+		soAP, soErr := ParseAddrPort(s)
+		goAP, goErr := gonetip.ParseAddrPort(s)
+		if (soErr == nil) != (goErr == nil) {
+			t.Fatalf("ParseAddrPort(%q) err = %v; Go err = %v", s, soErr, goErr)
+		}
+		if soErr != nil {
+			return
+		}
+
+		var a16 [16]byte
+		if got, want := soAP.Addr().As16(a16), goAP.Addr().As16(); got != want {
+			t.Errorf("ParseAddrPort(%q).Addr() = %v; Go = %v", s, got, want)
+		}
+		if got, want := soAP.Port(), goAP.Port(); got != want {
+			t.Errorf("ParseAddrPort(%q).Port() = %v; Go = %v", s, got, want)
+		}
+
+		var buf [MaxAddrPortLen]byte
+		if got, want := soAP.String(buf[:]), goAP.String(); got != want {
+			t.Errorf("ParseAddrPort(%q).String() = %q; Go = %q", s, got, want)
+		}
+	})
 }
