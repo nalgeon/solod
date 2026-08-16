@@ -101,10 +101,7 @@ func Repeat(a mem.Allocator, s string, count int) string {
 	b.Grow(n)
 	b.WriteString(s)
 	for b.Len() < n {
-		chunk := n - b.Len()
-		if b.Len() < chunk {
-			chunk = b.Len()
-		}
+		chunk := min(b.Len(), n-b.Len())
 		if chunkMax < chunk {
 			chunk = chunkMax
 		}

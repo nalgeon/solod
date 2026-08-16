@@ -2,181 +2,62 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package strings_test
+package strings
 
 import (
+	stdstrings "strings"
 	"testing"
+	stdunicode "unicode"
 
-	. "solod.dev/so/strings"
 	"solod.dev/so/unicode"
-	"solod.dev/so/unicode/utf8"
 )
 
-var trimTests = []struct {
-	f            string
-	in, arg, out string
-}{
-	{"Trim", "abba", "a", "bb"},
-	{"Trim", "abba", "ab", ""},
-	{"TrimLeft", "abba", "ab", ""},
-	{"TrimRight", "abba", "ab", ""},
-	{"TrimLeft", "abba", "a", "bba"},
-	{"TrimLeft", "abba", "b", "abba"},
-	{"TrimRight", "abba", "a", "abb"},
-	{"TrimRight", "abba", "b", "abba"},
-	{"Trim", "<tag>", "<>", "tag"},
-	{"Trim", "* listitem", " *", "listitem"},
-	{"Trim", `"quote"`, `"`, "quote"},
-	{"Trim", "\u2C6F\u2C6F\u0250\u0250\u2C6F\u2C6F", "\u2C6F", "\u0250\u0250"},
-	{"Trim", "\x80test\xff", "\xff", "test"},
-	{"Trim", " Ġ ", " ", "Ġ"},
-	{"Trim", " Ġİ0", "0 ", "Ġİ"},
-	//empty string tests
-	{"Trim", "abba", "", "abba"},
-	{"Trim", "", "123", ""},
-	{"Trim", "", "", ""},
-	{"TrimLeft", "abba", "", "abba"},
-	{"TrimLeft", "", "123", ""},
-	{"TrimLeft", "", "", ""},
-	{"TrimRight", "abba", "", "abba"},
-	{"TrimRight", "", "123", ""},
-	{"TrimRight", "", "", ""},
-	{"TrimRight", "☺\xc0", "☺", "☺\xc0"},
-	{"TrimPrefix", "aabb", "a", "abb"},
-	{"TrimPrefix", "aabb", "b", "aabb"},
-	{"TrimSuffix", "aabb", "a", "aabb"},
-	{"TrimSuffix", "aabb", "b", "aab"},
-}
+func FuzzTrim(f *testing.F) {
+	// Compare the trim functions with the strings package.
+	f.Add("", "")
+	f.Add("abba", "a")
+	f.Add("abba", "ab")
+	f.Add("<tag>", "<>")
+	f.Add("ⱯⱯɐɐⱯⱯ", "Ɐ")
+	f.Add("\x80test\xff", "\xff")
+	f.Add("☺\xc0", "☺")
+	f.Add("\t\v\r\f\n hello \t\v\r\f\n", " ")
+	f.Add("x \xc0\xc0 ", "　")
 
-func TestTrim(t *testing.T) {
-	for _, tc := range trimTests {
-		name := tc.f
-		var f func(string, string) string
-		switch name {
-		case "Trim":
-			f = Trim
-		case "TrimLeft":
-			f = TrimLeft
-		case "TrimRight":
-			f = TrimRight
-		case "TrimPrefix":
-			f = TrimPrefix
-		case "TrimSuffix":
-			f = TrimSuffix
-		default:
-			t.Errorf("Undefined trim function %s", name)
+	f.Fuzz(func(t *testing.T, s, cutset string) {
+		if got, want := Trim(s, cutset), stdstrings.Trim(s, cutset); got != want {
+			t.Fatalf("Trim(%q, %q) = %q, want %q", s, cutset, got, want)
 		}
-		actual := f(tc.in, tc.arg)
-		if actual != tc.out {
-			t.Errorf("%s(%q, %q) = %q; want %q", name, tc.in, tc.arg, actual, tc.out)
+		if got, want := TrimLeft(s, cutset), stdstrings.TrimLeft(s, cutset); got != want {
+			t.Fatalf("TrimLeft(%q, %q) = %q, want %q", s, cutset, got, want)
 		}
-	}
-}
-
-var trimSpaceTests = []StringTest{
-	{"", ""},
-	{"abc", "abc"},
-	{space + "abc" + space, "abc"},
-	{" ", ""},
-	{" \t\r\n \t\t\r\r\n\n ", ""},
-	{" \t\r\n x\t\t\r\r\n\n ", "x"},
-	{" \u2000\t\r\n x\t\t\r\r\ny\n \u3000", "x\t\t\r\r\ny"},
-	{"1 \t\r\n2", "1 \t\r\n2"},
-	{" x\x80", "x\x80"},
-	{" x\xc0", "x\xc0"},
-	{"x \xc0\xc0 ", "x \xc0\xc0"},
-	{"x \xc0", "x \xc0"},
-	{"x \xc0 ", "x \xc0"},
-	{"x \xc0\xc0 ", "x \xc0\xc0"},
-	{"x ☺\xc0\xc0 ", "x ☺\xc0\xc0"},
-	{"x ☺ ", "x ☺"},
-}
-
-func TestTrimSpace(t *testing.T) { runStringTests(t, TrimSpace, "TrimSpace", trimSpaceTests) }
-
-type predicate struct {
-	f    func(rune) bool
-	name string
-}
-
-var isSpace = predicate{unicode.IsSpace, "IsSpace"}
-var isDigit = predicate{unicode.IsDigit, "IsDigit"}
-var isUpper = predicate{unicode.IsUpper, "IsUpper"}
-var isValidRune = predicate{
-	func(r rune) bool {
-		return r != utf8.RuneError
-	},
-	"IsValidRune",
-}
-
-func not(p predicate) predicate {
-	return predicate{
-		func(r rune) bool {
-			return !p.f(r)
-		},
-		"not " + p.name,
-	}
-}
-
-var trimFuncTests = []struct {
-	f        predicate
-	in       string
-	trimOut  string
-	leftOut  string
-	rightOut string
-}{
-	{isSpace, space + " hello " + space,
-		"hello",
-		"hello " + space,
-		space + " hello"},
-	{isDigit, "\u0e50\u0e5212hello34\u0e50\u0e51",
-		"hello",
-		"hello34\u0e50\u0e51",
-		"\u0e50\u0e5212hello"},
-	{isUpper, "\u2C6F\u2C6F\u2C6F\u2C6FABCDhelloEF\u2C6F\u2C6FGH\u2C6F\u2C6F",
-		"hello",
-		"helloEF\u2C6F\u2C6FGH\u2C6F\u2C6F",
-		"\u2C6F\u2C6F\u2C6F\u2C6FABCDhello"},
-	{not(isSpace), "hello" + space + "hello",
-		space,
-		space + "hello",
-		"hello" + space},
-	{not(isDigit), "hello\u0e50\u0e521234\u0e50\u0e51helo",
-		"\u0e50\u0e521234\u0e50\u0e51",
-		"\u0e50\u0e521234\u0e50\u0e51helo",
-		"hello\u0e50\u0e521234\u0e50\u0e51"},
-	{isValidRune, "ab\xc0a\xc0cd",
-		"\xc0a\xc0",
-		"\xc0a\xc0cd",
-		"ab\xc0a\xc0"},
-	{not(isValidRune), "\xc0a\xc0",
-		"a",
-		"a\xc0",
-		"\xc0a"},
-	{isSpace, "",
-		"",
-		"",
-		""},
-	{isSpace, " ",
-		"",
-		"",
-		""},
-}
-
-func TestTrimFunc(t *testing.T) {
-	for _, tc := range trimFuncTests {
-		trimmers := []struct {
-			name string
-			trim func(s string, f RunePredicate) string
-			out  string
-		}{
-			{"TrimFunc", TrimFunc, tc.trimOut},
+		if got, want := TrimRight(s, cutset), stdstrings.TrimRight(s, cutset); got != want {
+			t.Fatalf("TrimRight(%q, %q) = %q, want %q", s, cutset, got, want)
 		}
-		for _, trimmer := range trimmers {
-			actual := trimmer.trim(tc.in, tc.f.f)
-			if actual != trimmer.out {
-				t.Errorf("%s(%q, %q) = %q; want %q", trimmer.name, tc.in, tc.f.name, actual, trimmer.out)
-			}
+		if got, want := TrimPrefix(s, cutset), stdstrings.TrimPrefix(s, cutset); got != want {
+			t.Fatalf("TrimPrefix(%q, %q) = %q, want %q", s, cutset, got, want)
 		}
-	}
+		if got, want := TrimSuffix(s, cutset), stdstrings.TrimSuffix(s, cutset); got != want {
+			t.Fatalf("TrimSuffix(%q, %q) = %q, want %q", s, cutset, got, want)
+		}
+		if got, want := TrimSpace(s), stdstrings.TrimSpace(s); got != want {
+			t.Fatalf("TrimSpace(%q) = %q, want %q", s, got, want)
+		}
+
+		got := TrimFunc(s, unicode.IsSpace)
+		want := stdstrings.TrimFunc(s, stdunicode.IsSpace)
+		if got != want {
+			t.Fatalf("TrimFunc(%q, IsSpace) = %q, want %q", s, got, want)
+		}
+		gotIdx := IndexFunc(s, unicode.IsSpace)
+		wantIdx := stdstrings.IndexFunc(s, stdunicode.IsSpace)
+		if gotIdx != wantIdx {
+			t.Fatalf("IndexFunc(%q, IsSpace) = %d, want %d", s, gotIdx, wantIdx)
+		}
+		gotHas := ContainsFunc(s, unicode.IsSpace)
+		wantHas := stdstrings.ContainsFunc(s, stdunicode.IsSpace)
+		if gotHas != wantHas {
+			t.Fatalf("ContainsFunc(%q, IsSpace) = %t, want %t", s, gotHas, wantHas)
+		}
+	})
 }

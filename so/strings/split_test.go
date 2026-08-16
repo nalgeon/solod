@@ -2,148 +2,73 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package strings_test
+package strings
 
 import (
+	stdstrings "strings"
 	"testing"
-
-	"solod.dev/so/math"
-	"solod.dev/so/slices"
-	. "solod.dev/so/strings"
-	"solod.dev/so/unicode"
 )
 
-type SplitTest struct {
-	s   string
-	sep string
-	n   int
-	a   []string
-}
+func FuzzSplit(f *testing.F) {
+	// Compare Split, SplitN, SplitAfter and Join with the strings package.
+	f.Add("", "", -1)
+	f.Add("abcd", "", 2)
+	f.Add("abcd", "a", 0)
+	f.Add("1,2,3,4", ",", -1)
+	f.Add("1 2 3 4", " ", 3)
+	f.Add("1....2....3....4", "...", -1)
+	f.Add("☺☻☹", "☹", -1)
+	f.Add("\xff-\xff", "", -1)
 
-var splittests = []SplitTest{
-	{"", "", -1, []string{}},
-	{abcd, "", 2, []string{"a", "bcd"}},
-	{abcd, "", 4, []string{"a", "b", "c", "d"}},
-	{abcd, "", -1, []string{"a", "b", "c", "d"}},
-	{faces, "", -1, []string{"☺", "☻", "☹"}},
-	{faces, "", 3, []string{"☺", "☻", "☹"}},
-	{faces, "", 17, []string{"☺", "☻", "☹"}},
-	{"☺�☹", "", -1, []string{"☺", "�", "☹"}},
-	{abcd, "a", 0, nil},
-	{abcd, "a", -1, []string{"", "bcd"}},
-	{abcd, "z", -1, []string{"abcd"}},
-	{commas, ",", -1, []string{"1", "2", "3", "4"}},
-	{dots, "...", -1, []string{"1", ".2", ".3", ".4"}},
-	{faces, "☹", -1, []string{"☺☻", ""}},
-	{faces, "~", -1, []string{faces}},
-	{"1 2 3 4", " ", 3, []string{"1", "2", "3 4"}},
-	{"1 2", " ", 3, []string{"1", "2"}},
-	{"", "T", math.MaxInt / 4, []string{""}},
-	{"\xff-\xff", "", -1, []string{"\xff", "-", "\xff"}},
-	{"\xff-\xff", "-", -1, []string{"\xff", "\xff"}},
-}
-
-func TestSplit(t *testing.T) {
-	for _, tt := range splittests {
-		a := SplitN(nil, tt.s, tt.sep, tt.n)
-		if !slices.Equal(a, tt.a) {
-			t.Errorf("Split(%q, %q, %d) = %v; want %v", tt.s, tt.sep, tt.n, a, tt.a)
-			continue
+	f.Fuzz(func(t *testing.T, s, sep string, n int) {
+		got := SplitN(nil, s, sep, n)
+		want := stdstrings.SplitN(s, sep, n)
+		if len(got) != len(want) {
+			t.Fatalf("SplitN(%q, %q, %d) = %q, want %q", s, sep, n, got, want)
 		}
-		if tt.n == 0 {
-			continue
-		}
-		s := Join(nil, a, tt.sep)
-		if s != tt.s {
-			t.Errorf("Join(Split(%q, %q, %d), %q) = %q", tt.s, tt.sep, tt.n, tt.sep, s)
-		}
-		if tt.n < 0 {
-			b := Split(nil, tt.s, tt.sep)
-			if !slices.Equal(a, b) {
-				t.Errorf("Split disagrees with SplitN(%q, %q, %d) = %v; want %v", tt.s, tt.sep, tt.n, b, a)
+		for i, p := range got {
+			if p != want[i] {
+				t.Fatalf("SplitN(%q, %q, %d)[%d] = %q, want %q", s, sep, n, i, p, want[i])
 			}
 		}
-	}
-}
 
-var splitaftertests = []SplitTest{
-	{abcd, "a", -1, []string{"a", "bcd"}},
-	{abcd, "z", -1, []string{"abcd"}},
-	{abcd, "", -1, []string{"a", "b", "c", "d"}},
-	{commas, ",", -1, []string{"1,", "2,", "3,", "4"}},
-	{dots, "...", -1, []string{"1...", ".2...", ".3...", ".4"}},
-	{faces, "☹", -1, []string{"☺☻☹", ""}},
-	{faces, "~", -1, []string{faces}},
-	{faces, "", -1, []string{"☺", "☻", "☹"}},
-}
-
-func TestSplitAfter(t *testing.T) {
-	for _, tt := range splitaftertests {
-		a := SplitAfter(nil, tt.s, tt.sep)
-		if !slices.Equal(a, tt.a) {
-			t.Errorf(`Split(%q, %q, %d) = %v; want %v`, tt.s, tt.sep, tt.n, a, tt.a)
-			continue
+		parts := Split(nil, s, sep)
+		wantAll := stdstrings.Split(s, sep)
+		if len(parts) != len(wantAll) {
+			t.Fatalf("Split(%q, %q) = %q, want %q", s, sep, parts, wantAll)
 		}
-		s := Join(nil, a, "")
-		if s != tt.s {
-			t.Errorf(`Join(Split(%q, %q, %d), %q) = %q`, tt.s, tt.sep, tt.n, tt.sep, s)
+		for i, p := range parts {
+			if p != wantAll[i] {
+				t.Fatalf("Split(%q, %q)[%d] = %q, want %q", s, sep, i, p, wantAll[i])
+			}
 		}
-	}
-}
 
-type FieldsTest struct {
-	s string
-	a []string
-}
-
-var fieldstests = []FieldsTest{
-	{"", []string{}},
-	{" ", []string{}},
-	{" \t ", []string{}},
-	{"\u2000", []string{}},
-	{"  abc  ", []string{"abc"}},
-	{"1 2 3 4", []string{"1", "2", "3", "4"}},
-	{"1  2  3  4", []string{"1", "2", "3", "4"}},
-	{"1\t\t2\t\t3\t4", []string{"1", "2", "3", "4"}},
-	{"1\u20002\u20013\u20024", []string{"1", "2", "3", "4"}},
-	{"\u2000\u2001\u2002", []string{}},
-	{"\n™\t™\n", []string{"™", "™"}},
-	{"\n\u20001™2\u2000 \u2001 ™", []string{"1™2", "™"}},
-	{"\n1\uFFFD \uFFFD2\u20003\uFFFD4", []string{"1\uFFFD", "\uFFFD2", "3\uFFFD4"}},
-	{"1\xFF\u2000\xFF2\xFF \xFF", []string{"1\xFF", "\xFF2\xFF", "\xFF"}},
-	{faces, []string{faces}},
-}
-
-func TestFields(t *testing.T) {
-	for _, tt := range fieldstests {
-		a := Fields(nil, tt.s)
-		if !slices.Equal(a, tt.a) {
-			t.Errorf("Fields(%q) = %v; want %v", tt.s, a, tt.a)
-			continue
+		after := SplitAfter(nil, s, sep)
+		wantAfter := stdstrings.SplitAfter(s, sep)
+		if len(after) != len(wantAfter) {
+			t.Fatalf("SplitAfter(%q, %q) = %q, want %q", s, sep, after, wantAfter)
 		}
-	}
-}
-
-var FieldsFuncTests = []FieldsTest{
-	{"", []string{}},
-	{"XX", []string{}},
-	{"XXhiXXX", []string{"hi"}},
-	{"aXXbXXXcX", []string{"a", "b", "c"}},
-}
-
-func TestFieldsFunc(t *testing.T) {
-	for _, tt := range fieldstests {
-		a := FieldsFunc(nil, tt.s, unicode.IsSpace)
-		if !slices.Equal(a, tt.a) {
-			t.Errorf("FieldsFunc(%q, unicode.IsSpace) = %v; want %v", tt.s, a, tt.a)
-			continue
+		for i, p := range after {
+			if p != wantAfter[i] {
+				t.Fatalf("SplitAfter(%q, %q)[%d] = %q, want %q", s, sep, i, p, wantAfter[i])
+			}
 		}
-	}
-	pred := func(c rune) bool { return c == 'X' }
-	for _, tt := range FieldsFuncTests {
-		a := FieldsFunc(nil, tt.s, pred)
-		if !slices.Equal(a, tt.a) {
-			t.Errorf("FieldsFunc(%q) = %v, want %v", tt.s, a, tt.a)
+
+		joined := Join(nil, parts, sep)
+		wantJoined := stdstrings.Join(wantAll, sep)
+		if joined != wantJoined {
+			t.Fatalf("Join(Split(%q, %q), %q) = %q, want %q", s, sep, sep, joined, wantJoined)
 		}
-	}
+
+		fields := Fields(nil, s)
+		wantFields := stdstrings.Fields(s)
+		if len(fields) != len(wantFields) {
+			t.Fatalf("Fields(%q) = %q, want %q", s, fields, wantFields)
+		}
+		for i, p := range fields {
+			if p != wantFields[i] {
+				t.Fatalf("Fields(%q)[%d] = %q, want %q", s, i, p, wantFields[i])
+			}
+		}
+	})
 }

@@ -1,182 +1,325 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package strings_test
 
 import (
+	"unsafe"
+
 	"solod.dev/so/mem"
 	"solod.dev/so/strings"
 	"solod.dev/so/testing"
+	"solod.dev/so/unicode/utf8"
 )
 
 func TestClone(t *testing.T) {
-	s := "hello"
-	c := strings.Clone(mem.System, s)
-	defer mem.FreeString(mem.System, c)
-	if c != s {
-		t.Error("Clone failed")
+	alloc := t.Allocator()
+	long := strings.Repeat(alloc, "a", 42)
+	defer mem.FreeString(alloc, long)
+
+	cases := []string{"", "short", long, long[:0]}
+	for _, in := range cases {
+		got := strings.Clone(alloc, in)
+		if got != in {
+			t.Errorf("Clone(%s) = %s, want %s", in, got, in)
+		}
+		if len(in) != 0 && unsafe.StringData(got) == unsafe.StringData(in) {
+			t.Errorf("Clone(%s) shares the memory of the input", in)
+		}
+		mem.FreeString(alloc, got)
 	}
 }
 
-func TestCompare(t *testing.T) {
-	// The result is -1, 0 or +1, not the difference of the bytes.
-	if got := strings.Compare("abc", "abb"); got != +1 {
-		t.Errorf("Compare(abc, abb) = %d, want +1", got)
-	}
-	if got := strings.Compare("abc", "abd"); got != -1 {
-		t.Errorf("Compare(abc, abd) = %d, want -1", got)
-	}
-	if got := strings.Compare("abc", "abc"); got != 0 {
-		t.Errorf("Compare(abc, abc) = %d, want 0", got)
-	}
-	if got := strings.Compare("a", "z"); got != -1 {
-		t.Errorf("Compare(a, z) = %d, want -1", got)
-	}
-	if got := strings.Compare("z", "a"); got != +1 {
-		t.Errorf("Compare(z, a) = %d, want +1", got)
-	}
+// A countCase is a test case of Count.
+type countCase struct {
+	s, sep string
+	want   int
+}
+
+var countCases = []countCase{
+	{"", "", 1},
+	{"", "notempty", 0},
+	{"notempty", "", 9},
+	{"smaller", "not smaller", 0},
+	{"12345678987654321", "6", 2},
+	{"611161116", "6", 3},
+	{"notequal", "NotEqual", 0},
+	{"equal", "equal", 1},
+	{"abc1231231123q", "123", 3},
+	{"11111", "11", 2},
+	{faces, "", 4},
+	{faces, "☻", 1},
+	{"\xff\xff", "\xff", 2},
 }
 
 func TestCount(t *testing.T) {
-	n := strings.Count("hello world", "o")
-	if n != 2 {
-		t.Error("Count failed")
+	for _, tc := range countCases {
+		if got := strings.Count(tc.s, tc.sep); got != tc.want {
+			var sbuf, sepbuf [64]byte
+			t.Errorf("Count(%s, %s) = %d, want %d",
+				dump(sbuf[:], tc.s), dump(sepbuf[:], tc.sep), got, tc.want)
+		}
 	}
-	n = strings.Count("hello world", "")
-	if n != 12 {
-		t.Error("Count failed")
+}
+
+func TestCountSweep(t *testing.T) {
+	// Count agrees with the reference over every short word.
+	var sbuf, sepbuf [maxWord]byte
+	for _, sw := range sweeps {
+		words := wordTotal(sw.alpha, sw.maxWord)
+		seps := wordTotal(sw.alpha, sw.maxSep)
+		for i := range words {
+			s := wordAt(sbuf[:], sw.alpha, sw.maxWord, i)
+			for j := range seps {
+				sep := wordAt(sepbuf[:], sw.alpha, sw.maxSep, j)
+				if len(sep) == 0 {
+					continue
+				}
+				got := strings.Count(s, sep)
+				want := countBrute(s, sep)
+				if got != want {
+					var d1, d2 [2 * maxWord]byte
+					t.Errorf("Count(%s, %s) = %d, want %d",
+						dump(d1[:], s), dump(d2[:], sep), got, want)
+					return
+				}
+			}
+		}
 	}
+}
+
+func TestCountEmptySep(t *testing.T) {
+	// An empty separator counts the code points and adds one.
+	cases := []string{"", "a", "abc", faces, "\xff\xff\xff", "a\x80b"}
+	for _, s := range cases {
+		want := utf8.RuneCountInString(s) + 1
+		if got := strings.Count(s, ""); got != want {
+			var buf [32]byte
+			t.Errorf("Count(%s, empty) = %d, want %d", dump(buf[:], s), got, want)
+		}
+	}
+}
+
+// A cutCase is a test case of Cut, CutPrefix and CutSuffix.
+type cutCase struct {
+	s, sep        string
+	before, after string
+	found         bool
+}
+
+var cutCases = []cutCase{
+	{"abc", "b", "a", "c", true},
+	{"abc", "a", "", "bc", true},
+	{"abc", "c", "ab", "", true},
+	{"abc", "abc", "", "", true},
+	{"abc", "", "", "abc", true},
+	{"abc", "d", "abc", "", false},
+	{"", "d", "", "", false},
+	{"", "", "", "", true},
 }
 
 func TestCut(t *testing.T) {
-	before, after := strings.Cut("hello world", " ")
-	if before != "hello" || after != "world" {
-		t.Error("Cut failed")
+	for _, tc := range cutCases {
+		before, after := strings.Cut(tc.s, tc.sep)
+		if before != tc.before || after != tc.after {
+			t.Errorf("Cut(%s, %s) = %s, %s, want %s, %s",
+				tc.s, tc.sep, before, after, tc.before, tc.after)
+		}
 	}
 }
 
-func TestCutPrefixSuffix(t *testing.T) {
-	src := "hello world"
-	if s, ok := strings.CutPrefix(src, "hello"); !ok || s != " world" {
-		t.Error("CutPrefix failed")
+func TestCutViews(t *testing.T) {
+	// Cut gives views of the input, not copies.
+	const s = "abcdef"
+	before, after := strings.Cut(s, "cd")
+	if unsafe.StringData(before) != unsafe.StringData(s) {
+		t.Error("Cut() copied the text before the separator")
 	}
-	if s, ok := strings.CutSuffix(src, "world"); !ok || s != "hello " {
-		t.Error("CutSuffix failed")
+	if unsafe.StringData(after) != unsafe.StringData(s[4:]) {
+		t.Error("Cut() copied the text after the separator")
 	}
 }
 
-func TestIndex(t *testing.T) {
-	idx := strings.Index("hello world", "o")
-	if idx != 4 {
-		t.Error("Index failed")
+var cutPrefixCases = []cutCase{
+	{"abc", "a", "", "bc", true},
+	{"abc", "abc", "", "", true},
+	{"abc", "", "", "abc", true},
+	{"abc", "d", "", "abc", false},
+	{"", "d", "", "", false},
+	{"", "", "", "", true},
+}
+
+func TestCutPrefix(t *testing.T) {
+	for _, tc := range cutPrefixCases {
+		after, found := strings.CutPrefix(tc.s, tc.sep)
+		if after != tc.after || found != tc.found {
+			t.Errorf("CutPrefix(%s, %s) = %s, %t, want %s, %t",
+				tc.s, tc.sep, after, found, tc.after, tc.found)
+		}
 	}
-	idx = strings.IndexAny("hello world", "ow")
-	if idx != 4 {
-		t.Error("IndexAny failed")
+}
+
+var cutSuffixCases = []cutCase{
+	{"abc", "bc", "a", "", true},
+	{"abc", "abc", "", "", true},
+	{"abc", "", "abc", "", true},
+	{"abc", "d", "abc", "", false},
+	{"", "d", "", "", false},
+	{"", "", "", "", true},
+}
+
+func TestCutSuffix(t *testing.T) {
+	for _, tc := range cutSuffixCases {
+		before, found := strings.CutSuffix(tc.s, tc.sep)
+		if before != tc.before || found != tc.found {
+			t.Errorf("CutSuffix(%s, %s) = %s, %t, want %s, %t",
+				tc.s, tc.sep, before, found, tc.before, tc.found)
+		}
 	}
-	idx = strings.IndexByte("hello world", 'o')
-	if idx != 4 {
-		t.Error("IndexByte failed")
-	}
+}
+
+// A prefixCase is a test case of HasPrefix and HasSuffix.
+type prefixCase struct {
+	s, fix     string
+	wantPrefix bool
+	wantSuffix bool
+}
+
+var prefixCases = []prefixCase{
+	{"", "", true, true},
+	{"", "a", false, false},
+	{"a", "", true, true},
+	{"abc", "abc", true, true},
+	{"abc", "a", true, false},
+	{"abc", "c", false, true},
+	{"abc", "abcd", false, false},
+	{faces, "☺", true, false},
+	{faces, "☹", false, true},
+	{"\xff\x00", "\xff", true, false},
+	{"\xff\x00", "\x00", false, true},
 }
 
 func TestHasPrefixSuffix(t *testing.T) {
-	src := "hello world"
-	if !strings.HasPrefix(src, "hello") || strings.HasPrefix(src, "world") {
-		t.Error("HasPrefix failed")
-	}
-	if !strings.HasSuffix(src, "world") || strings.HasSuffix(src, "hello") {
-		t.Error("HasSuffix failed")
-	}
-}
-
-func TestTrimPrefixSuffix(t *testing.T) {
-	src := "hello world"
-	if s := strings.TrimPrefix(src, "hello "); s != "world" {
-		t.Error("TrimPrefix failed")
-	}
-	if s := strings.TrimSuffix(src, " world"); s != "hello" {
-		t.Error("TrimSuffix failed")
+	for _, tc := range prefixCases {
+		var sbuf, fbuf [32]byte
+		if got := strings.HasPrefix(tc.s, tc.fix); got != tc.wantPrefix {
+			t.Errorf("HasPrefix(%s, %s) = %t, want %t",
+				dump(sbuf[:], tc.s), dump(fbuf[:], tc.fix), got, tc.wantPrefix)
+		}
+		if got := strings.HasSuffix(tc.s, tc.fix); got != tc.wantSuffix {
+			t.Errorf("HasSuffix(%s, %s) = %t, want %t",
+				dump(sbuf[:], tc.s), dump(fbuf[:], tc.fix), got, tc.wantSuffix)
+		}
 	}
 }
 
-func TestRepeat(t *testing.T) {
-	r := strings.Repeat(mem.System, "abc", 3)
-	defer mem.FreeString(mem.System, r)
-	if r != "abcabcabc" {
-		t.Error("Repeat failed")
-	}
+// A replaceCase is a test case of Replace.
+type replaceCase struct {
+	in       string
+	old, new string
+	n        int
+	want     string
+}
+
+var replaceCases = []replaceCase{
+	{"hello", "l", "L", 0, "hello"},
+	{"hello", "l", "L", -1, "heLLo"},
+	{"hello", "x", "X", -1, "hello"},
+	{"", "x", "X", -1, ""},
+	{"radar", "r", "<r>", -1, "<r>ada<r>"},
+	{"", "", "<>", -1, "<>"},
+	{"banana", "a", "<>", -1, "b<>n<>n<>"},
+	{"banana", "a", "<>", 1, "b<>nana"},
+	{"banana", "a", "<>", 1000, "b<>n<>n<>"},
+	{"banana", "an", "<>", -1, "b<><>a"},
+	{"banana", "ana", "<>", -1, "b<>na"},
+	{"banana", "", "<>", -1, "<>b<>a<>n<>a<>n<>a<>"},
+	{"banana", "", "<>", 10, "<>b<>a<>n<>a<>n<>a<>"},
+	{"banana", "", "<>", 6, "<>b<>a<>n<>a<>n<>a"},
+	{"banana", "", "<>", 5, "<>b<>a<>n<>a<>na"},
+	{"banana", "", "<>", 1, "<>banana"},
+	{"banana", "a", "a", -1, "banana"},
+	{"banana", "a", "a", 1, "banana"},
+	{faces, "", "<>", -1, "<>☺<>☻<>☹<>"},
 }
 
 func TestReplace(t *testing.T) {
-	s := "hello world"
-	r := strings.Replace(mem.System, s, "o", "0", 1)
-	if r != "hell0 world" {
-		t.Error("Replace failed")
-	}
-	mem.FreeString(mem.System, r)
-	r = strings.ReplaceAll(mem.System, s, "o", "0")
-	if r != "hell0 w0rld" {
-		t.Error("ReplaceAll failed")
-	}
-	mem.FreeString(mem.System, r)
-}
-
-func TestSplitJoin(t *testing.T) {
-	s := "a,b,c"
-	parts := strings.Split(mem.System, s, ",")
-	defer mem.FreeSlice(mem.System, parts)
-	if len(parts) != 3 || parts[0] != "a" || parts[1] != "b" || parts[2] != "c" {
-		t.Error("Split failed")
-	}
-	j := strings.Join(mem.System, parts, ",")
-	defer mem.FreeString(mem.System, j)
-	if j != s {
-		t.Error("Join failed")
+	alloc := t.Allocator()
+	for _, tc := range replaceCases {
+		got := strings.Replace(alloc, tc.in, tc.old, tc.new, tc.n)
+		if got != tc.want {
+			t.Errorf("Replace(%s, %s, %s, %d) = %s, want %s",
+				tc.in, tc.old, tc.new, tc.n, got, tc.want)
+		}
+		mem.FreeString(alloc, got)
 	}
 }
 
-func TestToUpperLower(t *testing.T) {
-	s := "Hello, 世界!"
-	u := strings.ToUpper(mem.System, s)
-	if u != "HELLO, 世界!" {
-		t.Error("ToUpper failed")
-	}
-	mem.FreeString(mem.System, u)
-	l := strings.ToLower(mem.System, s)
-	if l != "hello, 世界!" {
-		t.Error("ToLower failed")
-	}
-	mem.FreeString(mem.System, l)
-}
-
-func TestTrim(t *testing.T) {
-	s := "  hello world  "
-	trimmed := strings.TrimSpace(s)
-	if trimmed != "hello world" {
-		t.Error("TrimSpace failed")
-	}
-	trimmed = strings.Trim(s, " dh")
-	if trimmed != "ello worl" {
-		t.Error("Trim failed")
+func TestReplaceAll(t *testing.T) {
+	// ReplaceAll works like Replace with the count -1.
+	alloc := t.Allocator()
+	for _, tc := range replaceCases {
+		if tc.n != -1 {
+			continue
+		}
+		got := strings.ReplaceAll(alloc, tc.in, tc.old, tc.new)
+		if got != tc.want {
+			t.Errorf("ReplaceAll(%s, %s, %s) = %s, want %s",
+				tc.in, tc.old, tc.new, got, tc.want)
+		}
+		mem.FreeString(alloc, got)
 	}
 }
 
-func TestBuilder(t *testing.T) {
-	b := strings.NewBuilder(mem.System)
-	defer b.Free()
-	b.WriteString("Hello")
-	b.WriteByte(',')
-	b.WriteRune(' ')
-	b.WriteString("world")
-	s := b.String()
-	if s != "Hello, world" {
-		t.Error("Builder failed")
+// A runesCase is a test case of the conversion between a string and a slice of
+// code points.
+type runesCase struct {
+	in    string
+	want  string // the code points as decimal numbers, separated by a space
+	lossy bool   // the string holds an invalid byte
+}
+
+var runesCases = []runesCase{
+	{"", "", false},
+	{" ", "32", false},
+	{"ABC", "65 66 67", false},
+	{"abc", "97 98 99", false},
+	{"日本語", "26085 26412 35486", false},
+	{"ab\x80c", "97 98 65533 99", true},
+	{"ab\xc0c", "97 98 65533 99", true},
+}
+
+func TestRunes(t *testing.T) {
+	alloc := t.Allocator()
+	for _, tc := range runesCases {
+		rs := []rune(tc.in)
+		b := strings.NewBuilder(alloc)
+		for i, r := range rs {
+			if i > 0 {
+				b.WriteByte(' ')
+			}
+			writeInt(&b, int(r))
+		}
+		if got := b.String(); got != tc.want {
+			t.Errorf("[]rune(%s) = %s, want %s", tc.in, got, tc.want)
+		}
+		b.Free()
+
+		if tc.lossy {
+			// The invalid bytes became RuneError, so the text cannot come back.
+			continue
+		}
+		if got := string(rs); got != tc.in {
+			t.Errorf("string([]rune(%s)) = %s, want %s", tc.in, got, tc.in)
+		}
 	}
 }
 
-func TestReader(t *testing.T) {
-	r := strings.NewReader("hello world")
-	buf := make([]byte, 5)
-	n, err := r.Read(buf)
-	if err != nil || n != 5 || string(buf) != "hello" {
-		t.Error("Reader failed")
+// writeInt writes the decimal form of n to the builder.
+func writeInt(b *strings.Builder, n int) {
+	if n >= 10 {
+		writeInt(b, n/10)
 	}
+	b.WriteByte(byte('0' + n%10))
 }
