@@ -3,15 +3,141 @@ package net_test
 import (
 	"solod.dev/so/io"
 	"solod.dev/so/net"
+	"solod.dev/so/net/netip"
 	"solod.dev/so/testing"
 	"solod.dev/so/time"
 )
 
-func TestTCP_ResolveNamedPort(t *testing.T) {
-	// A named port resolves via the services database (no DNS for the host).
-	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:http")
-	if err != nil || addr.Port != 80 {
-		t.Error("failed to resolve named port")
+// The ResolveTCPAddr cases that need no name resolution: an IP literal host or
+// an empty host, with a numeric port or a service name.
+var tcpResolveCases = []resolveCase{
+	// An IP literal needs no DNS. The bare network takes both families.
+	{network: "tcp", address: "127.0.0.1:80", port: 80},
+	{network: "tcp4", address: "127.0.0.1:80", port: 80},
+	{network: "tcp", address: "[::1]:80", port: 80},
+	{network: "tcp6", address: "[::1]:80", port: 80},
+
+	// A named port resolves via the services database.
+	{network: "tcp", address: "127.0.0.1:http", port: 80},
+
+	// An empty host gives the unspecified address of the family.
+	{network: "tcp", address: ":80", port: 80},
+
+	// The port limits. An empty port means port 0.
+	{network: "tcp", address: "127.0.0.1:", port: 0},
+	{network: "tcp", address: "127.0.0.1:0", port: 0},
+	{network: "tcp", address: "127.0.0.1:65535", port: 65535},
+
+	// An unknown network.
+	{network: "udp", address: "127.0.0.1:80", err: errUnknownNetwork},
+	{network: "tcp5", address: "127.0.0.1:80", err: errUnknownNetwork},
+	{network: "tcpx", address: "127.0.0.1:80", err: errUnknownNetwork},
+	{network: "tcp44", address: "127.0.0.1:80", err: errUnknownNetwork},
+	{network: "TCP", address: "127.0.0.1:80", err: errUnknownNetwork},
+	{network: "tc", address: "127.0.0.1:80", err: errUnknownNetwork},
+	{network: "", address: "127.0.0.1:80", err: errUnknownNetwork},
+
+	// A bad address text. The error comes from SplitHostPort.
+	{network: "tcp", address: "127.0.0.1", err: errMissingPort},
+	{network: "tcp", address: "::1", err: errTooManyColons},
+
+	// A bad port.
+	{network: "tcp", address: "127.0.0.1:65536", err: errInvalidPort},
+	{network: "tcp", address: "127.0.0.1:99999", err: errInvalidPort},
+	{network: "tcp", address: "127.0.0.1:-1", err: errInvalidPort},
+	{network: "tcp", address: "127.0.0.1:nosuchservice", err: errInvalidPort},
+
+	// An IP literal must match the family of the network.
+	{network: "tcp4", address: "[::1]:80", err: errNoSuitableAddr},
+	{network: "tcp6", address: "127.0.0.1:80", err: errNoSuitableAddr},
+}
+
+func TestTCP_Resolve(t *testing.T) {
+	for _, tt := range tcpResolveCases {
+		addr, err := net.ResolveTCPAddr(tt.network, tt.address)
+		if errCode(err) != tt.err {
+			t.Errorf("ResolveTCPAddr(%s, %s) error = %s, want %s",
+				tt.network, tt.address, errName(errCode(err)), errName(tt.err))
+			continue
+		}
+		if err != nil {
+			if addr.IP.IsValid() || addr.Port != 0 {
+				t.Errorf("ResolveTCPAddr(%s, %s) gives an address on failure",
+					tt.network, tt.address)
+			}
+			continue
+		}
+		if addr.Port != tt.port {
+			t.Errorf("ResolveTCPAddr(%s, %s) port = %d, want %d",
+				tt.network, tt.address, addr.Port, tt.port)
+		}
+	}
+}
+
+func TestTCP_ResolveLiteral(t *testing.T) {
+	// An IP literal is parsed directly, without the resolver.
+	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:80")
+	if err != nil {
+		t.Fatal(err.Error())
+		return
+	}
+	if !addr.IP.Is4() || !addr.IP.Equal(netip.MustParseAddr("127.0.0.1")) {
+		t.Error("unexpected IPv4 literal address")
+	}
+
+	addr, err = net.ResolveTCPAddr("tcp", "[::1]:80")
+	if err != nil {
+		t.Fatal(err.Error())
+		return
+	}
+	if !addr.IP.Is6() || !addr.IP.Equal(netip.MustParseAddr("::1")) {
+		t.Error("unexpected IPv6 literal address")
+	}
+}
+
+func TestTCP_ResolveEmptyHost(t *testing.T) {
+	// An empty host gives the unspecified address of the network's family.
+	addr, err := net.ResolveTCPAddr("tcp", ":80")
+	if err != nil {
+		t.Fatal(err.Error())
+		return
+	}
+	if !addr.IP.IsUnspecified() || !addr.IP.Is4() {
+		t.Error("tcp with an empty host should give 0.0.0.0")
+	}
+
+	addr, err = net.ResolveTCPAddr("tcp6", ":80")
+	if err != nil {
+		t.Fatal(err.Error())
+		return
+	}
+	if !addr.IP.IsUnspecified() || !addr.IP.Is6() {
+		t.Error("tcp6 with an empty host should give ::")
+	}
+}
+
+func TestTCP_AddrText(t *testing.T) {
+	var buf [netip.MaxAddrPortLen]byte
+
+	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:80")
+	if err != nil {
+		t.Fatal(err.Error())
+		return
+	}
+	if addr.Network() != "tcp" {
+		t.Error("unexpected TCPAddr network")
+	}
+	if addr.String(buf[:]) != "127.0.0.1:80" {
+		t.Error("unexpected TCPAddr text for an IPv4 address")
+	}
+
+	addr, err = net.ResolveTCPAddr("tcp", "[::1]:80")
+	if err != nil {
+		t.Fatal(err.Error())
+		return
+	}
+	if addr.String(buf[:]) != "[::1]:80" {
+		t.Error("unexpected TCPAddr text for an IPv6 address")
 	}
 }
 
@@ -28,17 +154,6 @@ func TestTCP_ResolveHostname(t *testing.T) {
 	}
 	if !addr.IP.IsLoopback() {
 		t.Error("localhost should resolve to a loopback address")
-	}
-}
-
-func TestTCP_ResolveFamilyMismatch(t *testing.T) {
-	// An IP literal must match the network's family: "tcp4" rejects an IPv6
-	// literal, "tcp6" an IPv4 one.
-	if _, err := net.ResolveTCPAddr("tcp4", "[::1]:80"); err != net.ErrNoSuitableAddr {
-		t.Error("tcp4 should reject an IPv6 literal")
-	}
-	if _, err := net.ResolveTCPAddr("tcp6", "127.0.0.1:80"); err != net.ErrNoSuitableAddr {
-		t.Error("tcp6 should reject an IPv4 literal")
 	}
 }
 

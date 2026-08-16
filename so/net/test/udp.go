@@ -2,20 +2,106 @@ package net_test
 
 import (
 	"solod.dev/so/net"
+	"solod.dev/so/net/netip"
 	"solod.dev/so/testing"
 	"solod.dev/so/time"
 )
 
-func TestUDP_ResolveAddr(t *testing.T) {
-	// A named port resolves via the udp services database (no DNS for the host).
-	addr, err := net.ResolveUDPAddr("udp", "127.0.0.1:domain")
-	if err != nil || addr.Port != 53 {
-		t.Error("failed to resolve named UDP port")
+// The ResolveUDPAddr cases that need no name resolution. They mirror
+// tcpResolveCases, over the udp networks and the udp services database.
+var udpResolveCases = []resolveCase{
+	// An IP literal needs no DNS. The bare network takes both families.
+	{network: "udp", address: "127.0.0.1:53", port: 53},
+	{network: "udp4", address: "127.0.0.1:53", port: 53},
+	{network: "udp", address: "[::1]:53", port: 53},
+	{network: "udp6", address: "[::1]:53", port: 53},
+
+	// A named port resolves via the services database.
+	{network: "udp", address: "127.0.0.1:domain", port: 53},
+
+	// An empty host gives the unspecified address of the family.
+	{network: "udp", address: ":53", port: 53},
+
+	// The port limits. An empty port means port 0.
+	{network: "udp", address: "127.0.0.1:", port: 0},
+	{network: "udp", address: "127.0.0.1:0", port: 0},
+	{network: "udp", address: "127.0.0.1:65535", port: 65535},
+
+	// An unknown network.
+	{network: "tcp", address: "127.0.0.1:53", err: errUnknownNetwork},
+	{network: "udp5", address: "127.0.0.1:53", err: errUnknownNetwork},
+	{network: "udpx", address: "127.0.0.1:53", err: errUnknownNetwork},
+	{network: "udp44", address: "127.0.0.1:53", err: errUnknownNetwork},
+	{network: "UDP", address: "127.0.0.1:53", err: errUnknownNetwork},
+	{network: "ud", address: "127.0.0.1:53", err: errUnknownNetwork},
+	{network: "", address: "127.0.0.1:53", err: errUnknownNetwork},
+
+	// A bad address text. The error comes from SplitHostPort.
+	{network: "udp", address: "127.0.0.1", err: errMissingPort},
+	{network: "udp", address: "::1", err: errTooManyColons},
+
+	// A bad port.
+	{network: "udp", address: "127.0.0.1:65536", err: errInvalidPort},
+	{network: "udp", address: "127.0.0.1:99999", err: errInvalidPort},
+	{network: "udp", address: "127.0.0.1:-1", err: errInvalidPort},
+	{network: "udp", address: "127.0.0.1:nosuchservice", err: errInvalidPort},
+
+	// An IP literal must match the family of the network.
+	{network: "udp4", address: "[::1]:53", err: errNoSuitableAddr},
+	{network: "udp6", address: "127.0.0.1:53", err: errNoSuitableAddr},
+}
+
+func TestUDP_Resolve(t *testing.T) {
+	for _, tt := range udpResolveCases {
+		addr, err := net.ResolveUDPAddr(tt.network, tt.address)
+		if errCode(err) != tt.err {
+			t.Errorf("ResolveUDPAddr(%s, %s) error = %s, want %s",
+				tt.network, tt.address, errName(errCode(err)), errName(tt.err))
+			continue
+		}
+		if err != nil {
+			if addr.IP.IsValid() || addr.Port != 0 {
+				t.Errorf("ResolveUDPAddr(%s, %s) gives an address on failure",
+					tt.network, tt.address)
+			}
+			continue
+		}
+		if addr.Port != tt.port {
+			t.Errorf("ResolveUDPAddr(%s, %s) port = %d, want %d",
+				tt.network, tt.address, addr.Port, tt.port)
+		}
+	}
+}
+
+func TestUDP_AddrText(t *testing.T) {
+	var buf [netip.MaxAddrPortLen]byte
+
+	addr, err := net.ResolveUDPAddr("udp", "127.0.0.1:53")
+	if err != nil {
+		t.Fatal(err.Error())
+		return
+	}
+	if addr.Network() != "udp" {
+		t.Error("unexpected UDPAddr network")
+	}
+	if addr.String(buf[:]) != "127.0.0.1:53" {
+		t.Error("unexpected UDPAddr text for an IPv4 address")
 	}
 
+	addr, err = net.ResolveUDPAddr("udp", "[::1]:53")
+	if err != nil {
+		t.Fatal(err.Error())
+		return
+	}
+	if addr.String(buf[:]) != "[::1]:53" {
+		t.Error("unexpected UDPAddr text for an IPv6 address")
+	}
+}
+
+func TestUDP_ResolveHostname(t *testing.T) {
 	// "localhost" resolves via getaddrinfo (the system resolver), without any
 	// external DNS. It must come back as a loopback address.
-	addr, err = net.ResolveUDPAddr("udp", "localhost:53")
+	addr, err := net.ResolveUDPAddr("udp", "localhost:53")
 	if err != nil {
 		t.Fatal(err.Error())
 		return
