@@ -5,10 +5,15 @@
 
 #else
 
+// float.h defines NAN, and another package can include it.
+#ifndef NAN
 #define NAN (0.0 / 0.0)
+#endif
+
 static inline int isalpha(int ch) {
     return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z');
 }
+
 static inline double sqrt(double x) {
     if (x < 0) return NAN;
     if (x == 0) return 0;

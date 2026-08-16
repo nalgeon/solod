@@ -7,15 +7,11 @@ package bytes
 // Simple byte buffer for marshaling data.
 
 import (
-	"solod.dev/so/errors"
 	"solod.dev/so/io"
 	"solod.dev/so/mem"
 	"solod.dev/so/slices"
 	"solod.dev/so/unicode/utf8"
 )
-
-// ErrNegativeGrow means that a Buffer.Grow call was given a negative count.
-var ErrNegativeGrow = errors.New("bytes: negative grow")
 
 // MinRead is the minimum slice size passed to a [Buffer.Read] call by
 // [Buffer.ReadFrom]. As long as the [Buffer] has at least MinRead bytes beyond

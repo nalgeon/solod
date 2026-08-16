@@ -22,7 +22,7 @@ type RuneFunc func(rune) rune
 // The returned slice is allocated; the caller owns it.
 func ToLower(a mem.Allocator, s []byte) []byte {
 	isASCII, hasUpper := true, false
-	for i := 0; i < len(s); i++ {
+	for i := range s {
 		c := s[i]
 		if c >= utf8.RuneSelf {
 			isASCII = false
@@ -36,7 +36,7 @@ func ToLower(a mem.Allocator, s []byte) []byte {
 			return slices.Clone(a, s)
 		}
 		b := mem.AllocSlice[byte](a, len(s), len(s))
-		for i := 0; i < len(s); i++ {
+		for i := range s {
 			c := s[i]
 			if 'A' <= c && c <= 'Z' {
 				c += 'a' - 'A'
@@ -55,7 +55,7 @@ func ToLower(a mem.Allocator, s []byte) []byte {
 // The returned slice is allocated; the caller owns it.
 func ToUpper(a mem.Allocator, s []byte) []byte {
 	isASCII, hasLower := true, false
-	for i := 0; i < len(s); i++ {
+	for i := range s {
 		c := s[i]
 		if c >= utf8.RuneSelf {
 			isASCII = false
@@ -70,7 +70,7 @@ func ToUpper(a mem.Allocator, s []byte) []byte {
 			return slices.Clone(a, s)
 		}
 		b := mem.AllocSlice[byte](a, len(s), len(s))
-		for i := 0; i < len(s); i++ {
+		for i := range s {
 			c := s[i]
 			if 'a' <= c && c <= 'z' {
 				c -= 'a' - 'A'

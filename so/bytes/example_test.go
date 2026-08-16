@@ -1,13 +1,10 @@
 package bytes_test
 
 import (
-	"encoding/base64"
 	"os"
-	"slices"
 
 	"solod.dev/so/bytes"
 	"solod.dev/so/fmt"
-	"solod.dev/so/io"
 	"solod.dev/so/unicode"
 )
 
@@ -17,14 +14,6 @@ func ExampleBuffer() {
 	fmt.Fprintf(&b, "world!")
 	b.WriteTo(os.Stdout)
 	// Output: Hello world!
-}
-
-func ExampleBuffer_reader() {
-	// A Buffer can turn a string or a []byte into an io.Reader.
-	buf := bytes.NewBufferString(nil, "R29waGVycyBydWxlIQ==")
-	dec := base64.NewDecoder(base64.StdEncoding, &buf)
-	io.Copy(os.Stdout, dec)
-	// Output: Gophers rule!
 }
 
 func ExampleBuffer_Bytes() {
@@ -142,16 +131,6 @@ func ExampleCompare() {
 	}
 	if !bytes.Equal(a, b) {
 		// a not equal b
-	}
-}
-
-func ExampleCompare_search() {
-	// Binary search to find a matching byte slice.
-	var needle []byte
-	var haystack [][]byte // Assume sorted
-	_, found := slices.BinarySearchFunc(haystack, needle, bytes.Compare)
-	if found {
-		// Found it!
 	}
 }
 

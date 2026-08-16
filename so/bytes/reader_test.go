@@ -2,108 +2,18 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package bytes_test
+package bytes
 
 import (
 	"sync"
 	"testing"
-
-	. "solod.dev/so/bytes"
-	"solod.dev/so/io"
 )
 
-func TestReader(t *testing.T) {
-	r := NewReader([]byte("0123456789"))
-	tests := []struct {
-		off     int64
-		seek    int
-		n       int
-		want    string
-		wantpos int64
-		readerr error
-		seekerr string
-	}{
-		{seek: io.SeekStart, off: 0, n: 20, want: "0123456789"},
-		{seek: io.SeekStart, off: 1, n: 1, want: "1"},
-		{seek: io.SeekCurrent, off: 1, wantpos: 3, n: 2, want: "34"},
-		{seek: io.SeekStart, off: -1, seekerr: io.ErrOffset.Error()},
-		{seek: io.SeekStart, off: 1 << 33, wantpos: 1 << 33, readerr: io.EOF},
-		{seek: io.SeekCurrent, off: 1, wantpos: 1<<33 + 1, readerr: io.EOF},
-		{seek: io.SeekStart, n: 5, want: "01234"},
-		{seek: io.SeekCurrent, n: 5, want: "56789"},
-		{seek: io.SeekEnd, off: -1, n: 1, wantpos: 9, want: "9"},
-	}
-
-	for i, tt := range tests {
-		pos, err := r.Seek(tt.off, tt.seek)
-		if err == nil && tt.seekerr != "" {
-			t.Errorf("%d. want seek error %q", i, tt.seekerr)
-			continue
-		}
-		if err != nil && err.Error() != tt.seekerr {
-			t.Errorf("%d. seek error = %q; want %q", i, err.Error(), tt.seekerr)
-			continue
-		}
-		if tt.wantpos != 0 && tt.wantpos != pos {
-			t.Errorf("%d. pos = %d, want %d", i, pos, tt.wantpos)
-		}
-		buf := make([]byte, tt.n)
-		n, err := r.Read(buf)
-		if err != tt.readerr {
-			t.Errorf("%d. read = %v; want %v", i, err, tt.readerr)
-			continue
-		}
-		got := string(buf[:n])
-		if got != tt.want {
-			t.Errorf("%d. got %q; want %q", i, got, tt.want)
-		}
-	}
-}
-
-func TestReadAfterBigSeek(t *testing.T) {
-	r := NewReader([]byte("0123456789"))
-	if _, err := r.Seek(1<<31+5, io.SeekStart); err != nil {
-		t.Fatal(err)
-	}
-	if n, err := r.Read(make([]byte, 10)); n != 0 || err != io.EOF {
-		t.Errorf("Read = %d, %v; want 0, EOF", n, err)
-	}
-}
-
-func TestReaderAt(t *testing.T) {
-	r := NewReader([]byte("0123456789"))
-	tests := []struct {
-		off     int64
-		n       int
-		want    string
-		wanterr error
-	}{
-		{0, 10, "0123456789", nil},
-		{1, 10, "123456789", io.EOF},
-		{1, 9, "123456789", nil},
-		{11, 10, "", io.EOF},
-		{0, 0, "", nil},
-		{-1, 0, "", io.ErrOffset},
-	}
-	for i, tt := range tests {
-		b := make([]byte, tt.n)
-		rn, err := r.ReadAt(b, tt.off)
-		got := string(b[:rn])
-		if got != tt.want {
-			t.Errorf("%d. got %q; want %q", i, got, tt.want)
-		}
-		if err != nil && err.Error() != tt.wanterr.Error() {
-			t.Errorf("%d. got error = %v; want %v", i, err, tt.wanterr)
-		}
-	}
-}
-
 func TestReaderAtConcurrent(t *testing.T) {
-	// Test for the race detector, to verify ReadAt doesn't mutate
-	// any state.
+	// A test for the race detector: ReadAt must change no state.
 	r := NewReader([]byte("0123456789"))
 	var wg sync.WaitGroup
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -115,12 +25,11 @@ func TestReaderAtConcurrent(t *testing.T) {
 }
 
 func TestEmptyReaderConcurrent(t *testing.T) {
-	// Test for the race detector, to verify a Read that doesn't yield any bytes
-	// is okay to use from multiple goroutines. This was our historic behavior.
-	// See golang.org/issue/7856
+	// A test for the race detector: a Read that gives no bytes is safe from
+	// several goroutines.
 	r := NewReader([]byte{})
 	var wg sync.WaitGroup
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		wg.Add(2)
 		go func() {
 			defer wg.Done()
@@ -133,172 +42,4 @@ func TestEmptyReaderConcurrent(t *testing.T) {
 		}()
 	}
 	wg.Wait()
-}
-
-func TestReaderWriteTo(t *testing.T) {
-	for i := 0; i < 30; i += 3 {
-		var l int
-		if i > 0 {
-			l = len(testString) / i
-		}
-		s := testString[:l]
-		r := NewReader(testBytes[:l])
-		var b Buffer
-		n, err := r.WriteTo(&b)
-		if expect := int64(len(s)); n != expect {
-			t.Errorf("got %v; want %v", n, expect)
-		}
-		if err != nil {
-			t.Errorf("for length %d: got error = %v; want nil", l, err)
-		}
-		if b.String() != s {
-			t.Errorf("got string %q; want %q", b.String(), s)
-		}
-		if r.Len() != 0 {
-			t.Errorf("reader contains %v bytes; want 0", r.Len())
-		}
-	}
-}
-
-func TestReaderLen(t *testing.T) {
-	const data = "hello world"
-	r := NewReader([]byte(data))
-	if got, want := r.Len(), 11; got != want {
-		t.Errorf("r.Len(): got %d, want %d", got, want)
-	}
-	if n, err := r.Read(make([]byte, 10)); err != nil || n != 10 {
-		t.Errorf("Read failed: read %d %v", n, err)
-	}
-	if got, want := r.Len(), 1; got != want {
-		t.Errorf("r.Len(): got %d, want %d", got, want)
-	}
-	if n, err := r.Read(make([]byte, 1)); err != nil || n != 1 {
-		t.Errorf("Read failed: read %d %v; want 1, nil", n, err)
-	}
-	if got, want := r.Len(), 0; got != want {
-		t.Errorf("r.Len(): got %d, want %d", got, want)
-	}
-}
-
-func TestUnreadRuneError(t *testing.T) {
-	var tests = []struct {
-		name string
-		f    func(*Reader)
-	}{
-		{"Read", func(r *Reader) { r.Read([]byte{0}) }},
-		{"ReadByte", func(r *Reader) { r.ReadByte() }},
-		{"UnreadRune", func(r *Reader) { r.UnreadRune() }},
-		{"Seek", func(r *Reader) { r.Seek(0, io.SeekCurrent) }},
-		{"WriteTo", func(r *Reader) { r.WriteTo(&Buffer{}) }},
-	}
-	for _, tt := range tests {
-		reader := NewReader([]byte("0123456789"))
-		if res := reader.ReadRune(); res.Err != nil {
-			// should not happen
-			t.Fatal(res.Err)
-		}
-		tt.f(&reader)
-		err := reader.UnreadRune()
-		if err == nil {
-			t.Errorf("Unreading after %s: expected error", tt.name)
-		}
-	}
-}
-
-// verify that copying from an empty reader always has the same results,
-// regardless of the presence of a WriteTo method.
-func TestReaderCopyNothing(t *testing.T) {
-	type nErr struct {
-		n   int64
-		err error
-	}
-	type justReader struct {
-		io.Reader
-	}
-	type justWriter struct {
-		io.Writer
-	}
-	discard := justWriter{io.Discard} // hide ReadFrom
-
-	var with, withOut nErr
-	r := NewReader(nil)
-	with.n, with.err = io.Copy(discard, &r)
-	withOut.n, withOut.err = io.Copy(discard, justReader{&r})
-	if with != withOut {
-		t.Errorf("behavior differs: with = %#v; without: %#v", with, withOut)
-	}
-}
-
-// tests that Len is affected by reads, but Size is not.
-func TestReaderLenSize(t *testing.T) {
-	r := NewReader([]byte("abc"))
-	io.CopyN(io.Discard, &r, 1)
-	if r.Len() != 2 {
-		t.Errorf("Len = %d; want 2", r.Len())
-	}
-	if r.Size() != 3 {
-		t.Errorf("Size = %d; want 3", r.Size())
-	}
-}
-
-func TestReaderReset(t *testing.T) {
-	r := NewReader([]byte("世界"))
-	if res := r.ReadRune(); res.Err != nil {
-		t.Errorf("ReadRune: unexpected error: %v", res.Err)
-	}
-
-	const want = "abcdef"
-	r.Reset([]byte(want))
-	if err := r.UnreadRune(); err == nil {
-		t.Errorf("UnreadRune: expected error, got nil")
-	}
-	buf, err := io.ReadAll(nil, &r)
-	if err != nil {
-		t.Errorf("ReadAll: unexpected error: %v", err)
-	}
-	if got := string(buf); got != want {
-		t.Errorf("ReadAll: got %q, want %q", got, want)
-	}
-}
-
-func TestReaderZero(t *testing.T) {
-	if l := (&Reader{}).Len(); l != 0 {
-		t.Errorf("Len: got %d, want 0", l)
-	}
-
-	if n, err := (&Reader{}).Read(nil); n != 0 || err != io.EOF {
-		t.Errorf("Read: got %d, %v; want 0, io.EOF", n, err)
-	}
-
-	if n, err := (&Reader{}).ReadAt(nil, 11); n != 0 || err != io.EOF {
-		t.Errorf("ReadAt: got %d, %v; want 0, io.EOF", n, err)
-	}
-
-	if b, err := (&Reader{}).ReadByte(); b != 0 || err != io.EOF {
-		t.Errorf("ReadByte: got %d, %v; want 0, io.EOF", b, err)
-	}
-
-	if res := (&Reader{}).ReadRune(); res.Rune != 0 || res.Size != 0 || res.Err != io.EOF {
-		t.Errorf("ReadRune: got %d, %d, %v; want 0, 0, io.EOF", res.Rune, res.Size, res.Err)
-	}
-
-	if offset, err := (&Reader{}).Seek(11, io.SeekStart); offset != 11 || err != nil {
-		t.Errorf("Seek: got %d, %v; want 11, nil", offset, err)
-	}
-
-	if s := (&Reader{}).Size(); s != 0 {
-		t.Errorf("Size: got %d, want 0", s)
-	}
-
-	if (&Reader{}).UnreadByte() == nil {
-		t.Errorf("UnreadByte: got nil, want error")
-	}
-
-	if (&Reader{}).UnreadRune() == nil {
-		t.Errorf("UnreadRune: got nil, want error")
-	}
-
-	if n, err := (&Reader{}).WriteTo(io.Discard); n != 0 || err != nil {
-		t.Errorf("WriteTo: got %d, %v; want 0, nil", n, err)
-	}
 }
