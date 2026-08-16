@@ -4,212 +4,82 @@
 
 package path
 
-import "testing"
+import (
+	gopath "path"
+	"testing"
 
-type PathTest struct {
-	path, result string
+	"solod.dev/so/mem"
+)
+
+// The paths of the fuzz corpus. They hold every element shape: a name, a dot
+// element, a parent element, an empty element, and a leading slash.
+var fuzzPaths = []string{
+	"",
+	".",
+	"..",
+	"/",
+	"//",
+	"abc",
+	"abc/def",
+	"/abc/",
+	"abc//def//ghi",
+	"abc/./def",
+	"abc/def/../ghi",
+	"abc/def/../../../ghi/jkl/../../../mno",
+	"a/../..",
+	"...",
+	".x/..y",
+	"a.dir/b.go",
+	"/usr/bin/gcc",
+	"\x00/\xff",
+	"日本語/ファイル.txt",
 }
 
-var cleantests = []PathTest{
-	// Already clean
-	{"", "."},
-	{"abc", "abc"},
-	{"abc/def", "abc/def"},
-	{"a/b/c", "a/b/c"},
-	{".", "."},
-	{"..", ".."},
-	{"../..", "../.."},
-	{"../../abc", "../../abc"},
-	{"/abc", "/abc"},
-	{"/", "/"},
-
-	// Remove trailing slash
-	{"abc/", "abc"},
-	{"abc/def/", "abc/def"},
-	{"a/b/c/", "a/b/c"},
-	{"./", "."},
-	{"../", ".."},
-	{"../../", "../.."},
-	{"/abc/", "/abc"},
-
-	// Remove doubled slash
-	{"abc//def//ghi", "abc/def/ghi"},
-	{"//abc", "/abc"},
-	{"///abc", "/abc"},
-	{"//abc//", "/abc"},
-	{"abc//", "abc"},
-
-	// Remove . elements
-	{"abc/./def", "abc/def"},
-	{"/./abc/def", "/abc/def"},
-	{"abc/.", "abc"},
-
-	// Remove .. elements
-	{"abc/def/ghi/../jkl", "abc/def/jkl"},
-	{"abc/def/../ghi/../jkl", "abc/jkl"},
-	{"abc/def/..", "abc"},
-	{"abc/def/../..", "."},
-	{"/abc/def/../..", "/"},
-	{"abc/def/../../..", ".."},
-	{"/abc/def/../../..", "/"},
-	{"abc/def/../../../ghi/jkl/../../../mno", "../../mno"},
-
-	// Combinations
-	{"abc/./../def", "def"},
-	{"abc//./../def", "def"},
-	{"abc/../../././../def", "../../def"},
-}
-
-func TestClean(t *testing.T) {
-	for _, test := range cleantests {
-		if s := Clean(nil, test.path); s != test.result {
-			t.Errorf("Clean(%q) = %q, want %q", test.path, s, test.result)
-		}
-		if s := Clean(nil, test.result); s != test.result {
-			t.Errorf("Clean(%q) = %q, want %q", test.result, s, test.result)
-		}
+func FuzzClean(f *testing.F) {
+	for _, p := range fuzzPaths {
+		f.Add(p)
 	}
-}
-
-type SplitTest struct {
-	path, dir, file string
-}
-
-var splittests = []SplitTest{
-	{"a/b", "a/", "b"},
-	{"a/b/", "a/b/", ""},
-	{"a/", "a/", ""},
-	{"a", "", "a"},
-	{"/", "/", ""},
-}
-
-func TestSplit(t *testing.T) {
-	for _, test := range splittests {
-		if d, f := Split(test.path); d != test.dir || f != test.file {
-			t.Errorf("Split(%q) = %q, %q, want %q, %q", test.path, d, f, test.dir, test.file)
+	f.Fuzz(func(t *testing.T, p string) {
+		clean := Clean(nil, p)
+		if want := gopath.Clean(p); clean != want {
+			t.Errorf("Clean(%q) = %q, want %q", p, clean, want)
 		}
-	}
-}
+		mem.FreeString(nil, clean)
 
-type JoinTest struct {
-	elem []string
-	path string
-}
-
-var jointests = []JoinTest{
-	// zero parameters
-	{[]string{}, ""},
-
-	// one parameter
-	{[]string{""}, ""},
-	{[]string{"a"}, "a"},
-
-	// two parameters
-	{[]string{"a", "b"}, "a/b"},
-	{[]string{"a", ""}, "a"},
-	{[]string{"", "b"}, "b"},
-	{[]string{"/", "a"}, "/a"},
-	{[]string{"/", ""}, "/"},
-	{[]string{"a/", "b"}, "a/b"},
-	{[]string{"a/", ""}, "a"},
-	{[]string{"", ""}, ""},
-}
-
-func TestJoin(t *testing.T) {
-	for _, test := range jointests {
-		if p := Join(nil, test.elem...); p != test.path {
-			t.Errorf("Join(%q) = %q, want %q", test.elem, p, test.path)
+		dir := Dir(nil, p)
+		if want := gopath.Dir(p); dir != want {
+			t.Errorf("Dir(%q) = %q, want %q", p, dir, want)
 		}
-	}
-}
+		mem.FreeString(nil, dir)
 
-type ExtTest struct {
-	path, ext string
-}
-
-var exttests = []ExtTest{
-	{"path.go", ".go"},
-	{"path.pb.go", ".go"},
-	{"a.dir/b", ""},
-	{"a.dir/b.go", ".go"},
-	{"a.dir/", ""},
-}
-
-func TestExt(t *testing.T) {
-	for _, test := range exttests {
-		if x := Ext(test.path); x != test.ext {
-			t.Errorf("Ext(%q) = %q, want %q", test.path, x, test.ext)
+		if got, want := Base(p), gopath.Base(p); got != want {
+			t.Errorf("Base(%q) = %q, want %q", p, got, want)
 		}
-	}
-}
-
-var basetests = []PathTest{
-	// Already clean
-	{"", "."},
-	{".", "."},
-	{"/.", "."},
-	{"/", "/"},
-	{"////", "/"},
-	{"x/", "x"},
-	{"abc", "abc"},
-	{"abc/def", "def"},
-	{"a/b/.x", ".x"},
-	{"a/b/c.", "c."},
-	{"a/b/c.x", "c.x"},
-}
-
-func TestBase(t *testing.T) {
-	for _, test := range basetests {
-		if s := Base(test.path); s != test.result {
-			t.Errorf("Base(%q) = %q, want %q", test.path, s, test.result)
+		if got, want := Ext(p), gopath.Ext(p); got != want {
+			t.Errorf("Ext(%q) = %q, want %q", p, got, want)
 		}
-	}
-}
-
-var dirtests = []PathTest{
-	{"", "."},
-	{".", "."},
-	{"/.", "/"},
-	{"/", "/"},
-	{"////", "/"},
-	{"/foo", "/"},
-	{"x/", "x"},
-	{"abc", "."},
-	{"abc/def", "abc"},
-	{"abc////def", "abc"},
-	{"a/b/.x", "a/b"},
-	{"a/b/c.", "a/b"},
-	{"a/b/c.x", "a/b"},
-}
-
-func TestDir(t *testing.T) {
-	for _, test := range dirtests {
-		if s := Dir(nil, test.path); s != test.result {
-			t.Errorf("Dir(%q) = %q, want %q", test.path, s, test.result)
+		if got, want := IsAbs(p), gopath.IsAbs(p); got != want {
+			t.Errorf("IsAbs(%q) = %v, want %v", p, got, want)
 		}
-	}
-}
 
-type IsAbsTest struct {
-	path  string
-	isAbs bool
-}
-
-var isAbsTests = []IsAbsTest{
-	{"", false},
-	{"/", true},
-	{"/usr/bin/gcc", true},
-	{"..", false},
-	{"/a/../bb", true},
-	{".", false},
-	{"./", false},
-	{"lala", false},
-}
-
-func TestIsAbs(t *testing.T) {
-	for _, test := range isAbsTests {
-		if r := IsAbs(test.path); r != test.isAbs {
-			t.Errorf("IsAbs(%q) = %v, want %v", test.path, r, test.isAbs)
+		gotDir, gotFile := Split(p)
+		wantDir, wantFile := gopath.Split(p)
+		if gotDir != wantDir || gotFile != wantFile {
+			t.Errorf("Split(%q) = %q, %q, want %q, %q",
+				p, gotDir, gotFile, wantDir, wantFile)
 		}
+	})
+}
+
+func FuzzJoin(f *testing.F) {
+	for i, x := range fuzzPaths {
+		f.Add(x, fuzzPaths[len(fuzzPaths)-1-i])
 	}
+	f.Fuzz(func(t *testing.T, x, y string) {
+		joined := Join(nil, x, y)
+		if want := gopath.Join(x, y); joined != want {
+			t.Errorf("Join(%q, %q) = %q, want %q", x, y, joined, want)
+		}
+		mem.FreeString(nil, joined)
+	})
 }
