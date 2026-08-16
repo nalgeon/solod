@@ -114,14 +114,6 @@ const (
 
 // Value is the interface to the dynamic value stored in a flag.
 // (The default value is represented as a string.)
-//
-// If a Value has an IsBoolFlag() bool method returning true,
-// the command-line parser makes -name equivalent to -name=true
-// rather than using the next command-line argument.
-//
-// Set is called once, in command line order, for each flag present.
-// The flag package may call the [String] method with a zero-valued receiver,
-// such as a nil pointer.
 type Value interface {
 	Get() any
 	Set(string) error
@@ -296,26 +288,30 @@ func (f *FlagSet) Usage() {
 // default values of all defined command-line flags in the set. See the
 // documentation for the global function PrintDefaults for more information.
 func (f *FlagSet) PrintDefaults() {
+	out := f.Output()
 	for i := range f.nflag {
 		flag := f.flags[i]
-		var b strings.Builder
-		fmt.Fprintf(&b, "  -%s", flag.Name) // Two spaces before -; see next two comments.
+		// n counts the bytes before the usage message.
+		n := 3 + len(flag.Name) // Two spaces before -; see next two comments.
+		io.WriteString(out, "  -")
+		io.WriteString(out, flag.Name)
 		name := flag.Type()
 		if len(name) > 0 {
-			b.WriteString(" ")
-			b.WriteString(name)
+			n += 1 + len(name)
+			io.WriteString(out, " ")
+			io.WriteString(out, name)
 		}
 		// Boolean flags of one ASCII letter are so common we
 		// treat them specially, putting their usage on the same line.
-		if b.Len() <= 4 { // space, space, '-', 'x'.
-			b.WriteString("\t")
+		if n <= 4 { // space, space, '-', 'x'.
+			io.WriteString(out, "\t")
 		} else {
 			// Four spaces before the tab triggers good alignment
 			// for both 4- and 8-space tab stops.
-			b.WriteString("\n    \t")
+			io.WriteString(out, "\n    \t")
 		}
-		b.WriteString(flag.Usage)
-		fmt.Fprintf(f.Output(), "%s\n", b.String())
+		io.WriteString(out, flag.Usage)
+		io.WriteString(out, "\n")
 	}
 }
 
