@@ -2,6 +2,7 @@ package atomic_test
 
 import (
 	"solod.dev/so/conc"
+	"solod.dev/so/math"
 	"solod.dev/so/mem"
 	"solod.dev/so/sync/atomic"
 	"solod.dev/so/testing"
@@ -57,5 +58,62 @@ func TestInt64_SwapCAS(t *testing.T) {
 	}
 	if a.Load() != 30 {
 		t.Error("cas set wrong value")
+	}
+}
+
+func TestInt64_Negative(t *testing.T) {
+	// Checks negative values and an add that crosses zero.
+	var a atomic.Int64
+
+	a.Store(-1)
+	if a.Load() != -1 {
+		t.Error("store negative failed")
+	}
+	if a.Add(-4) != -5 {
+		t.Error("add of a negative delta must return new value")
+	}
+	if a.Add(10) != 5 {
+		t.Error("add across zero must return new value")
+	}
+	if a.Swap(-7) != 5 {
+		t.Error("swap must return old value")
+	}
+	if a.Load() != -7 {
+		t.Error("swap must set new value")
+	}
+	if !a.CompareAndSwap(-7, -8) {
+		t.Error("cas must succeed on negative match")
+	}
+	if a.CompareAndSwap(-7, 0) {
+		t.Error("cas must fail on negative mismatch")
+	}
+	if a.Load() != -8 {
+		t.Error("failed cas must not change value")
+	}
+}
+
+func TestInt64_Limits(t *testing.T) {
+	// Checks the values at the limits of the type. Add wraps like
+	// the Go operator: past the maximum it continues at the minimum.
+	var a atomic.Int64
+
+	a.Store(math.MaxInt64)
+	if a.Load() != math.MaxInt64 {
+		t.Error("store max failed")
+	}
+	if a.Add(1) != math.MinInt64 {
+		t.Error("add past the maximum must wrap to the minimum")
+	}
+	if a.Add(-1) != math.MaxInt64 {
+		t.Error("add past the minimum must wrap to the maximum")
+	}
+	if !a.CompareAndSwap(math.MaxInt64, math.MinInt64) {
+		t.Error("cas must succeed on max")
+	}
+	if a.Swap(0) != math.MinInt64 {
+		t.Error("swap must return the minimum")
+	}
+	if a.Add(0) != 0 {
+		t.Error("add of a zero delta must not change value")
 	}
 }
