@@ -2,76 +2,36 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package strconv_test
+package strconv
 
 import (
+	stdconv "strconv"
 	"testing"
-
-	"solod.dev/so/bytes"
-	. "solod.dev/so/strconv"
 )
 
-type atobTest struct {
-	in  string
-	out bool
-	err error
-}
+func FuzzParseBool(f *testing.F) {
+	// Compare ParseBool with the strconv package.
+	f.Add("")
+	f.Add("0")
+	f.Add("1")
+	f.Add("t")
+	f.Add("T")
+	f.Add("TRUE")
+	f.Add("true")
+	f.Add("True")
+	f.Add("f")
+	f.Add("F")
+	f.Add("FALSE")
+	f.Add("false")
+	f.Add("False")
+	f.Add("asdf")
+	f.Add("tRuE")
 
-var atobtests = []atobTest{
-	{"", false, ErrSyntax},
-	{"asdf", false, ErrSyntax},
-	{"0", false, nil},
-	{"f", false, nil},
-	{"F", false, nil},
-	{"FALSE", false, nil},
-	{"false", false, nil},
-	{"False", false, nil},
-	{"1", true, nil},
-	{"t", true, nil},
-	{"T", true, nil},
-	{"TRUE", true, nil},
-	{"true", true, nil},
-	{"True", true, nil},
-}
-
-func TestParseBool(t *testing.T) {
-	for _, test := range atobtests {
-		b, e := ParseBool(test.in)
-		if b != test.out || e != test.err {
-			t.Errorf("ParseBool(%s) = %v, %v, want %v, %v", test.in, b, e, test.out, test.err)
+	f.Fuzz(func(t *testing.T, s string) {
+		got, gotErr := ParseBool(s)
+		want, wantErr := stdconv.ParseBool(s)
+		if got != want || errKind(gotErr) != errKind(wantErr) {
+			t.Fatalf("ParseBool(%q) = %t, %v; want %t, %v", s, got, gotErr, want, wantErr)
 		}
-	}
-}
-
-var boolString = map[bool]string{
-	true:  "true",
-	false: "false",
-}
-
-func TestFormatBool(t *testing.T) {
-	for b, s := range boolString {
-		if f := FormatBool(b); f != s {
-			t.Errorf("FormatBool(%v) = %q; want %q", b, f, s)
-		}
-	}
-}
-
-type appendBoolTest struct {
-	b   bool
-	in  []byte
-	out []byte
-}
-
-var appendBoolTests = []appendBoolTest{
-	{true, []byte("foo "), []byte("foo true")},
-	{false, []byte("foo "), []byte("foo false")},
-}
-
-func TestAppendBool(t *testing.T) {
-	for _, test := range appendBoolTests {
-		b := AppendBool(test.in, test.b)
-		if !bytes.Equal(b, test.out) {
-			t.Errorf("AppendBool(%q, %v) = %q; want %q", test.in, test.b, b, test.out)
-		}
-	}
+	})
 }

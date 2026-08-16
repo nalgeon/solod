@@ -2,13 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package strconv_test
+package strconv
 
-import (
-	"testing"
-
-	. "solod.dev/so/strconv"
-)
+import "testing"
 
 type shiftTest struct {
 	i     uint64
@@ -127,4 +123,47 @@ func TestDecimalRoundedInteger(t *testing.T) {
 				test.i, test.shift, int, test.int)
 		}
 	}
+}
+
+func NewDecimal(i uint64) *decimal {
+	d := new(decimal)
+	d.Assign(i)
+	return d
+}
+
+func (a *decimal) String(buf []byte) string {
+	w := 0
+	switch {
+	case a.nd == 0:
+		return "0"
+
+	case a.dp <= 0:
+		// zeros fill space between decimal point and digits
+		buf[w] = '0'
+		w++
+		buf[w] = '.'
+		w++
+		w += digitZero(buf[w : w+-a.dp])
+		w += copy(buf[w:], a.d[0:a.nd])
+
+	case a.dp < a.nd:
+		// decimal point in middle of digits
+		w += copy(buf[w:], a.d[0:a.dp])
+		buf[w] = '.'
+		w++
+		w += copy(buf[w:], a.d[a.dp:a.nd])
+
+	default:
+		// zeros fill space between digits and decimal point
+		w += copy(buf[w:], a.d[0:a.nd])
+		w += digitZero(buf[w : w+a.dp-a.nd])
+	}
+	return string(buf[0:w])
+}
+
+func digitZero(dst []byte) int {
+	for i := range dst {
+		dst[i] = '0'
+	}
+	return len(dst)
 }

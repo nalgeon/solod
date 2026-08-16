@@ -176,18 +176,19 @@ func ParseInt(s string, base int, bitSize int) (int64, error) {
 		bitSize = IntSize
 	}
 
+	// The negation runs on the unsigned value. C does not define the negation
+	// of the smallest int64, which a bit size of 64 reaches.
 	cutoff := uint64(1) << uint(bitSize-1)
 	if !neg && un >= cutoff {
 		return int64(cutoff - 1), ErrRange
 	}
 	if neg && un > cutoff {
-		return -int64(cutoff), ErrRange
+		return int64(-cutoff), ErrRange
 	}
-	n := int64(un)
 	if neg {
-		n = -n
+		return int64(-un), nil
 	}
-	return n, nil
+	return int64(un), nil
 }
 
 // Atoi is equivalent to ParseInt(s, 10, 0), converted to type int.
