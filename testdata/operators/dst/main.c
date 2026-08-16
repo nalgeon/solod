@@ -60,6 +60,27 @@ int main(void) {
         (void)b5;
     }
     {
+        // Arithmetic on a type narrower than int. C promotes the operands to
+        // int and computes at that width, so every result needs a conversion
+        // back to the narrow type.
+        so_byte n1 = 3, n2 = 10;
+        so_byte n3 = (so_byte)(n1 - n2);
+        (void)n3;
+        so_int n4 = (so_int)((so_byte)(n1 - n2));
+        (void)n4;
+        so_int n5 = (so_int)((so_byte)(n1 * n2));
+        (void)n5;
+        so_int n6 = (so_int)(so_byte)((n1 << 6));
+        (void)n6;
+        so_int n7 = (so_int)((so_byte)(~n1));
+        (void)n7;
+        so_int n8 = (so_int)((so_byte)(-n1));
+        (void)n8;
+        int16_t s1 = 30000, s2 = 30000;
+        so_int n9 = (so_int)((int16_t)(s1 + s2));
+        (void)n9;
+    }
+    {
         // Increment/decrement through a pointer.
         so_int n = 1;
         so_int* p = &n;

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/constant"
+	"go/token"
 	"go/types"
 	"io"
 	"math"
@@ -70,6 +71,31 @@ func (g *Generator) constCast(n ast.Expr, obj types.Object) (string, bool) {
 	return g.mapTypeName(n, use), true
 }
 
+// narrowCast returns the C type that holds the result of an integer operation
+// on a narrow type, and reports whether the operation needs the conversion.
+//
+// C promotes an operand narrower than int to int, so C runs the arithmetic at
+// the width of int. Go runs it at the width of the operand type and wraps
+// there. The value differs when the result leaves the range of the Go type: for
+// two byte operands, C reads 3 - 10 as -7, and Go reads it as 249.
+//
+// A constant operation needs no conversion, because Go has already checked the
+// value against the type of the operation.
+func (g *Generator) narrowCast(n ast.Expr) (string, bool) {
+	if !narrowsInC(n) {
+		return "", false
+	}
+	tv := g.types.Types[n]
+	if tv.Value != nil {
+		return "", false
+	}
+	typ := g.folder().cTypeOf(n)
+	if typ == nil || !isIntegerType(typ) || cIntWidth(typ) >= 32 {
+		return "", false
+	}
+	return g.mapTypeName(n, typ), true
+}
+
 // cIntType returns the name of the C type an integer expression evaluates to.
 func (g *Generator) cIntType(n ast.Expr) string {
 	return g.mapTypeName(n, g.folder().cTypeOf(n))
@@ -133,4 +159,23 @@ func exceedsUint64(val constant.Value) bool {
 	}
 	_, ok := constant.Uint64Val(val)
 	return !ok
+}
+
+// narrowsInC reports whether an operation on a narrow integer type can leave
+// the range of that type. The bitwise operations and the right shift keep
+// operands that are in range in range, so they are absent.
+func narrowsInC(n ast.Expr) bool {
+	switch expr := n.(type) {
+	case *ast.BinaryExpr:
+		switch expr.Op {
+		case token.ADD, token.SUB, token.MUL, token.QUO, token.SHL:
+			return true
+		}
+	case *ast.UnaryExpr:
+		switch expr.Op {
+		case token.SUB, token.XOR:
+			return true
+		}
+	}
+	return false
 }

@@ -84,6 +84,13 @@ func (g *Generator) emitNumericLit(w io.Writer, n *ast.BasicLit) {
 
 // emitBinaryExpr emits a binary expression.
 func (g *Generator) emitBinaryExpr(w io.Writer, n *ast.BinaryExpr) {
+	// Arithmetic on a type narrower than int: wrap the result
+	// at the width of the Go type.
+	if typ, ok := g.narrowCast(n); ok {
+		fmt.Fprintf(w, "(%s)(", typ)
+		defer fmt.Fprint(w, ")")
+	}
+
 	// Equality comparison.
 	if n.Op == token.EQL || n.Op == token.NEQ {
 		g.emitEqual(w, n)
@@ -648,6 +655,12 @@ func (g *Generator) emitUnaryExpr(w io.Writer, n *ast.UnaryExpr) {
 			g.emitExpr(w, n.X)
 			return
 		}
+	}
+	// Arithmetic on a type narrower than int: wrap the result
+	// at the width of the Go type.
+	if typ, ok := g.narrowCast(n); ok {
+		fmt.Fprintf(w, "(%s)(", typ)
+		defer fmt.Fprint(w, ")")
 	}
 	if n.Op == token.XOR {
 		fmt.Fprint(w, "~")

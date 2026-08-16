@@ -58,6 +58,28 @@ func main() {
 	}
 
 	{
+		// Arithmetic on a type narrower than int. C promotes the operands to
+		// int and computes at that width, so every result needs a conversion
+		// back to the narrow type.
+		var n1, n2 byte = 3, 10
+		n3 := n1 - n2
+		_ = n3
+		n4 := int(n1 - n2)
+		_ = n4
+		n5 := int(n1 * n2)
+		_ = n5
+		n6 := int(n1 << 6)
+		_ = n6
+		n7 := int(^n1)
+		_ = n7
+		n8 := int(-n1)
+		_ = n8
+		var s1, s2 int16 = 30000, 30000
+		n9 := int(s1 + s2)
+		_ = n9
+	}
+
+	{
 		// Increment/decrement through a pointer.
 		n := 1
 		p := &n
