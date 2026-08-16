@@ -7,13 +7,18 @@ package cmp_test
 import (
 	"solod.dev/so/cmp"
 	"solod.dev/so/fmt"
+	"solod.dev/so/math"
 )
 
 func ExampleLess() {
 	fmt.Printf("%t\n", cmp.Less(1, 2))
 	fmt.Printf("%t\n", cmp.Less("a", "aa"))
+	fmt.Printf("%t\n", cmp.Less(1.0, math.NaN()))
+	fmt.Printf("%t\n", cmp.Less(math.NaN(), 1.0))
 	// Output:
 	// true
+	// true
+	// false
 	// true
 }
 
@@ -21,18 +26,22 @@ func ExampleCompare() {
 	fmt.Printf("%d\n", cmp.Compare(1, 2))
 	fmt.Printf("%d\n", cmp.Compare("a", "aa"))
 	fmt.Printf("%d\n", cmp.Compare(1.5, 1.5))
+	fmt.Printf("%d\n", cmp.Compare(math.NaN(), 1.0))
 	// Output:
 	// -1
 	// -1
 	// 0
+	// -1
 }
 
 func ExampleEqual() {
 	fmt.Printf("%t\n", cmp.Equal(1, 1))
 	fmt.Printf("%t\n", cmp.Equal("a", "aa"))
 	fmt.Printf("%t\n", cmp.Equal(1.5, 1.5))
+	fmt.Printf("%t\n", cmp.Equal(math.NaN(), math.NaN()))
 	// Output:
 	// true
 	// false
+	// true
 	// true
 }
