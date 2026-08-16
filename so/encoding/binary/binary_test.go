@@ -5,66 +5,103 @@
 package binary
 
 import (
+	stdbinary "encoding/binary"
 	"testing"
-
-	"solod.dev/so/math"
 )
 
-func TestByteOrder(t *testing.T) {
-	type byteOrder interface {
-		ByteOrder
-		AppendByteOrder
+// soOrder is the byte order of this package.
+type soOrder interface {
+	ByteOrder
+	AppendByteOrder
+}
+
+// stdOrder is the byte order of Go's encoding/binary.
+type stdOrder interface {
+	stdbinary.ByteOrder
+	stdbinary.AppendByteOrder
+}
+
+func FuzzByteOrder(f *testing.F) {
+	f.Add([]byte{0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef}, uint64(0x0123456789abcdef))
+	f.Add([]byte{0, 0, 0, 0, 0, 0, 0, 0}, uint64(0))
+	f.Add([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, ^uint64(0))
+	f.Add([]byte{0xaa}, uint64(0x8000000000000000))
+
+	f.Fuzz(func(t *testing.T, b []byte, v uint64) {
+		var src [8]byte
+		copy(src[:], b)
+
+		checkRead(t, "LittleEndian", &LittleEndian, stdbinary.LittleEndian, src)
+		checkRead(t, "BigEndian", &BigEndian, stdbinary.BigEndian, src)
+		checkWrite(t, "LittleEndian", &LittleEndian, stdbinary.LittleEndian, v)
+		checkWrite(t, "BigEndian", &BigEndian, stdbinary.BigEndian, v)
+		checkAppend(t, "LittleEndian", &LittleEndian, stdbinary.LittleEndian, v)
+		checkAppend(t, "BigEndian", &BigEndian, stdbinary.BigEndian, v)
+	})
+}
+
+// checkRead compares Uint16, Uint32 and Uint64 against Go's encoding/binary.
+func checkRead(t *testing.T, name string, so soOrder, std stdOrder, src [8]byte) {
+	if got, want := so.Uint16(src[:]), std.Uint16(src[:]); got != want {
+		t.Errorf("%s.Uint16(%x) = %#x, want %#x", name, src, got, want)
 	}
-	buf := make([]byte, 8)
-	for _, order := range []byteOrder{LittleEndian, BigEndian} {
-		const offset = 3
-		for _, value := range []uint64{
-			0x0000000000000000,
-			0x0123456789abcdef,
-			0xfedcba9876543210,
-			0xffffffffffffffff,
-			0xaaaaaaaaaaaaaaaa,
-			math.Float64bits(math.Pi),
-			math.Float64bits(math.E),
-		} {
-			want16 := uint16(value)
-			order.PutUint16(buf[:2], want16)
-			if got := order.Uint16(buf[:2]); got != want16 {
-				t.Errorf("PutUint16: Uint16 = %v, want %v", got, want16)
-			}
-			buf = order.AppendUint16(buf[:offset], want16)
-			if got := order.Uint16(buf[offset:]); got != want16 {
-				t.Errorf("AppendUint16: Uint16 = %v, want %v", got, want16)
-			}
-			if len(buf) != offset+2 {
-				t.Errorf("AppendUint16: len(buf) = %d, want %d", len(buf), offset+2)
-			}
+	if got, want := so.Uint32(src[:]), std.Uint32(src[:]); got != want {
+		t.Errorf("%s.Uint32(%x) = %#x, want %#x", name, src, got, want)
+	}
+	if got, want := so.Uint64(src[:]), std.Uint64(src[:]); got != want {
+		t.Errorf("%s.Uint64(%x) = %#x, want %#x", name, src, got, want)
+	}
+}
 
-			want32 := uint32(value)
-			order.PutUint32(buf[:4], want32)
-			if got := order.Uint32(buf[:4]); got != want32 {
-				t.Errorf("PutUint32: Uint32 = %v, want %v", got, want32)
-			}
-			buf = order.AppendUint32(buf[:offset], want32)
-			if got := order.Uint32(buf[offset:]); got != want32 {
-				t.Errorf("AppendUint32: Uint32 = %v, want %v", got, want32)
-			}
-			if len(buf) != offset+4 {
-				t.Errorf("AppendUint32: len(buf) = %d, want %d", len(buf), offset+4)
-			}
+// checkWrite compares PutUint16, PutUint32 and PutUint64 against Go's
+// encoding/binary.
+func checkWrite(t *testing.T, name string, so soOrder, std stdOrder, v uint64) {
+	var got, want [8]byte
 
-			want64 := uint64(value)
-			order.PutUint64(buf[:8], want64)
-			if got := order.Uint64(buf[:8]); got != want64 {
-				t.Errorf("PutUint64: Uint64 = %v, want %v", got, want64)
-			}
-			buf = order.AppendUint64(buf[:offset], want64)
-			if got := order.Uint64(buf[offset:]); got != want64 {
-				t.Errorf("AppendUint64: Uint64 = %v, want %v", got, want64)
-			}
-			if len(buf) != offset+8 {
-				t.Errorf("AppendUint64: len(buf) = %d, want %d", len(buf), offset+8)
-			}
-		}
+	so.PutUint16(got[:2], uint16(v))
+	std.PutUint16(want[:2], uint16(v))
+	if got != want {
+		t.Errorf("%s.PutUint16(%#x) = %x, want %x", name, uint16(v), got[:2], want[:2])
+	}
+
+	got, want = [8]byte{}, [8]byte{}
+	so.PutUint32(got[:4], uint32(v))
+	std.PutUint32(want[:4], uint32(v))
+	if got != want {
+		t.Errorf("%s.PutUint32(%#x) = %x, want %x", name, uint32(v), got[:4], want[:4])
+	}
+
+	got, want = [8]byte{}, [8]byte{}
+	so.PutUint64(got[:], v)
+	std.PutUint64(want[:], v)
+	if got != want {
+		t.Errorf("%s.PutUint64(%#x) = %x, want %x", name, v, got[:], want[:])
+	}
+}
+
+// checkAppend compares AppendUint16, AppendUint32 and AppendUint64 against
+// Go's encoding/binary. It appends to a non-empty slice, so it also checks
+// that Append keeps the bytes of the input slice.
+func checkAppend(t *testing.T, name string, so soOrder, std stdOrder, v uint64) {
+	prefix := []byte{0xa5}
+	buf := make([]byte, 1, 9)
+	buf[0] = 0xa5
+
+	got := so.AppendUint16(buf[:1], uint16(v))
+	want := std.AppendUint16(prefix, uint16(v))
+	if string(got) != string(want) {
+		t.Errorf("%s.AppendUint16(%#x) = %x, want %x", name, uint16(v), got, want)
+	}
+
+	got = so.AppendUint32(buf[:1], uint32(v))
+	want = std.AppendUint32(prefix, uint32(v))
+	if string(got) != string(want) {
+		t.Errorf("%s.AppendUint32(%#x) = %x, want %x", name, uint32(v), got, want)
+	}
+
+	got = so.AppendUint64(buf[:1], v)
+	want = std.AppendUint64(prefix, v)
+	if string(got) != string(want) {
+		t.Errorf("%s.AppendUint64(%#x) = %x, want %x", name, v, got, want)
 	}
 }

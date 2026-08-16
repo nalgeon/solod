@@ -142,8 +142,8 @@ int main(void) {
         // encoding/binary, encoding/hex
         binary_LE le = {};
         so_Slice word = (so_Slice){(so_byte[4]){0, 0, 0, 0}, 4, 4};
-        binary_LE_PutUint32(le, word, 0x01020304);
-        check(binary_LE_Uint32(le, word) == 0x01020304, so_str("binary: wrong value"));
+        binary_LE_PutUint32(&le, word, 0x01020304);
+        check(binary_LE_Uint32(&le, word) == 0x01020304, so_str("binary: wrong value"));
         so_Slice dst = so_make_slice(so_byte, hex_EncodedLen(so_len(word)), hex_EncodedLen(so_len(word)));
         hex_Encode(dst, word);
         check(so_string_eq(so_bytes_string(dst), so_str("04030201")), so_str("hex: wrong encoding"));
