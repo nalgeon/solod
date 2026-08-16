@@ -69,6 +69,8 @@ type PoolOptions struct {
 //	p.Wait()
 func NewPool(alloc mem.Allocator, opts PoolOptions) *Pool {
 	c.Assert(opts.NumThreads >= 0, "conc: NumThreads must be >= 0")
+	c.Assert(opts.QueueSize >= 0, "conc: QueueSize must be >= 0")
+
 	numThreads := opts.NumThreads
 	if numThreads == 0 {
 		numThreads = runtime.NumCPU()
@@ -76,7 +78,6 @@ func NewPool(alloc mem.Allocator, opts PoolOptions) *Pool {
 
 	queueSize := numThreads
 	if opts.QueueSize > 0 {
-		c.Assert(opts.QueueSize >= 1, "conc: queue size must be >= 1")
 		queueSize = opts.QueueSize
 	}
 
