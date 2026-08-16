@@ -16,14 +16,21 @@ func TestClone(t *testing.T) {
 }
 
 func TestCompare(t *testing.T) {
-	if strings.Compare("abc", "abb") <= 0 {
-		t.Error("Compare failed")
+	// The result is -1, 0 or +1, not the difference of the bytes.
+	if got := strings.Compare("abc", "abb"); got != +1 {
+		t.Errorf("Compare(abc, abb) = %d, want +1", got)
 	}
-	if strings.Compare("abc", "abd") >= 0 {
-		t.Error("Compare failed")
+	if got := strings.Compare("abc", "abd"); got != -1 {
+		t.Errorf("Compare(abc, abd) = %d, want -1", got)
 	}
-	if strings.Compare("abc", "abc") != 0 {
-		t.Error("Compare failed")
+	if got := strings.Compare("abc", "abc"); got != 0 {
+		t.Errorf("Compare(abc, abc) = %d, want 0", got)
+	}
+	if got := strings.Compare("a", "z"); got != -1 {
+		t.Errorf("Compare(a, z) = %d, want -1", got)
+	}
+	if got := strings.Compare("z", "a"); got != +1 {
+		t.Errorf("Compare(z, a) = %d, want +1", got)
 	}
 }
 

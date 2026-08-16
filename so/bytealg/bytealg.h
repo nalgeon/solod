@@ -19,7 +19,7 @@ static inline so_int bytealg_Compare(so_Slice a, so_Slice b) {
     so_int n = a.len;
     if (b.len < n) n = b.len;
     int cmp = n > 0 ? memcmp(a.ptr, b.ptr, (size_t)n) : 0;
-    if (cmp != 0) return cmp;
+    if (cmp != 0) return cmp < 0 ? -1 : +1;
     if (a.len < b.len) return -1;
     if (a.len > b.len) return +1;
     return 0;

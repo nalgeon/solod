@@ -20,15 +20,16 @@ func TestClone(t *testing.T) {
 }
 
 func TestCompare(t *testing.T) {
+	// The result is -1, 0 or +1, not the difference of the bytes.
 	a := []byte("abc")
-	if bytes.Compare(a, []byte("abc")) != 0 {
-		t.Error("Compare(abc, abc) != 0")
+	if got := bytes.Compare(a, []byte("abc")); got != 0 {
+		t.Errorf("Compare(abc, abc) = %d, want 0", got)
 	}
-	if bytes.Compare(a, []byte("xyz")) >= 0 {
-		t.Error("Compare(abc, xyz) >= 0")
+	if got := bytes.Compare(a, []byte("xyz")); got != -1 {
+		t.Errorf("Compare(abc, xyz) = %d, want -1", got)
 	}
-	if bytes.Compare([]byte("xyz"), a) <= 0 {
-		t.Error("Compare(xyz, abc) <= 0")
+	if got := bytes.Compare([]byte("xyz"), a); got != +1 {
+		t.Errorf("Compare(xyz, abc) = %d, want +1", got)
 	}
 }
 

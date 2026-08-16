@@ -4,6 +4,10 @@
 
 package bytealg
 
+// Compare returns an integer comparing two byte slices lexicographically.
+// The result is 0 if a and b are the same, -1 if a is less than b, and +1 if a
+// is greater than b. A nil argument is the same as an empty slice.
+//
 //so:extern nodecay
 func Compare(a, b []byte) int {
 	l := len(a)
