@@ -311,7 +311,9 @@ func (t Time) Add(d Duration) Time {
 	t.wall = (t.wall &^ nsecMask) | uint64(nsec) // update nsec
 	t.addSec(dsec)
 	if (t.wall & hasMonotonic) != 0 {
-		te := t.ext + int64(d)
+		// The sum can overflow. C does not define a signed overflow, so the
+		// addition runs in uint64. The check below finds the overflow.
+		te := int64(uint64(t.ext) + uint64(d))
 		if (d < 0 && te > t.ext) || (d > 0 && te < t.ext) {
 			// Monotonic clock reading now out of range; degrade to wall-only.
 			t.stripMono()
@@ -330,7 +332,12 @@ func (t Time) Sub(u Time) Duration {
 	if (t.wall & u.wall & hasMonotonic) != 0 {
 		return subMono(t.ext, u.ext)
 	}
-	d := Duration(t.sec()-u.sec())*Second + Duration(t.nsec()-u.nsec())
+	// The subtraction and the multiplication can overflow. C does not define a
+	// signed overflow, so the calculation runs in uint64. The check below finds
+	// the overflow.
+	sec := uint64(t.sec()) - uint64(u.sec())
+	nsec := uint64(int64(t.nsec() - u.nsec()))
+	d := Duration(sec*uint64(Second) + nsec)
 	// Check for overflow or underflow.
 	if u.Add(d).Equal(t) {
 		return d // d is correct
@@ -342,7 +349,9 @@ func (t Time) Sub(u Time) Duration {
 }
 
 func subMono(t, u int64) Duration {
-	d := Duration(t - u)
+	// The subtraction can overflow. C does not define a signed overflow, so the
+	// calculation runs in uint64. The checks below find the overflow.
+	d := Duration(uint64(t) - uint64(u))
 	if d < 0 && t > u {
 		return maxDuration // t - u is positive out of range
 	}
@@ -425,7 +434,9 @@ func (t Time) Round(d Duration) Time {
 // absSec returns the time t as absolute seconds.
 // It is called when computing a presentation property like Month or Hour.
 func (t Time) absSec() absSeconds {
-	return absSeconds(t.unixSec() + (unixToInternal + internalToAbsolute))
+	// The addition is above int64 for a time after the Unix epoch. C does not
+	// define a signed overflow, so the calculation runs in uint64.
+	return absSeconds(uint64(t.unixSec()) + uint64(unixToInternal+internalToAbsolute))
 }
 
 // addSec adds d seconds to the time.
@@ -442,8 +453,9 @@ func (t *Time) addSec(d int64) {
 		t.stripMono()
 	}
 
-	// Check if the sum of t.ext and d overflows and handle it properly.
-	sum := t.ext + d
+	// Check if the sum of t.ext and d overflows and handle it properly. C does
+	// not define a signed overflow, so the addition runs in uint64.
+	sum := int64(uint64(t.ext) + uint64(d))
 	if (sum > t.ext) == (d > 0) {
 		t.ext = sum
 	} else if d > 0 {

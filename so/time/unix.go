@@ -19,7 +19,9 @@ func (t Time) Unix() int64 {
 // milliseconds cannot be represented by an int64 (a date more than 292 million
 // years before or after 1970).
 func (t Time) UnixMilli() int64 {
-	return t.unixSec()*1000 + int64(t.nsec())/1000000
+	// The calculation runs in uint64: an instant outside the range overflows,
+	// and C does not define a signed overflow.
+	return int64(uint64(t.unixSec())*1000 + uint64(int64(t.nsec())/1000000))
 }
 
 // UnixMicro returns t as a Unix time, the number of microseconds elapsed since
@@ -27,7 +29,9 @@ func (t Time) UnixMilli() int64 {
 // microseconds cannot be represented by an int64 (a date before year -290307 or
 // after year 294246).
 func (t Time) UnixMicro() int64 {
-	return t.unixSec()*1000000 + int64(t.nsec())/1000
+	// The calculation runs in uint64: an instant outside the range overflows,
+	// and C does not define a signed overflow.
+	return int64(uint64(t.unixSec())*1000000 + uint64(int64(t.nsec())/1000))
 }
 
 // UnixNano returns t as a Unix time, the number of nanoseconds elapsed
@@ -36,7 +40,9 @@ func (t Time) UnixMicro() int64 {
 // 1678 or after 2262). Note that this means the result of calling UnixNano
 // on the zero Time is undefined.
 func (t Time) UnixNano() int64 {
-	return (t.unixSec())*1000000000 + int64(t.nsec())
+	// The calculation runs in uint64: an instant outside the range overflows,
+	// and C does not define a signed overflow.
+	return int64(uint64(t.unixSec())*1000000000 + uint64(t.nsec()))
 }
 
 // Unix returns the local Time corresponding to the given Unix time,

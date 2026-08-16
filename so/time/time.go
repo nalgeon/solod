@@ -110,9 +110,14 @@ func Date(year int, month Month, day, hour, min, sec, nsec int, offset Offset) T
 	day, hour = norm(day, hour, 24)
 
 	// Convert to absolute time and then Unix time.
-	unixSec := int64(dateToAbsDays(int64(year), month, day))*secondsPerDay +
-		int64(hour*secondsPerHour+min*secondsPerMinute+sec) +
-		absoluteToUnix
+	//
+	// The absolute epoch is about 292 billion years back, so the day count
+	// times the length of a day is above int64 for every date. The subtraction
+	// brings the value back into range. C does not define a signed overflow, so
+	// the calculation runs in uint64.
+	abs := uint64(dateToAbsDays(int64(year), month, day))*secondsPerDay +
+		uint64(int64(hour*secondsPerHour+min*secondsPerMinute+sec))
+	unixSec := int64(abs - uint64(unixToInternal+internalToAbsolute))
 
 	// Adjust to UTC by subtracting the offset.
 	if offset != 0 {

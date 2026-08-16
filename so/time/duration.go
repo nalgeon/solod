@@ -235,7 +235,9 @@ func (d Duration) Round(m Duration) Duration {
 		if lessThanHalf(r, m) {
 			return d + r
 		}
-		if d1 := d - m + r; d1 < d {
+		// C does not define a signed overflow, so the calculation runs in
+		// uint64. The comparison finds the overflow.
+		if d1 := Duration(uint64(d) - uint64(m) + uint64(r)); d1 < d {
 			return d1
 		}
 		return minDuration // overflow
@@ -243,7 +245,7 @@ func (d Duration) Round(m Duration) Duration {
 	if lessThanHalf(r, m) {
 		return d - r
 	}
-	if d1 := d + m - r; d1 > d {
+	if d1 := Duration(uint64(d) + uint64(m) - uint64(r)); d1 > d {
 		return d1
 	}
 	return maxDuration // overflow

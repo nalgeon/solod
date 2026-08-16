@@ -2,119 +2,31 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package time_test
+package time
 
 import (
 	"testing"
-	"testing/quick"
-
-	. "solod.dev/so/time"
+	stdtime "time"
 )
 
-func TestUnixUTC(t *testing.T) {
-	for _, test := range utctests {
-		sec := test.seconds
-		golden := &test.golden
-		tm := Unix(sec, 0)
-		newsec := tm.Unix()
-		if newsec != sec {
-			t.Errorf("Unix(%d, 0).Unix() = %d", sec, newsec)
-		}
-		if !same(tm, golden) {
-			t.Errorf("Unix(%d, 0):  // %#v", sec, tm)
-			t.Errorf("  want=%+v", *golden)
-			t.Errorf("  have=%+v", tm)
-		}
-	}
-}
+func FuzzUnix(f *testing.F) {
+	// Compare the Unix constructors and the Unix methods with the time package.
+	f.Add(int64(0), int64(0))
+	f.Add(int64(1), int64(0))
+	f.Add(int64(-1), int64(0))
+	f.Add(int64(1221681866), int64(0))
+	f.Add(int64(-1221681866), int64(0))
+	f.Add(int64(1221681866), int64(-1000000000))
+	f.Add(int64(1221681866), int64(1000000000))
+	f.Add(int64(1221681866), int64(999999999))
+	f.Add(int64(1221681866), int64(-999999999))
+	f.Add(int64(-62135596800), int64(0)) // the zero Time
+	f.Add(int64(1e18), int64(1e18))
+	f.Add(int64(-1e18), int64(-1e18))
 
-func TestUnixNanoUTC(t *testing.T) {
-	for _, test := range nanoutctests {
-		golden := &test.golden
-		nsec := test.seconds*1e9 + int64(golden.Nanosecond)
-		tm := Unix(0, nsec)
-		newnsec := tm.Unix()*1e9 + int64(tm.Nanosecond())
-		if newnsec != nsec {
-			t.Errorf("Unix(0, %d).Nanoseconds() = %d", nsec, newnsec)
-		}
-		if !same(tm, golden) {
-			t.Errorf("Unix(0, %d):", nsec)
-			t.Errorf("  want=%+v", *golden)
-			t.Errorf("  have=%+v", tm)
-		}
-	}
-}
-
-func TestUnixUTCAndBack(t *testing.T) {
-	f := func(sec int64) bool { return Unix(sec, 0).Unix() == sec }
-	f32 := func(sec int32) bool { return f(int64(sec)) }
-	cfg := &quick.Config{MaxCount: 10000}
-
-	// Try a reasonable date first, then the huge ones.
-	if err := quick.Check(f32, cfg); err != nil {
-		t.Fatal(err)
-	}
-	if err := quick.Check(f, cfg); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestUnixNanoUTCAndBack(t *testing.T) {
-	f := func(nsec int64) bool {
-		t := Unix(0, nsec)
-		ns := t.Unix()*1e9 + int64(t.Nanosecond())
-		return ns == nsec
-	}
-	f32 := func(nsec int32) bool { return f(int64(nsec)) }
-	cfg := &quick.Config{MaxCount: 10000}
-
-	// Try a small date first, then the large ones. (The span is only a few hundred years
-	// for nanoseconds in an int64.)
-	if err := quick.Check(f32, cfg); err != nil {
-		t.Fatal(err)
-	}
-	if err := quick.Check(f, cfg); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestUnixMilli(t *testing.T) {
-	f := func(msec int64) bool {
-		t := UnixMilli(msec)
-		return t.UnixMilli() == msec
-	}
-	cfg := &quick.Config{MaxCount: 10000}
-	if err := quick.Check(f, cfg); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestUnixMicro(t *testing.T) {
-	f := func(usec int64) bool {
-		t := UnixMicro(usec)
-		return t.UnixMicro() == usec
-	}
-	cfg := &quick.Config{MaxCount: 10000}
-	if err := quick.Check(f, cfg); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func same(t Time, u *parsedTime) bool {
-	// Check aggregates.
-	date := t.Date(UTC)
-	clock := t.Clock(UTC)
-	if date.Year != u.Year || date.Month != u.Month || date.Day != u.Day ||
-		clock.Hour != u.Hour || clock.Minute != u.Minute || clock.Second != u.Second {
-		return false
-	}
-	// Check individual entries.
-	return t.Year() == u.Year &&
-		t.Month() == u.Month &&
-		t.Day() == u.Day &&
-		t.Hour() == u.Hour &&
-		t.Minute() == u.Minute &&
-		t.Second() == u.Second &&
-		t.Nanosecond() == u.Nanosecond &&
-		t.Weekday() == u.Weekday
+	f.Fuzz(func(t *testing.T, sec, nsec int64) {
+		checkTime(t, "Unix", Unix(sec, nsec), stdtime.Unix(sec, nsec).UTC())
+		checkTime(t, "UnixMilli", UnixMilli(sec), stdtime.UnixMilli(sec).UTC())
+		checkTime(t, "UnixMicro", UnixMicro(sec), stdtime.UnixMicro(sec).UTC())
+	})
 }

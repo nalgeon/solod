@@ -147,13 +147,14 @@ func parseTimeOnly(value string, offset Offset) (Time, error) {
 	return Date(0, Month(1), 1, hour, min, sec, 0, offset), nil
 }
 
-// parseOffset parses "Z", "+HH:MM", or "-HH:MM" at position i.
-// Returns the offset in seconds.
+// parseOffset parses "Z", "+HH:MM", or "-HH:MM" at position i. The offset must
+// end the value. Returns the offset in seconds.
 func parseOffset(value string, i int) (Offset, bool) {
-	if value[i] == 'Z' {
+	rest := len(value) - i
+	if rest == 1 && value[i] == 'Z' {
 		return UTC, true
 	}
-	if value[i] != '+' && value[i] != '-' {
+	if rest != 6 || (value[i] != '+' && value[i] != '-') {
 		return 0, false
 	}
 	if value[i+3] != ':' {

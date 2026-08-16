@@ -1,3 +1,7 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package time_test
 
 import (
@@ -172,6 +176,39 @@ func TestParse_Custom(t *testing.T) {
 	clock := tm.Clock(time.UTC)
 	if clock.Hour != 0 || clock.Minute != 0 || clock.Second != 0 {
 		t.Error("unexpected Parse custom clock")
+	}
+}
+
+// A badCase is a layout and a value Parse must reject.
+type badCase struct {
+	layout string
+	value  string
+	why    string
+}
+
+// badOffsetCases hold the lengths parseRFC3339 and parseRFC3339Nano accept,
+// with an offset field that does not fill the rest of the value.
+var badOffsetCases = []badCase{
+	{time.RFC3339, "2024-03-15T14:30:45+", "a sign with no offset digits"},
+	{time.RFC3339, "2024-03-15T14:30:45-", "a sign with no offset digits"},
+	{time.RFC3339, "2024-03-15T14:30:45*", "an offset that is neither Z nor a sign"},
+	{time.RFC3339, "2024-03-15T14:30:45Zxxxxx", "text after Z"},
+	{time.RFC3339, "2024-03-15T14:30:45+0500x", "an offset with no colon"},
+	{time.RFC3339Nano, "2024-03-15T14:30:45.123456789+", "a sign with no offset digits"},
+	{time.RFC3339Nano, "2024-03-15T14:30:45.123456789-", "a sign with no offset digits"},
+	{time.RFC3339Nano, "2024-03-15T14:30:45.123456789Zxxxxx", "text after Z"},
+	{time.RFC3339Nano, "2024-03-15T14:30:45.123456789+0500x", "an offset with no colon"},
+}
+
+func TestParse_BadOffset(t *testing.T) {
+	// Check that Parse rejects a truncated or overlong offset field.
+	// Parse reads the offset at a fixed position, so it must not read past
+	// the end of the value.
+	for _, c := range badOffsetCases {
+		_, err := time.Parse(c.layout, c.value, time.UTC)
+		if err == nil {
+			t.Errorf("Parse(%s) accepted %s", c.value, c.why)
+		}
 	}
 }
 

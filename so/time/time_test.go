@@ -2,164 +2,124 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package time_test
+package time
 
 import (
 	"testing"
-
-	. "solod.dev/so/time"
+	stdtime "time"
 )
 
-func TestZeroTime(t *testing.T) {
-	var zero Time
-	date := zero.Date(UTC)
-	clock := zero.Clock(UTC)
-	nsec := zero.Nanosecond()
-	yday := zero.YearDay()
-	wday := zero.Weekday()
-	if date.Year != 1 || date.Month != January || date.Day != 1 || clock.Hour != 0 || clock.Minute != 0 || clock.Second != 0 || nsec != 0 || yday != 1 || wday != Monday {
-		t.Errorf("zero time = %v %v %v year %v %02d:%02d:%02d.%09d yday %d want Monday Jan 1 year 1 00:00:00.000000000 yday 1",
-			wday, date.Month, date.Day, date.Year, clock.Hour, clock.Minute, clock.Second, nsec, yday)
+// bound maps an arbitrary value into the range [-lim, lim]. The fuzzer draws
+// the whole int range, and a year of 10^18 tells nothing the calendar tests do
+// not already tell.
+func bound(v, lim int) int {
+	return v % (lim + 1)
+}
+
+// checkTime compares every value the two packages report for one instant. want
+// must be a Time in UTC, because the ported package reports UTC.
+func checkTime(t *testing.T, ctx string, got Time, want stdtime.Time) {
+	t.Helper()
+	if got.Unix() != want.Unix() {
+		t.Errorf("%s: Unix() = %d, want %d", ctx, got.Unix(), want.Unix())
+	}
+	if got.UnixMilli() != want.UnixMilli() {
+		t.Errorf("%s: UnixMilli() = %d, want %d", ctx, got.UnixMilli(), want.UnixMilli())
+	}
+	if got.UnixMicro() != want.UnixMicro() {
+		t.Errorf("%s: UnixMicro() = %d, want %d", ctx, got.UnixMicro(), want.UnixMicro())
+	}
+	if got.UnixNano() != want.UnixNano() {
+		t.Errorf("%s: UnixNano() = %d, want %d", ctx, got.UnixNano(), want.UnixNano())
+	}
+	if got.IsZero() != want.IsZero() {
+		t.Errorf("%s: IsZero() = %v, want %v", ctx, got.IsZero(), want.IsZero())
+	}
+
+	wantYear, wantMonth, wantDay := want.Date()
+	if got.Year() != wantYear || int(got.Month()) != int(wantMonth) || got.Day() != wantDay {
+		t.Errorf("%s: Year(), Month(), Day() = %d-%02d-%02d, want %d-%02d-%02d",
+			ctx, got.Year(), int(got.Month()), got.Day(), wantYear, int(wantMonth), wantDay)
+	}
+	if date := got.Date(UTC); date.Year != wantYear || int(date.Month) != int(wantMonth) || date.Day != wantDay {
+		t.Errorf("%s: Date() = %d-%02d-%02d, want %d-%02d-%02d",
+			ctx, date.Year, int(date.Month), date.Day, wantYear, int(wantMonth), wantDay)
+	}
+
+	wantHour, wantMin, wantSec := want.Clock()
+	if got.Hour() != wantHour || got.Minute() != wantMin || got.Second() != wantSec {
+		t.Errorf("%s: Hour(), Minute(), Second() = %02d:%02d:%02d, want %02d:%02d:%02d",
+			ctx, got.Hour(), got.Minute(), got.Second(), wantHour, wantMin, wantSec)
+	}
+	if clock := got.Clock(UTC); clock.Hour != wantHour || clock.Minute != wantMin || clock.Second != wantSec {
+		t.Errorf("%s: Clock() = %02d:%02d:%02d, want %02d:%02d:%02d",
+			ctx, clock.Hour, clock.Minute, clock.Second, wantHour, wantMin, wantSec)
+	}
+	if got.Nanosecond() != want.Nanosecond() {
+		t.Errorf("%s: Nanosecond() = %d, want %d", ctx, got.Nanosecond(), want.Nanosecond())
+	}
+
+	if int(got.Weekday()) != int(want.Weekday()) {
+		t.Errorf("%s: Weekday() = %d, want %d", ctx, int(got.Weekday()), int(want.Weekday()))
+	}
+	if got.YearDay() != want.YearDay() {
+		t.Errorf("%s: YearDay() = %d, want %d", ctx, got.YearDay(), want.YearDay())
+	}
+	gotISOYear, gotISOWeek := got.ISOWeek()
+	wantISOYear, wantISOWeek := want.ISOWeek()
+	if gotISOYear != wantISOYear || gotISOWeek != wantISOWeek {
+		t.Errorf("%s: ISOWeek() = %d/%d, want %d/%d",
+			ctx, gotISOYear, gotISOWeek, wantISOYear, wantISOWeek)
 	}
 }
 
-// parsedTime is the struct representing a parsed time value.
-type parsedTime struct {
-	Year                 int
-	Month                Month
-	Day                  int
-	Hour, Minute, Second int // 15:04:05 is 15, 4, 5.
-	Nanosecond           int // Fractional second.
-	Weekday              Weekday
-}
+func FuzzDate(f *testing.F) {
+	// Compare Date and the calendar methods with the time package. Every
+	// component may be outside its usual range, so this also compares the
+	// normalization of the two packages.
+	f.Add(1, 1, 1, 0, 0, 0, 0, 0)
+	f.Add(1970, 1, 1, 0, 0, 0, 0, 0)
+	f.Add(2011, 11, 18, 15, 56, 35, 0, 0)
+	f.Add(2011, 11, 18, 15, 56, 34, 1_000_000_000, 0)
+	f.Add(2011, 11, 19, -9, 56, 35, 0, 0)
+	f.Add(2011, 10, 49, 15, 56, 35, 0, 0)
+	f.Add(2012, -1, 18, 15, 56, 35, 0, 0)
+	f.Add(2010, 23, 18, 15, 56, 35, 0, 0)
+	f.Add(1970, 1, 15297, 15, 56, 35, 0, 0)
+	f.Add(1970, 1, -25508, 8, 0, 0, 0, 0)
+	f.Add(2011, 11, 18, 10, 56, 35, 0, -5*3600)
+	f.Add(2011, 11, 19, 3, 56, 35, 0, 12*3600)
+	f.Add(2024, 6, 15, 23, 30, 0, 0, 5*3600+1800)
+	f.Add(-1000, 2, 29, 0, 0, 0, 0, 0)
 
-type TimeTest struct {
-	seconds int64
-	golden  parsedTime
-}
+	f.Fuzz(func(t *testing.T, year, month, day, hour, min, sec, nsec, offset int) {
+		year = bound(year, 9999)
+		month = bound(month, 30)
+		day = bound(day, 400)
+		hour = bound(hour, 100)
+		min = bound(min, 200)
+		sec = bound(sec, 200)
+		nsec = bound(nsec, 2_000_000_000)
+		offset = bound(offset, 18*3600)
 
-var utctests = []TimeTest{
-	{0, parsedTime{1970, January, 1, 0, 0, 0, 0, Thursday}},
-	{1221681866, parsedTime{2008, September, 17, 20, 4, 26, 0, Wednesday}},
-	{-1221681866, parsedTime{1931, April, 16, 3, 55, 34, 0, Thursday}},
-	{-11644473600, parsedTime{1601, January, 1, 0, 0, 0, 0, Monday}},
-	{599529660, parsedTime{1988, December, 31, 0, 1, 0, 0, Saturday}},
-	{978220860, parsedTime{2000, December, 31, 0, 1, 0, 0, Sunday}},
-}
+		zone := stdtime.FixedZone("", offset)
+		got := Date(year, Month(month), day, hour, min, sec, nsec, Offset(offset))
+		want := stdtime.Date(year, stdtime.Month(month), day, hour, min, sec, nsec, zone)
+		checkTime(t, "Date", got, want.UTC())
 
-var nanoutctests = []TimeTest{
-	{0, parsedTime{1970, January, 1, 0, 0, 0, 1e8, Thursday}},
-	{1221681866, parsedTime{2008, September, 17, 20, 4, 26, 2e8, Wednesday}},
-}
-
-var dateTests = []struct {
-	year, month, day, hour, min, sec, nsec int
-	z                                      Offset
-	unix                                   int64
-}{
-	{2011, 11, 6, 8, 0, 0, 0, UTC, 1320566400},   // 8:00:00 UTC
-	{2011, 11, 6, 8, 59, 59, 0, UTC, 1320569999}, // 8:59:59 UTC
-	{2011, 11, 6, 10, 0, 0, 0, UTC, 1320573600},  // 10:00:00 UTC
-
-	{2011, 3, 13, 9, 0, 0, 0, UTC, 1300006800},   // 9:00:00 UTC
-	{2011, 3, 13, 9, 59, 59, 0, UTC, 1300010399}, // 9:59:59 UTC
-	{2011, 3, 13, 10, 0, 0, 0, UTC, 1300010400},  // 10:00:00 UTC
-	{2011, 3, 13, 9, 30, 0, 0, UTC, 1300008600},  // 9:30:00 UTC
-	{2012, 12, 24, 8, 0, 0, 0, UTC, 1356336000},  // Leap year
-
-	// Many names for 2011-11-18 15:56:35.0 UTC
-	{2011, 11, 18, 15, 56, 35, 0, UTC, 1321631795},                 // Nov 18 15:56:35
-	{2011, 11, 19, -9, 56, 35, 0, UTC, 1321631795},                 // Nov 19 -9:56:35
-	{2011, 11, 17, 39, 56, 35, 0, UTC, 1321631795},                 // Nov 17 39:56:35
-	{2011, 11, 18, 14, 116, 35, 0, UTC, 1321631795},                // Nov 18 14:116:35
-	{2011, 10, 49, 15, 56, 35, 0, UTC, 1321631795},                 // Oct 49 15:56:35
-	{2011, 11, 18, 15, 55, 95, 0, UTC, 1321631795},                 // Nov 18 15:55:95
-	{2011, 11, 18, 15, 56, 34, 1e9, UTC, 1321631795},               // Nov 18 15:56:34 + 10^9ns
-	{2011, 12, -12, 15, 56, 35, 0, UTC, 1321631795},                // Dec -12 15:56:35
-	{2012, 1, -43, 15, 56, 35, 0, UTC, 1321631795},                 // 2012 Jan -43 15:56:35
-	{2012, int(January - 2), 18, 15, 56, 35, 0, UTC, 1321631795},   // 2012 (Jan-2) 18 15:56:35
-	{2010, int(December + 11), 18, 15, 56, 35, 0, UTC, 1321631795}, // 2010 (Dec+11) 18 15:56:35
-	{1970, 1, 15297, 15, 56, 35, 0, UTC, 1321631795},               // large number of days
-	{2011, 11, 18, 10, 56, 35, 0, Offset(-5 * 3600), 1321631795},   // UTC-5
-	{2011, 11, 18, 3, 56, 35, 0, Offset(-12 * 3600), 1321631795},   // UTC-12
-	{2011, 11, 18, 16, 56, 35, 0, Offset(1 * 3600), 1321631795},    // UTC+1
-	{2011, 11, 19, 3, 56, 35, 0, Offset(12 * 3600), 1321631795},    // UTC+12
-
-	{1970, 1, -25508, 8, 0, 0, 0, UTC, -2203948800}, // negative Unix time
-}
-
-func TestDate(t *testing.T) {
-	for _, tt := range dateTests {
-		time := Date(tt.year, Month(tt.month), tt.day, tt.hour, tt.min, tt.sec, tt.nsec, tt.z)
-		want := Unix(tt.unix, 0)
-		if !time.Equal(want) {
-			t.Errorf("Date(%d, %d, %d, %d, %d, %d, %d, %v) = %v, want %v",
-				tt.year, tt.month, tt.day, tt.hour, tt.min, tt.sec, tt.nsec, tt.z,
-				time, want)
+		// The calendar methods that take an offset must report the components
+		// the call passed in, once normalized.
+		wantYear, wantMonth, wantDay := want.Date()
+		if date := got.Date(Offset(offset)); date.Year != wantYear ||
+			int(date.Month) != int(wantMonth) || date.Day != wantDay {
+			t.Errorf("Date(%d) = %d-%02d-%02d, want %d-%02d-%02d", offset,
+				date.Year, int(date.Month), date.Day, wantYear, int(wantMonth), wantDay)
 		}
-	}
-}
-
-var defaultLocTests = []struct {
-	name string
-	f    func(t1, t2 Time) bool
-}{
-	{"After", func(t1, t2 Time) bool { return t1.After(t2) == t2.After(t1) }},
-	{"Before", func(t1, t2 Time) bool { return t1.Before(t2) == t2.Before(t1) }},
-	{"Equal", func(t1, t2 Time) bool { return t1.Equal(t2) == t2.Equal(t1) }},
-	{"Compare", func(t1, t2 Time) bool { return t1.Compare(t2) == t2.Compare(t1) }},
-
-	{"IsZero", func(t1, t2 Time) bool { return t1.IsZero() == t2.IsZero() }},
-	{"Date", func(t1, t2 Time) bool {
-		d1 := t1.Date(UTC)
-		d2 := t2.Date(UTC)
-		return d1 == d2
-	}},
-	{"Year", func(t1, t2 Time) bool { return t1.Year() == t2.Year() }},
-	{"Month", func(t1, t2 Time) bool { return t1.Month() == t2.Month() }},
-	{"Day", func(t1, t2 Time) bool { return t1.Day() == t2.Day() }},
-	{"Weekday", func(t1, t2 Time) bool { return t1.Weekday() == t2.Weekday() }},
-	{"ISOWeek", func(t1, t2 Time) bool {
-		a1, b1 := t1.ISOWeek()
-		a2, b2 := t2.ISOWeek()
-		return a1 == a2 && b1 == b2
-	}},
-	{"Clock", func(t1, t2 Time) bool {
-		c1 := t1.Clock(UTC)
-		c2 := t2.Clock(UTC)
-		return c1 == c2
-	}},
-	{"Hour", func(t1, t2 Time) bool { return t1.Hour() == t2.Hour() }},
-	{"Minute", func(t1, t2 Time) bool { return t1.Minute() == t2.Minute() }},
-	{"Second", func(t1, t2 Time) bool { return t1.Second() == t2.Second() }},
-	{"Nanosecond", func(t1, t2 Time) bool { return t1.Hour() == t2.Hour() }},
-	{"YearDay", func(t1, t2 Time) bool { return t1.YearDay() == t2.YearDay() }},
-
-	// Using Equal since Add don't modify loc using "==" will cause a fail
-	{"Add", func(t1, t2 Time) bool { return t1.Add(Hour).Equal(t2.Add(Hour)) }},
-	{"Sub", func(t1, t2 Time) bool { return t1.Sub(t2) == t2.Sub(t1) }},
-
-	// Original cause for this test case bug 15852
-	{"AddDate", func(t1, t2 Time) bool { return t1.AddDate(1991, 9, 3) == t2.AddDate(1991, 9, 3) }},
-
-	{"Unix", func(t1, t2 Time) bool { return t1.Unix() == t2.Unix() }},
-	{"UnixNano", func(t1, t2 Time) bool { return t1.UnixNano() == t2.UnixNano() }},
-	{"UnixMilli", func(t1, t2 Time) bool { return t1.UnixMilli() == t2.UnixMilli() }},
-	{"UnixMicro", func(t1, t2 Time) bool { return t1.UnixMicro() == t2.UnixMicro() }},
-
-	{"Truncate", func(t1, t2 Time) bool { return t1.Truncate(Hour).Equal(t2.Truncate(Hour)) }},
-	{"Round", func(t1, t2 Time) bool { return t1.Round(Hour).Equal(t2.Round(Hour)) }},
-
-	{"== Time{}", func(t1, t2 Time) bool { return (t1 == Time{}) == (t2 == Time{}) }},
-}
-
-func TestDefaultLoc(t *testing.T) {
-	// Verify that all of Time's methods behave identically for two zero values.
-	for _, tt := range defaultLocTests {
-		t1 := Time{}
-		t2 := Time{}
-		if !tt.f(t1, t2) {
-			t.Errorf("Time{} values behave differently for %s", tt.name)
+		wantHour, wantMin, wantSec := want.Clock()
+		if clock := got.Clock(Offset(offset)); clock.Hour != wantHour ||
+			clock.Minute != wantMin || clock.Second != wantSec {
+			t.Errorf("Clock(%d) = %02d:%02d:%02d, want %02d:%02d:%02d", offset,
+				clock.Hour, clock.Minute, clock.Second, wantHour, wantMin, wantSec)
 		}
-	}
+	})
 }
