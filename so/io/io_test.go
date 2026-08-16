@@ -5,236 +5,178 @@
 package io_test
 
 import (
+	stdio "io"
+	stdstrings "strings"
 	"testing"
 
-	"solod.dev/so/bytes"
-	"solod.dev/so/errors"
-	. "solod.dev/so/io"
+	"solod.dev/so/io"
+	"solod.dev/so/mem"
 	"solod.dev/so/strings"
 )
 
-// A version of bytes.Buffer without ReadFrom and WriteTo
-type Buffer struct {
-	bytes.Buffer
-	ReaderFrom // conflicts with and hides bytes.Buffer's ReaderFrom.
-	WriterTo   // conflicts with and hides bytes.Buffer's WriterTo.
-}
+// The classes of the errors the fuzzers compare. An error of so/io and the
+// matching error of io are different values, so the fuzzers compare the class
+// of an error instead of the error.
+const (
+	kindNil = iota
+	kindEOF
+	kindUnexpectedEOF
+	kindOther
+)
 
-// Simple tests, primarily to verify the ReadFrom and WriteTo callouts inside Copy and CopyN.
-
-func TestCopy(t *testing.T) {
-	rb := new(Buffer)
-	wb := new(Buffer)
-	rb.WriteString("hello, world.")
-	Copy(wb, rb)
-	if wb.String() != "hello, world." {
-		t.Errorf("Copy did not work properly")
+// errKind returns the class of the error.
+func errKind(err error) int {
+	switch err {
+	case nil:
+		return kindNil
+	case io.EOF, stdio.EOF:
+		return kindEOF
+	case io.ErrUnexpectedEOF, stdio.ErrUnexpectedEOF:
+		return kindUnexpectedEOF
 	}
+	return kindOther
 }
 
-func TestCopyNegative(t *testing.T) {
-	rb := new(Buffer)
-	wb := new(Buffer)
-	rb.WriteString("hello")
-	Copy(wb, &LimitedReader{R: rb, N: -1})
-	if wb.String() != "" {
-		t.Errorf("Copy on LimitedReader with N<0 copied data")
+// chunkReader gives at most n bytes at one read.
+type chunkReader struct {
+	s string
+	n int
+}
+
+func (r *chunkReader) Read(p []byte) (int, error) {
+	if len(r.s) == 0 {
+		return 0, io.EOF
 	}
-
-	CopyN(wb, rb, -1)
-	if wb.String() != "" {
-		t.Errorf("CopyN with N<0 copied data")
+	if len(p) > r.n {
+		p = p[:r.n]
 	}
+	n := copy(p, r.s)
+	r.s = r.s[n:]
+	return n, nil
 }
 
-func TestCopyBuffer(t *testing.T) {
-	rb := new(Buffer)
-	wb := new(Buffer)
-	rb.WriteString("hello, world.")
-	CopyBuffer(wb, rb, make([]byte, 1)) // Tiny buffer to keep it honest.
-	if wb.String() != "hello, world." {
-		t.Errorf("CopyBuffer did not work properly")
+// stdChunkReader is chunkReader for the io package of Go. The two packages
+// have different EOF values, so a reader of the reference side must give the
+// EOF of Go.
+type stdChunkReader struct {
+	s string
+	n int
+}
+
+func (r *stdChunkReader) Read(p []byte) (int, error) {
+	if len(r.s) == 0 {
+		return 0, stdio.EOF
 	}
-}
-
-func TestCopyReadFrom(t *testing.T) {
-	rb := new(Buffer)
-	wb := new(bytes.Buffer) // implements ReadFrom.
-	rb.WriteString("hello, world.")
-	Copy(wb, rb)
-	if wb.String() != "hello, world." {
-		t.Errorf("Copy did not work properly")
+	if len(p) > r.n {
+		p = p[:r.n]
 	}
+	n := copy(p, r.s)
+	r.s = r.s[n:]
+	return n, nil
 }
 
-func TestCopyWriteTo(t *testing.T) {
-	rb := new(bytes.Buffer) // implements WriteTo.
-	wb := new(Buffer)
-	rb.WriteString("hello, world.")
-	Copy(wb, rb)
-	if wb.String() != "hello, world." {
-		t.Errorf("Copy did not work properly")
-	}
+func TestCopyBufferPanic(t *testing.T) {
+	// So has no recover, so only a Go test checks a panic.
+	t.Run("nil buffer", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatal("want panic")
+			}
+		}()
+		var w io.DiscardWriter
+		r := strings.NewReader("hello")
+		_, _ = io.CopyBuffer(&w, &r, nil)
+	})
+	t.Run("empty buffer", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatal("want panic")
+			}
+		}()
+		var w io.DiscardWriter
+		r := strings.NewReader("hello")
+		_, _ = io.CopyBuffer(&w, &r, []byte{})
+	})
 }
 
-// Version of bytes.Buffer that checks whether WriteTo was called or not
-type writeToChecker struct {
-	bytes.Buffer
-	writeToCalled bool
+func FuzzReadAll(f *testing.F) {
+	// ReadAll grows through a chain of the intermediate slices, so the size of
+	// the input and the size of a read decide the shape of the chain.
+	f.Add([]byte(""), uint8(1))
+	f.Add([]byte("hello, world."), uint8(1))
+	f.Add([]byte("hello, world."), uint8(200))
+	f.Add(make([]byte, 512), uint8(64))
+	f.Add(make([]byte, 4096), uint8(255))
+
+	f.Fuzz(func(t *testing.T, data []byte, chunk uint8) {
+		r := chunkReader{s: string(data), n: int(chunk)%255 + 1}
+		got, err := io.ReadAll(mem.System, &r)
+		defer mem.FreeSlice(mem.System, got)
+
+		if err != nil {
+			t.Fatalf("ReadAll() error = %v", err)
+		}
+		if string(got) != string(data) {
+			t.Fatalf("ReadAll() = %d bytes, want %d bytes", len(got), len(data))
+		}
+	})
 }
 
-func (wt *writeToChecker) WriteTo(w Writer) (int64, error) {
-	wt.writeToCalled = true
-	return wt.Buffer.WriteTo(w)
+func FuzzCopy(f *testing.F) {
+	// Copy must move the same bytes as the Copy of Go, whatever the number of
+	// the bytes one read gives.
+	f.Add([]byte(""), uint8(1))
+	f.Add([]byte("hello, world."), uint8(1))
+	f.Add([]byte("hello, world."), uint8(5))
+	f.Add(make([]byte, 9000), uint8(255))
+
+	f.Fuzz(func(t *testing.T, data []byte, chunk uint8) {
+		size := int(chunk)%255 + 1
+
+		src := chunkReader{s: string(data), n: size}
+		var dst stdstrings.Builder
+		n, err := io.Copy(&dst, &src)
+		if err != nil {
+			t.Fatalf("Copy() error = %v", err)
+		}
+
+		refSrc := stdChunkReader{s: string(data), n: size}
+		var refDst stdstrings.Builder
+		refN, refErr := stdio.Copy(&refDst, &refSrc)
+		if refErr != nil {
+			t.Fatalf("std Copy() error = %v", refErr)
+		}
+
+		if n != refN {
+			t.Fatalf("Copy() = %d, want %d", n, refN)
+		}
+		if dst.String() != refDst.String() {
+			t.Fatal("Copy() wrote the wrong bytes")
+		}
+	})
 }
 
-type zeroErrReader struct {
-	err error
-}
+func FuzzReadFull(f *testing.F) {
+	f.Add([]byte("hello, world."), uint8(1), uint8(13))
+	f.Add([]byte("hello, world."), uint8(3), uint8(20))
+	f.Add([]byte(""), uint8(1), uint8(4))
 
-func (r zeroErrReader) Read(p []byte) (int, error) {
-	return copy(p, []byte{0}), r.err
-}
+	f.Fuzz(func(t *testing.T, data []byte, chunk, bufLen uint8) {
+		size := int(chunk)%255 + 1
 
-type errWriter struct {
-	err error
-}
+		r := chunkReader{s: string(data), n: size}
+		buf := make([]byte, bufLen)
+		n, err := io.ReadFull(&r, buf)
 
-func (w errWriter) Write([]byte) (int, error) {
-	return 0, w.err
-}
+		refR := stdChunkReader{s: string(data), n: size}
+		refBuf := make([]byte, bufLen)
+		refN, refErr := stdio.ReadFull(&refR, refBuf)
 
-// In case a Read results in an error with non-zero bytes read, and
-// the subsequent Write also results in an error, the error from Write
-// is returned, as it is the one that prevented progressing further.
-func TestCopyReadErrWriteErr(t *testing.T) {
-	er, ew := errors.New("readError"), errors.New("writeError")
-	r, w := zeroErrReader{err: er}, errWriter{err: ew}
-	n, err := Copy(w, r)
-	if n != 0 || err != ew {
-		t.Errorf("Copy(zeroErrReader, errWriter) = %d, %v; want 0, writeError", n, err)
-	}
-}
-
-func TestCopyN(t *testing.T) {
-	rb := new(Buffer)
-	wb := new(Buffer)
-	rb.WriteString("hello, world.")
-	CopyN(wb, rb, 5)
-	if wb.String() != "hello" {
-		t.Errorf("CopyN did not work properly")
-	}
-}
-
-func TestCopyNReadFrom(t *testing.T) {
-	rb := new(Buffer)
-	wb := new(bytes.Buffer) // implements ReadFrom.
-	rb.WriteString("hello")
-	CopyN(wb, rb, 5)
-	if wb.String() != "hello" {
-		t.Errorf("CopyN did not work properly")
-	}
-}
-
-func TestCopyNWriteTo(t *testing.T) {
-	rb := new(bytes.Buffer) // implements WriteTo.
-	wb := new(Buffer)
-	rb.WriteString("hello, world.")
-	CopyN(wb, rb, 5)
-	if wb.String() != "hello" {
-		t.Errorf("CopyN did not work properly")
-	}
-}
-
-type noReadFrom struct {
-	w Writer
-}
-
-func (w *noReadFrom) Write(p []byte) (n int, err error) {
-	return w.w.Write(p)
-}
-
-type wantedAndErrReader struct{}
-
-func (wantedAndErrReader) Read(p []byte) (int, error) {
-	return len(p), errors.New("wantedAndErrReader error")
-}
-
-func TestCopyNEOF(t *testing.T) {
-	// Test that EOF behavior is the same regardless of whether
-	// argument to CopyN has ReadFrom.
-
-	b := new(bytes.Buffer)
-
-	r := strings.NewReader("foo")
-	n, err := CopyN(&noReadFrom{b}, &r, 3)
-	if n != 3 || err != nil {
-		t.Errorf("CopyN(noReadFrom, foo, 3) = %d, %v; want 3, nil", n, err)
-	}
-
-	r = strings.NewReader("foo")
-	n, err = CopyN(&noReadFrom{b}, &r, 4)
-	if n != 3 || !errEqual(err, EOF) {
-		t.Errorf("CopyN(noReadFrom, foo, 4) = %d, %v; want 3, EOF", n, err)
-	}
-
-	r = strings.NewReader("foo")
-	n, err = CopyN(b, &r, 3) // b has read from
-	if n != 3 || err != nil {
-		t.Errorf("CopyN(bytes.Buffer, foo, 3) = %d, %v; want 3, nil", n, err)
-	}
-
-	r = strings.NewReader("foo")
-	n, err = CopyN(b, &r, 4) // b has read from
-	if n != 3 || !errEqual(err, EOF) {
-		t.Errorf("CopyN(bytes.Buffer, foo, 4) = %d, %v; want 3, EOF", n, err)
-	}
-
-	n, err = CopyN(b, wantedAndErrReader{}, 5)
-	if n != 5 || err != nil {
-		t.Errorf("CopyN(bytes.Buffer, wantedAndErrReader, 5) = %d, %v; want 5, nil", n, err)
-	}
-
-	n, err = CopyN(&noReadFrom{b}, wantedAndErrReader{}, 5)
-	if n != 5 || err != nil {
-		t.Errorf("CopyN(noReadFrom, wantedAndErrReader, 5) = %d, %v; want 5, nil", n, err)
-	}
-}
-
-// largeWriter returns an invalid count that is larger than the number
-// of bytes provided (issue 39978).
-type largeWriter struct {
-	err error
-}
-
-func (w largeWriter) Write(p []byte) (int, error) {
-	return len(p) + 1, w.err
-}
-
-func TestCopyLargeWriter(t *testing.T) {
-	want := ErrInvalidWrite
-	rb := new(Buffer)
-	wb := largeWriter{}
-	rb.WriteString("hello, world.")
-	if _, err := Copy(wb, rb); err != want {
-		t.Errorf("Copy error: got %v, want %v", err, want)
-	}
-
-	want = errors.New("largeWriterError")
-	rb = new(Buffer)
-	wb = largeWriter{err: want}
-	rb.WriteString("hello, world.")
-	if _, err := Copy(wb, rb); err != want {
-		t.Errorf("Copy error: got %v, want %v", err, want)
-	}
-}
-
-func errEqual(a, b error) bool {
-	if a == b {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-	return a.Error() == b.Error()
+		if n != refN || errKind(err) != errKind(refErr) {
+			t.Fatalf("ReadFull() = %d, %v, want %d, %v", n, err, refN, refErr)
+		}
+		if string(buf[:n]) != string(refBuf[:refN]) {
+			t.Fatal("ReadFull() read the wrong bytes")
+		}
+	})
 }

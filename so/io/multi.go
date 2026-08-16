@@ -11,6 +11,8 @@ func (*eofReader) Read(b []byte) (int, error) {
 	return 0, EOF
 }
 
+var eofRdr = &eofReader{}
+
 type MultiReader struct {
 	readers []Reader
 }
@@ -32,7 +34,7 @@ func (mr *MultiReader) Read(p []byte) (int, error) {
 		if err == EOF {
 			// Use eofReader instead of nil to avoid nil panic
 			// after performing flatten (Issue 18232).
-			mr.readers[0] = &eofReader{} // permit earlier GC
+			mr.readers[0] = eofRdr
 			mr.readers = mr.readers[1:]
 		}
 		if n > 0 || err != EOF {
