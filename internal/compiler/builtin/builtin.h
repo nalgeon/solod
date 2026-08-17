@@ -534,13 +534,11 @@ static inline so_String so_error_error(void* self) {
 #ifndef so_build_hosted
 
 // so_write_out is the target's output hook for a freestanding environment.
-__attribute__((weak)) so_int so_write_out(const uint8_t* buf, so_int size);
+// The default definition in builtin.c drops the bytes and reports a full write.
+so_int so_write_out(const uint8_t* buf, so_int size);
 
 // so_write_str writes a null-terminated string through so_write_out.
 static inline void so_write_str(const char* s) {
-    if (so_write_out == NULL) {
-        return;
-    }
     so_write_out((const uint8_t*)s, (so_int)strlen(s));
 }
 

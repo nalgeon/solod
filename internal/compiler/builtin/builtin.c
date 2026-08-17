@@ -75,6 +75,57 @@ __attribute__((constructor)) static void so_install_fault_handler(void) {
 }
 #endif
 
+// --- Target hooks ---
+
+// A freestanding environment has no standard output, no entropy source and no
+// clock, so the target supplies them. Each hook below gets a weak definition,
+// and a definition in the target replaces it. A program that never calls a
+// hook still links, and a call with no definition in the target gets the
+// documented default.
+//
+// The defaults live in this file, because every build links it. A default in a
+// header does not work: the target includes the header and then defines the
+// hook, so one translation unit holds two definitions of one function.
+//
+// Each hook is declared where it is called: so_write_out in builtin.h,
+// so_crand_read in crypto/crand and runtime, and the three clock hooks in
+// time.
+#ifndef so_build_hosted
+
+// so_write_out drops the bytes and reports a full write, so panic and fmt
+// print nothing and report no error.
+__attribute__((weak)) so_int so_write_out(const uint8_t* buf, so_int size) {
+    (void)buf;
+    return size;
+}
+
+// so_crand_read reads no bytes. crypto/crand panics, and runtime.Seed falls
+// back to its deterministic generator.
+__attribute__((weak)) so_int so_crand_read(uint8_t* buf, so_int size) {
+    (void)buf;
+    (void)size;
+    return 0;
+}
+
+// so_time_wall panics, because no default date is correct.
+__attribute__((weak)) so_R_i64_i32 so_time_wall(void) {
+    so_panic("time: define so_time_wall for this target");
+}
+
+// so_time_mono returns 0, which time.Now reads as the absence of a monotonic
+// clock.
+__attribute__((weak)) int64_t so_time_mono(void) {
+    return 0;
+}
+
+// so_time_sleep panics, because a target with no clock cannot wait.
+__attribute__((weak)) void so_time_sleep(int64_t ns) {
+    (void)ns;
+    so_panic("time: define so_time_sleep for this target");
+}
+
+#endif  // !so_build_hosted
+
 // Command-line arguments, populated by main().
 so_Slice os_Args = {};
 

@@ -337,7 +337,7 @@ so_int so_crand_read(uint8_t* buf, so_int size) {
 }
 ```
 
-The declaration is weak, so a program that never calls `crypto/crand` still links. A call with no definition panics.
+The hook has a weak default definition, so a program that never calls `crypto/crand` still links. A call with no definition in the target panics.
 
 ### encoding/json
 
@@ -418,7 +418,7 @@ The package now works in freestanding mode. It imported `os` for the standard ou
 
 ### time
 
-The package now reads the clock in freestanding mode. `Now`, `Since`, `Until`, and `Sleep` used to panic. The target now supplies the clock through three weak hooks, the same way `crypto/crand` supplies entropy:
+The package now reads the clock in freestanding mode. `Now`, `Since`, `Until`, and `Sleep` used to panic. The target now supplies the clock through three hooks, the same way `crypto/crand` supplies entropy:
 
 ```c
 so_R_i64_i32 so_time_wall(void) {

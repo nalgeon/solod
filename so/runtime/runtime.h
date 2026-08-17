@@ -54,14 +54,14 @@ static inline so_int runtime_NumCPU(void) {
 // so_crand_read is the entropy hook of the target. crypto/crand declares the
 // same function and documents it. Seed reads the hook, so one definition gives
 // the program both cryptographic random and an unpredictable seed.
-__attribute__((weak)) so_int so_crand_read(uint8_t* buf, so_int size);
+so_int so_crand_read(uint8_t* buf, so_int size);
 
 // Seed returns a random 64-bit seed. A target with no so_crand_read gets a
 // deterministic xorshift64 sequence, because math/rand and maps must work
 // without an entropy source.
 static inline uint64_t runtime_Seed(void) {
     uint64_t seed = 0;
-    if (so_crand_read != NULL && so_crand_read((uint8_t*)&seed, 8) == 8 && seed != 0) {
+    if (so_crand_read((uint8_t*)&seed, 8) == 8 && seed != 0) {
         return seed;
     }
     static uint64_t rng_state = 0xdeadbeefcafebabeULL;

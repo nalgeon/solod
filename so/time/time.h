@@ -74,9 +74,8 @@ static inline char* strptime(const char* str, const char* format, time_tm* tm) {
 // board or at a host import. A target that counts elapsed time only returns 0
 // seconds, which dates every Time at the epoch and keeps Since and Until exact.
 //
-// The declaration is weak, so a program that never reads the wall clock still
-// links. A call with no definition panics.
-__attribute__((weak)) so_R_i64_i32 so_time_wall(void);
+// The default definition in builtin.c panics.
+so_R_i64_i32 so_time_wall(void);
 
 // so_time_mono returns a monotonic count of nanoseconds from an arbitrary
 // origin. The target must define this function to get a monotonic clock. Point
@@ -88,36 +87,26 @@ __attribute__((weak)) so_R_i64_i32 so_time_wall(void);
 // here, and widen a counter that wraps: a 32-bit counter at 1 kHz wraps after
 // 49 days.
 //
-// The declaration is weak. A target with no definition has no monotonic clock,
-// so Time holds a wall clock reading alone.
-__attribute__((weak)) int64_t so_time_mono(void);
+// The default definition in builtin.c returns 0. A target with no definition
+// of its own has no monotonic clock, so Time holds a wall clock reading alone.
+int64_t so_time_mono(void);
 
 // so_time_sleep pauses for at least ns nanoseconds. The target must define this
 // function. Point it at a wait instruction, at the delay of the operating
 // system, or at a host import.
 //
-// The declaration is weak, so a program that never sleeps still links. A call
-// with no definition panics.
-__attribute__((weak)) void so_time_sleep(int64_t ns);
+// The default definition in builtin.c panics.
+void so_time_sleep(int64_t ns);
 
 static inline so_R_i64_i32 time_wall() {
-    if (so_time_wall == NULL) {
-        so_panic("time: define so_time_wall for this target");
-    }
     return so_time_wall();
 }
 
 static inline int64_t time_mono() {
-    // A target with no so_time_mono has no monotonic clock.
-    // Now reads the 0 as the absence of a monotonic clock.
-    if (so_time_mono == NULL) return 0;
     return so_time_mono();
 }
 
 static inline void time_sleep(int64_t ns) {
-    if (so_time_sleep == NULL) {
-        so_panic("time: define so_time_sleep for this target");
-    }
     so_time_sleep(ns);
 }
 

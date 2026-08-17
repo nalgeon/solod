@@ -101,7 +101,7 @@ conc  flag  log/slog  net  os  sync
 
 ## Target hooks
 
-A freestanding environment has no standard output, no entropy source and no clock, and only the target knows how to reach its own hardware. The stdlib declares a weak C function for each of these, and the target defines the ones its program needs:
+A freestanding environment has no standard output, no entropy source and no clock, and only the target knows how to reach its own hardware. So declares a C function for each of these, and the target defines the ones its program needs:
 
 | Hook            | Signature                                              | With no definition                            |
 | --------------- | ------------------------------------------------------ | --------------------------------------------- |
@@ -111,7 +111,7 @@ A freestanding environment has no standard output, no entropy source and no cloc
 | `so_time_sleep` | `void so_time_sleep(int64_t ns)`                       | `time.Sleep` panics                           |
 | `so_write_out`  | `so_int so_write_out(const uint8_t* buf, so_int size)` | `panic` and `fmt` print nothing               |
 
-Every declaration is weak, so a program that never calls the package still links. Define the hooks in a C file and add it to the build, or embed it with `so:embed`:
+Every hook has a weak default definition in `builtin.c`, so a program that never calls the package still links, and a program that calls it gets the behavior of the last column. A definition in the target replaces the default. Define the hooks in a C file and add it to the build, or embed it with `so:embed`:
 
 ```c
 so_int so_crand_read(uint8_t* buf, so_int size) {
