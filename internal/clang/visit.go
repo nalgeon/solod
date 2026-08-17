@@ -463,16 +463,22 @@ func (g *Generator) emitTypeSpec(w io.Writer, spec *ast.TypeSpec, dirs directive
 
 // emitIfStmt emits an if statement, wrapping in a scope block if there's an init statement.
 func (g *Generator) emitIfStmt(w io.Writer, stmt *ast.IfStmt) {
-	if stmt.Init != nil {
-		fmt.Fprintf(w, "%s{\n", g.indent())
-		g.state.depth++
-		g.walkAST(w, stmt.Init)
+	if stmt.Init == nil {
 		g.emitIfInner(w, stmt, g.indent())
-		g.state.depth--
-		fmt.Fprintf(w, "%s}\n", g.indent())
-	} else {
-		g.emitIfInner(w, stmt, g.indent())
+		return
 	}
+	fmt.Fprintf(w, "%s{\n", g.indent())
+	g.emitScopedIf(w, stmt)
+	fmt.Fprintf(w, "%s}\n", g.indent())
+}
+
+// emitScopedIf emits the init statement and the if chain one level deeper.
+// The caller emits the enclosing braces, which scope the init statement.
+func (g *Generator) emitScopedIf(w io.Writer, stmt *ast.IfStmt) {
+	g.state.depth++
+	g.walkAST(w, stmt.Init)
+	g.emitIfInner(w, stmt, g.indent())
+	g.state.depth--
 }
 
 // emitIfInner emits the if/else-if/else chain. The prefix controls leading
@@ -491,6 +497,14 @@ func (g *Generator) emitIfInner(w io.Writer, stmt *ast.IfStmt, prefix string) {
 	// Handle else-if and else clauses.
 	switch els := stmt.Else.(type) {
 	case *ast.IfStmt:
+		if els.Init != nil {
+			// C has no init statement in if, so the else-if becomes a nested
+			// block. The block scopes the init statement like Go does.
+			fmt.Fprintf(w, "%s} else {\n", g.indent())
+			g.emitScopedIf(w, els)
+			fmt.Fprintf(w, "%s}\n", g.indent())
+			return
+		}
 		fmt.Fprintf(w, "%s} else ", g.indent())
 		g.emitIfInner(w, els, "")
 	case *ast.BlockStmt:
