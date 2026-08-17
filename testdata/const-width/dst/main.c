@@ -19,7 +19,7 @@ static const so_unused uint32_t wideShift = 0;
 
 // Here only the intermediate is beyond C's reach. It folds on its own, and the
 // width-dependent shift around it stays.
-static const so_unused uint64_t wideMask = ((18446744073709551615u) >> (64 - 8 * ptrSize));
+static const so_unused uint64_t wideMask = ((uint64_t)(18446744073709551615u) >> (64 - 8 * ptrSize));
 
 // -- Implementation --
 

@@ -129,6 +129,48 @@ int main(void) {
         if (gone != 0) {
             so_panic("1 >> 64");
         }
+        // C does not define a shift of a negative value.
+        int64_t low = INT64_MIN;
+        if (low != INT64_MIN) {
+            so_panic("-1 << 63");
+        }
+        int64_t ones = -1;
+        if (ones != -1) {
+            so_panic("-1 << 63 >> 63");
+        }
+        int32_t high = -256;
+        if (high != -256) {
+            so_panic("^0 << 8");
+        }
+    }
+    {
+        // C gives a constant expression the type of its literals, so the left
+        // operand of a shift is converted to the type of the shift.
+        int64_t product = ((int64_t)(2 * 1) << 61);
+        if (product != 4611686018427387904) {
+            so_panic("2 * 1 << 61");
+        }
+        int64_t sum = ((int64_t)(1 + 1) << 61);
+        if (sum != 4611686018427387904) {
+            so_panic("(1 + 1) << 61");
+        }
+        // A named constant is declared with a C type, so it needs no conversion.
+        const so_unused int64_t one = 1;
+        int64_t named = (one << 62);
+        if (named != 4611686018427387904) {
+            so_panic("one << 62");
+        }
+        // The left operand of a shift keeps its own type where that type holds
+        // more than the type of the shift.
+        uint64_t wide = (((uint64_t)1 << 63) >> 3);
+        if (wide != 1152921504606846976) {
+            so_panic("1<<63 >> 3");
+        }
+        // The left operand folds, so the shift around it needs the cast.
+        int64_t folded = ((int64_t)1 << 40);
+        if (folded != 1099511627776) {
+            so_panic("(1<<64 >> 64) << 40");
+        }
     }
     {
         // Expressions that C computes correctly are left as operators.

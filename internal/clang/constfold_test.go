@@ -47,6 +47,13 @@ func TestConstFolderNeedsFold(t *testing.T) {
 		{"uint64", "0 << 64", true},
 		{"int64", "1 >> 64", true},
 
+		// The left operand of the shift is negative. This happens for a left
+		// shift and for a right shift.
+		{"int64", "-1 << 63", true},
+		{"int", "-1 >> 30", true},
+		{"int64", "-1 << 63 >> 63", true},
+		{"int", "^0 << 8", true},
+
 		// An untyped rune is 32 bits wide. A value outside int32 does not fit
 		// the emitted C type.
 		{"", "'a' + 1<<40", true},

@@ -125,14 +125,9 @@ func (g *Generator) emitBinaryExpr(w io.Writer, n *ast.BinaryExpr) {
 
 	// Shift expression: parenthesize because Go's << >> have multiplicative
 	// precedence, but C's << >> are below additive (+/-).
-	// Cast integer literal operands to the result type so that e.g. 1 << 63
-	// uses a 64-bit left operand instead of C's 32-bit int.
-	if n.Op == token.SHL || n.Op == token.SHR {
+	if isShift(n.Op) {
 		fmt.Fprint(w, "(")
-		if lit, ok := n.X.(*ast.BasicLit); ok && lit.Kind == token.INT {
-			fmt.Fprintf(w, "(%s)", g.cIntType(n))
-		}
-		g.emitExpr(w, n.X)
+		g.emitShiftOperand(w, n)
 		fmt.Fprintf(w, " %s ", n.Op.String())
 		g.emitExpr(w, n.Y)
 		fmt.Fprint(w, ")")
@@ -181,6 +176,23 @@ func (g *Generator) emitBinaryExpr(w io.Writer, n *ast.BinaryExpr) {
 	g.emitExpr(w, n.X)
 	fmt.Fprintf(w, " %s ", n.Op.String())
 	g.emitExpr(w, n.Y)
+}
+
+// emitShiftOperand emits the left operand of a shift expression,
+// with a cast where the operand needs one.
+func (g *Generator) emitShiftOperand(w io.Writer, n *ast.BinaryExpr) {
+	typ, ok := g.shiftCast(n)
+	if !ok {
+		g.emitExpr(w, n.X)
+		return
+	}
+	fmt.Fprintf(w, "(%s)", typ)
+	if _, ok := n.X.(*ast.BinaryExpr); ok {
+		// A cast binds tighter than an arithmetic operator.
+		g.emitParenExpr(w, n.X)
+		return
+	}
+	g.emitExpr(w, n.X)
 }
 
 // emitEqual emits an == or != comparison. Strings, interfaces,
@@ -817,6 +829,11 @@ func isSelfParenthesized(expr ast.Expr) bool {
 		return true
 	}
 	return false
+}
+
+// isShift reports whether a token is a shift operator.
+func isShift(op token.Token) bool {
+	return op == token.SHL || op == token.SHR
 }
 
 // isOrderCompare reports whether a token is an ordering comparison

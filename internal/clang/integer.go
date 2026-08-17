@@ -71,6 +71,53 @@ func (g *Generator) constCast(n ast.Expr, obj types.Object) (string, bool) {
 	return g.mapTypeName(n, use), true
 }
 
+// shiftCast returns the C type for the left operand of a shift, and reports
+// whether the operand needs the conversion.
+//
+// C gives a constant expression the type of its literals, so C evaluates
+// 1 << 63 in a 32-bit int and loses the value. The conversion gives C the type
+// of the shift.
+//
+// The operand keeps its own type where that type holds more than the type of
+// the shift. Go computes an untyped operand at full precision and checks only
+// the result, so in the int32 constant 1<<40 >> 20 the operand needs int64.
+//
+// An identifier, a selector and a call already emit with a C type. A variable
+// operand also carries the C type of its Go type. Neither needs the conversion.
+func (g *Generator) shiftCast(n *ast.BinaryExpr) (string, bool) {
+	typ, ok := g.shiftCastType(n)
+	if !ok {
+		return "", false
+	}
+	return g.mapTypeName(n.X, typ), true
+}
+
+// shiftCastType returns the Go type of the conversion of the left operand of a
+// shift, and reports whether the operand needs the conversion.
+func (g *Generator) shiftCastType(n *ast.BinaryExpr) (types.Type, bool) {
+	tv := g.types.Types[n.X]
+	if tv.Value == nil || tv.Value.Kind() != constant.Int {
+		return nil, false
+	}
+	switch n.X.(type) {
+	case *ast.Ident, *ast.SelectorExpr, *ast.CallExpr:
+		return nil, false
+	}
+	f := g.folder()
+	typ := f.cTypeOf(n)
+	if operand := f.cTypeOf(n.X); isWiderInteger(operand, typ) {
+		typ = operand
+	}
+	// An inner shift emits a conversion of its own, which can serve the outer
+	// shift too. An inner shift that folds emits a literal instead.
+	if inner, ok := n.X.(*ast.BinaryExpr); ok && isShift(inner.Op) && !f.needsFold(inner) {
+		if got, ok := g.shiftCastType(inner); ok && !isWiderInteger(typ, got) {
+			return nil, false
+		}
+	}
+	return typ, true
+}
+
 // narrowCast returns the C type that holds the result of an integer operation
 // on a narrow type, and reports whether the operation needs the conversion.
 //
@@ -121,6 +168,15 @@ func intLit(val constant.Value) string {
 func emitsAsUint64(typ types.Type, val constant.Value) bool {
 	basic, ok := types.Unalias(typ).(*types.Basic)
 	return ok && basic.Kind() == types.UntypedInt && exceedsInt64(val)
+}
+
+// isWiderInteger reports whether the C integer type a holds a value
+// that the C integer type b cannot.
+func isWiderInteger(a, b types.Type) bool {
+	if cIntWidth(a) != cIntWidth(b) {
+		return cIntWidth(a) > cIntWidth(b)
+	}
+	return isUnsignedType(a) && !isUnsignedType(b)
 }
 
 // isIntegerType reports whether t is an integer type (named or not).

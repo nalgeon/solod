@@ -188,6 +188,18 @@ func TrailingZeros32(x uint32) int {
 }
 ```
 
+A constant shift with a negative left operand is now folded:
+
+```go
+var low int64 = -1 << 63 // was (-1 << 63), now INT64_MIN
+```
+
+The left operand of a constant shift now gets a cast to the C type of the shift:
+
+```go
+var big int64 = (1 + 1) << 62 // was ((1 + 1) << 62), now ((int64_t)(1 + 1) << 62)
+```
+
 ### Integer literals
 
 An integer literal above `MaxInt64` now gets a `u` suffix in C:

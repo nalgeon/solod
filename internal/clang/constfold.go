@@ -56,12 +56,14 @@ func (f constFolder) fitsCLiteral(n ast.Expr) bool {
 //   - the operation mixes an untyped value above int64 with a negative one;
 //   - the shift count reaches the width of the type the shift evaluates in.
 //     C does not define such a shift.
+//   - the left operand of a shift is negative. C does not define such a shift.
 //   - the node is a float literal of an integer expression. C reads such a
 //     literal as a double and computes the whole expression in double.
 //
 // Otherwise the result is false, and C can compute the value.
 func (f constFolder) beyondC(n ast.Expr) bool {
-	if !f.fitsCType(n) || f.mixesSignedness(n) || f.shiftExceedsWidth(n) || isFloatLit(n) {
+	if !f.fitsCType(n) || f.mixesSignedness(n) || isFloatLit(n) ||
+		f.shiftExceedsWidth(n) || f.shiftsNegative(n) {
 		return true
 	}
 	for _, child := range exprChildren(n) {
@@ -129,7 +131,7 @@ func (f constFolder) mixesSignedness(n ast.Expr) bool {
 // the width of the C type the shift evaluates in.
 func (f constFolder) shiftExceedsWidth(n ast.Expr) bool {
 	bin, ok := n.(*ast.BinaryExpr)
-	if !ok || (bin.Op != token.SHL && bin.Op != token.SHR) {
+	if !ok || !isShift(bin.Op) {
 		return false
 	}
 	count := f.info.Types[bin.Y].Value
@@ -141,6 +143,17 @@ func (f constFolder) shiftExceedsWidth(n ast.Expr) bool {
 		return true // the count is above int64, so it exceeds every width
 	}
 	return bits >= cIntWidth(f.cTypeOf(bin))
+}
+
+// shiftsNegative reports whether a constant shift has a negative left operand.
+// C does not define a left shift of a negative value, and the C compiler decides
+// the result of a right shift of a negative value.
+func (f constFolder) shiftsNegative(n ast.Expr) bool {
+	bin, ok := n.(*ast.BinaryExpr)
+	if !ok || !isShift(bin.Op) {
+		return false
+	}
+	return isNegative(f.info.Types[bin.X].Value)
 }
 
 // isFloatLit reports whether an expression is a float literal, for example 1e9.

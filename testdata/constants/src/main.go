@@ -176,6 +176,48 @@ func main() {
 		if gone != 0 {
 			panic("1 >> 64")
 		}
+		// C does not define a shift of a negative value.
+		var low int64 = -1 << 63
+		if low != -9223372036854775808 {
+			panic("-1 << 63")
+		}
+		var ones int64 = -1 << 63 >> 63
+		if ones != -1 {
+			panic("-1 << 63 >> 63")
+		}
+		var high int32 = ^0 << 8
+		if high != -256 {
+			panic("^0 << 8")
+		}
+	}
+	{
+		// C gives a constant expression the type of its literals, so the left
+		// operand of a shift is converted to the type of the shift.
+		var product int64 = 2 * 1 << 61
+		if product != 4611686018427387904 {
+			panic("2 * 1 << 61")
+		}
+		var sum int64 = (1 + 1) << 61
+		if sum != 4611686018427387904 {
+			panic("(1 + 1) << 61")
+		}
+		// A named constant is declared with a C type, so it needs no conversion.
+		const one = 1
+		var named int64 = one << 62
+		if named != 4611686018427387904 {
+			panic("one << 62")
+		}
+		// The left operand of a shift keeps its own type where that type holds
+		// more than the type of the shift.
+		var wide uint64 = 1 << 63 >> 3
+		if wide != 1152921504606846976 {
+			panic("1<<63 >> 3")
+		}
+		// The left operand folds, so the shift around it needs the cast.
+		var folded int64 = (1 << 64 >> 64) << 40
+		if folded != 1099511627776 {
+			panic("(1<<64 >> 64) << 40")
+		}
 	}
 	{
 		// Expressions that C computes correctly are left as operators.
