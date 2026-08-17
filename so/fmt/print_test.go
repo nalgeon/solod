@@ -41,8 +41,8 @@ func TestPrintfLiteral(t *testing.T) {
 }
 
 func TestPrintfStar(t *testing.T) {
-	widths := []int{-8, -1, 0, 1, 6, 12}
-	precs := []int{0, 1, 3, 8}
+	widths := []int{-99999999, -8, -1, 0, 1, 6, 12}
+	precs := []int{-1, 0, 1, 3, 8}
 	for _, wid := range widths {
 		difff(t, "%*d", []arg{{kind: kindInt, i: wid}, {kind: kindInt, i: 42}}, "%*d", wid, 42)
 		difff(t, "%-*d|", []arg{{kind: kindInt, i: wid}, {kind: kindInt, i: 42}}, "%-*d|", wid, 42)

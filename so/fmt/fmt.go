@@ -84,9 +84,14 @@ var (
 //
 //so:extern nodecay
 func Print(a ...string) (int, error) {
-	args := make([]any, len(a))
+	// Go's Print adds a space between two operands only when neither is a
+	// string, so the separator goes in here.
+	args := make([]any, 0, 2*len(a))
 	for i, s := range a {
-		args[i] = s
+		if i > 0 {
+			args = append(args, " ")
+		}
+		args = append(args, s)
 	}
 	return fmt.Print(args...)
 }

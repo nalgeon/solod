@@ -28,6 +28,10 @@ func TestVerbInt(t *testing.T) {
 		{"%08x", 255, "000000ff"},
 		{"%o", 8, "10"},
 		{"%#o", 8, "010"},
+		{"%b", 5, "101"},
+		{"%b", -5, "-101"},
+		{"%#b", 5, "0b101"},
+		{"%08b", 5, "00000101"},
 
 		// A negative value in a base other than 10 prints a sign and the
 		// magnitude, not the two's complement.
@@ -65,7 +69,10 @@ func TestVerbUint(t *testing.T) {
 
 	cases := []uintCase{
 		{"%u", 42, "42"},
-		{"%x", 255, "ff"},
+		{"%5u", 42, "   42"},
+		{"%-5u|", 42, "42   |"},
+		{"%05u", 42, "00042"},
+		{"%+u", 42, "+42"},
 		{"%u", maxUint, maxWant},
 	}
 	for _, c := range cases {
@@ -101,8 +108,19 @@ func TestVerbFloat(t *testing.T) {
 		{"%g", 1234.5678, "1234.5678"},
 		{"%g", 3.14159265358979, "3.14159265358979"},
 
+		{"%F", 3.14159, "3.141590"},
+
 		// A hexadecimal float writes at least two exponent digits in Go.
 		{"%a", 1.0, "0x1p+00"},
+		{"%A", 1.0, "0X1P+00"},
+
+		// The sharp flag forces a decimal point and keeps the trailing zeros.
+		{"%#e", 1.0, "1.000000e+00"},
+		{"%#f", 1.0, "1.000000"},
+		{"%#g", 1.0, "1.00000"},
+		{"%#.3g", 1.0, "1.00"},
+		{"%#g", 1234.5678, "1234.5678"},
+		{"%#a", 1.0, "0x1.0000p+00"},
 
 		// The two special values keep the Go spelling, and an infinity
 		// carries a sign.
@@ -265,16 +283,7 @@ type runeCase struct {
 
 // check reports a case whose output does not match.
 func check(t *testing.T, format string, got string, want string) {
-	if got == want {
-		return
+	if got != want {
+		t.Errorf("%s: got [%s], want [%s]", format, got, want)
 	}
-	var sb strings.Builder
-	defer sb.Free()
-	sb.WriteString(format)
-	sb.WriteString(": got [")
-	sb.WriteString(got)
-	sb.WriteString("], want [")
-	sb.WriteString(want)
-	sb.WriteString("]")
-	t.Error(sb.String())
 }
