@@ -57,6 +57,29 @@ func TestFreestandingLibs(t *testing.T) {
 	be.Equal(t, user, []string{"m", "pthread"})
 }
 
+func TestInitArgs(t *testing.T) {
+	// The generated test runner does not import os, but the so/os/os_test package
+	// does. The runner must respect this indirect os import.
+	runnerMain := func(t *testing.T, opts Options) string {
+		outDir := t.TempDir()
+		_, err := TranslateTests("../../so/os", outDir, Selection{}, opts)
+		be.Err(t, err, nil)
+		code, err := os.ReadFile(filepath.Join(outDir, "main.c"))
+		be.Err(t, err, nil)
+		return string(code)
+	}
+
+	// A hosted build initializes os.Args from argc/argv.
+	hosted := runnerMain(t, Options{})
+	be.True(t, strings.Contains(hosted, "int main(int argc, char* argv[])"))
+	be.True(t, strings.Contains(hosted, "so_args_init(argc, argv, _so_argv);"))
+
+	// A freestanding build has no so_args_init, so it keeps the plain main.
+	bare := runnerMain(t, Options{Freestanding: true})
+	be.True(t, strings.Contains(bare, "int main(void)"))
+	be.True(t, !strings.Contains(bare, "so_args_init"))
+}
+
 func caseDirs(t *testing.T, pattern string) []string {
 	matches, err := filepath.Glob(pattern)
 	be.Err(t, err, nil)

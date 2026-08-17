@@ -58,6 +58,11 @@ func translate(src source, outDir string, opts Options) ([]string, error) {
 	entry := pkgs[0]
 	ordered := topoSort(entry)
 
+	// main initializes os.Args when some package of the program uses os.
+	// A freestanding build has no so_args_init, so it keeps the plain main.
+	// The os package rejects such a build anyway.
+	initArgs := !opts.Freestanding && slices.ContainsFunc(ordered, isOSPackage)
+
 	// Translate each package, collecting the union of their link libraries.
 	libSet := make(map[string]bool)
 	for _, pkg := range ordered {
@@ -65,6 +70,7 @@ func translate(src source, outDir string, opts Options) ([]string, error) {
 		res, err := clang.Emit(clang.EmitOptions{
 			Pkg:         pkg,
 			OutDir:      pkgOutDir,
+			InitArgs:    initArgs,
 			TrackSource: opts.TrackSource,
 		})
 		if err != nil {
@@ -148,6 +154,11 @@ func packageOutDir(pkg, entry *packages.Package, outDir string) string {
 	}
 	relPath := strings.TrimPrefix(pkg.PkgPath, pkg.Module.Path+"/")
 	return filepath.Join(outDir, relPath)
+}
+
+// isOSPackage reports whether pkg is the So os package.
+func isOSPackage(pkg *packages.Package) bool {
+	return pkg.PkgPath == "solod.dev/so/os"
 }
 
 // isStdlib reports whether pkg is a So standard library package.

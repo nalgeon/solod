@@ -16,6 +16,7 @@ import (
 type EmitOptions struct {
 	Pkg         *packages.Package
 	OutDir      string
+	InitArgs    bool // main takes argc/argv and initializes os.Args
 	TrackSource bool // track source locations for panics
 }
 

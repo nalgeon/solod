@@ -75,7 +75,7 @@ func (g *Generator) emitFuncProto(w io.Writer, decl *ast.FuncDecl) *types.Signat
 		}
 	}
 	params := "void"
-	if isMainFunc(decl) && g.importsOS() {
+	if isMainFunc(decl) && g.opts.InitArgs {
 		params = "int argc, char* argv[]"
 	} else if len(parts) > 0 {
 		params = strings.Join(parts, ", ")
@@ -239,7 +239,7 @@ func (g *Generator) emitFuncBody(w io.Writer, decl *ast.FuncDecl) {
 
 	// Emit function body, handling deferred calls if needed.
 	g.state.depth++
-	if isMainFunc(decl) && g.importsOS() {
+	if isMainFunc(decl) && g.opts.InitArgs {
 		fmt.Fprintf(w, "%sso_String _so_argv[argc];\n", g.indent())
 		fmt.Fprintf(w, "%sso_args_init(argc, argv, _so_argv);\n", g.indent())
 	}
@@ -458,16 +458,6 @@ func (g *Generator) funcSig(decl *ast.FuncDecl) *types.Signature {
 // callSig extracts the function signature from a call expression.
 func (g *Generator) callSig(call *ast.CallExpr) *types.Signature {
 	return g.types.TypeOf(call.Fun).Underlying().(*types.Signature)
-}
-
-// importsOS reports whether the current package imports "os",
-// which determines whether we need to initialize argc/argv in main().
-func (g *Generator) importsOS() bool {
-	// Only check the main package for simplicity. If "os" is imported in
-	// a non-main package, the user will have to import "os" in main too
-	// to signal that they want argc/argv support.
-	_, ok := g.pkg.Imports["solod.dev/so/os"]
-	return ok
 }
 
 // recvTypeName returns the Go type name from a method receiver field.
