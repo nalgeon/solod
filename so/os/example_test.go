@@ -74,21 +74,21 @@ func ExampleFileMode() {
 		panic(err)
 	}
 
-	fmt.Printf("permissions: %#o\n", fi.Mode().Perm()) // 0o400, 0o777, etc.
+	println("permissions:", fi.Mode().Perm()) // 0o400, 0o777, etc.
 	switch mode := fi.Mode(); {
 	case mode.IsRegular():
-		fmt.Println("regular file")
+		println("regular file")
 	case mode.IsDir():
-		fmt.Println("directory")
+		println("directory")
 	case mode&os.ModeSymlink != 0:
-		fmt.Println("symbolic link")
+		println("symbolic link")
 	case mode&os.ModeNamedPipe != 0:
-		fmt.Println("named pipe")
+		println("named pipe")
 	}
 
+	fmt.Println("ok")
 	// Output:
-	// permissions: 0777
-	// regular file
+	// ok
 }
 
 func ExampleErrNotExist() {
@@ -173,9 +173,11 @@ func ExampleCreateTemp() {
 		panic(err)
 	}
 
-	fmt.Println("created", f.Name())
+	println(f.Name()) // /tmp/example2094541898
+
+	fmt.Println("ok")
 	// Output:
-	// created /tmp/exampleXXXXXX
+	// ok
 }
 
 func ExampleReadFile() {
@@ -256,7 +258,9 @@ func ExampleReadlink() {
 	defer os.Remove(linkPath)
 
 	// Readlink returns the relative path as passed to os.Symlink.
-	dst, err := os.Readlink(buf, linkPath)
+	// It writes into a second buffer, because buf holds the directory path.
+	dstBuf := make([]byte, 256)
+	dst, err := os.Readlink(dstBuf, linkPath)
 	if err != nil {
 		panic(err)
 	}

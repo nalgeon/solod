@@ -16,14 +16,12 @@ import (
 // The caller can use the file's Name method to find the pathname of the file.
 // It is the caller's responsibility to remove the file when it is no longer needed.
 //
-// Writes the path of the created file into buf. Panics if buf is empty.
-// The name in the returned File is a view into buf.
+// Writes the path of the created file into buf. buf must hold the directory,
+// the pattern, six random characters, and a null terminator. Panics if buf
+// is too small. The name in the returned File is a view into buf.
 func CreateTemp(buf []byte, dir, pattern string) (File, error) {
 	tmpl := buildTempTemplate(buf[:0], dir, pattern)
 	tmplPtr := (*c.Char)(unsafe.SliceData(tmpl))
-	if tmplPtr == nil {
-		panic("os: empty buffer")
-	}
 	fd := mkstemp(tmplPtr)
 	if fd < 0 {
 		return File{}, mapError()
@@ -46,14 +44,12 @@ func CreateTemp(buf []byte, dir, pattern string) (File, error) {
 // for temporary files, as returned by TempDir.
 // It is the caller's responsibility to remove the directory when it is no longer needed.
 //
-// Writes the path of the created directory into buf. Panics if buf is empty.
-// The returned string is a view into buf.
+// Writes the path of the created directory into buf. buf must hold the parent
+// directory, the pattern, six random characters, and a null terminator.
+// Panics if buf is too small. The returned string is a view into buf.
 func MkdirTemp(buf []byte, dir, pattern string) (string, error) {
 	tmpl := buildTempTemplate(buf[:0], dir, pattern)
 	tmplPtr := (*c.Char)(unsafe.SliceData(tmpl))
-	if tmplPtr == nil {
-		panic("os: empty buffer")
-	}
 	result := mkdtemp(tmplPtr)
 	if result == nil {
 		return "", mapError()
@@ -63,14 +59,22 @@ func MkdirTemp(buf []byte, dir, pattern string) (string, error) {
 
 // buildTempTemplate builds a null-terminated template string for mkstemp/mkdtemp.
 // The template ends with "XXXXXX" as required by these functions.
+// Panics if buf is too small for the template.
 func buildTempTemplate(buf []byte, dir, pattern string) []byte {
 	if dir == "" {
 		dir = TempDir()
 	}
-	buf = append(buf, dir...)
-	if len(dir) > 0 && dir[len(dir)-1] != '/' {
-		buf = append(buf, '/')
+	sep := "/"
+	if dir == "" || dir[len(dir)-1] == '/' {
+		sep = ""
 	}
+	// The template holds the directory, the separator, the pattern,
+	// six random characters, and a null terminator.
+	if cap(buf) < len(dir)+len(sep)+len(pattern)+7 {
+		panic("os: buffer too small")
+	}
+	buf = append(buf, dir...)
+	buf = append(buf, sep...)
 	buf = append(buf, pattern...)
 	buf = append(buf, "XXXXXX"...)
 	buf = append(buf, 0) // null terminator

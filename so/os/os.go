@@ -110,8 +110,9 @@ func Mkdir(name string, perm FileMode) error {
 // If the link destination is relative, Readlink returns the relative path
 // without resolving it to an absolute one.
 //
-// Writes the result into buf. Panics if buf is empty.
-// The returned string is a view into buf.
+// Writes the result into buf. Panics if buf is empty. A buf shorter than
+// the destination gets the first len(buf) bytes of the destination,
+// and Readlink reports no error. The returned string is a view into buf.
 func Readlink(buf []byte, name string) (string, error) {
 	bufPtr := unsafe.SliceData(buf)
 	if bufPtr == nil {
