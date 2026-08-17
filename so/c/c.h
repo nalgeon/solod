@@ -31,11 +31,13 @@ static inline char* c_CharPtr(void* ptr) {
 
 #define c_Sizeof(T) ((so_int)sizeof(T))
 
-#define c_Slice(T, ptr, len, cap) \
-    (ptr ? (so_Slice){(ptr), (len), (cap)} : (so_Slice){})
+#define c_Slice(T, ptr, len, cap) ({                          \
+    T* _sptr = (ptr);                                         \
+    (_sptr ? (so_Slice){_sptr, (len), (cap)} : (so_Slice){}); \
+})
 
-#define c_String(T, ptr) ({                                            \
-    const char* _ptr = (const char*)(ptr);                             \
+#define c_String(T, ptr) ({                                           \
+    const char* _ptr = (const char*)(ptr);                            \
     (_ptr ? (so_String){_ptr, (so_int)strlen(_ptr)} : (so_String){}); \
 })
 

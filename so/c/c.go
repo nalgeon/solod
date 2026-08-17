@@ -164,14 +164,15 @@ func CString(s string) *Char {
 	return (*Char)(unsafe.StringData(s))
 }
 
-// PtrAdd adds offset bytes to a pointer and returns the result.
+// PtrAdd adds offset to a pointer and returns the result.
+// The offset counts elements of type T, not bytes.
 //
 //	ptr + offset
 //
 //so:extern
 func PtrAdd[T any](ptr *T, offset int) *T {
 	raw := ptrVal(ptr)
-	p := unsafe.Add(raw, offset)
+	p := unsafe.Add(raw, offset*Sizeof[T]())
 	return (*T)(p)
 }
 
@@ -191,7 +192,7 @@ func PtrAs[T any](ptr any) *T {
 //
 //so:extern
 func PtrAt[T any](ptr *T, index int) *T {
-	return PtrAdd(ptr, index*Sizeof[T]())
+	return PtrAdd(ptr, index)
 }
 
 // Raw emits a raw block of C code.
