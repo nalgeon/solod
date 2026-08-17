@@ -2,6 +2,7 @@ package slices_test
 
 import (
 	"solod.dev/so/cmp"
+	"solod.dev/so/math"
 	"solod.dev/so/math/bits"
 	"solod.dev/so/math/rand"
 	"solod.dev/so/slices"
@@ -261,6 +262,83 @@ func TestSortStableWith(t *testing.T) {
 	}
 	if s[0] != -5467984 || s[12] != 9845 {
 		t.Error("wrong values")
+	}
+}
+
+// -- Min and Max --
+
+func TestMinMax_Ints(t *testing.T) {
+	ints := []int{3, 1, 4, 1, 5, 9}
+	if slices.Min(ints) != 1 {
+		t.Error("wrong min value")
+	}
+	if slices.Max(ints) != 9 {
+		t.Error("wrong max value")
+	}
+	one := []int{7}
+	if slices.Min(one) != 7 || slices.Max(one) != 7 {
+		t.Error("wrong min/max single value")
+	}
+}
+
+func TestMinMax_Strings(t *testing.T) {
+	strs := []string{"banana", "apple", "cherry"}
+	if slices.Min(strs) != "apple" {
+		t.Error("wrong min value")
+	}
+	if slices.Max(strs) != "cherry" {
+		t.Error("wrong max value")
+	}
+}
+
+func TestMinMax_Floats(t *testing.T) {
+	// Min returns a NaN if any element is a NaN.
+	nan := math.NaN()
+	if !math.IsNaN(slices.Min([]float64{1, nan, 3})) {
+		t.Error("Min: want NaN with a NaN in the middle")
+	}
+	if !math.IsNaN(slices.Min([]float64{nan, 1, 3})) {
+		t.Error("Min: want NaN with a NaN first")
+	}
+
+	// Max ignores NaNs. This differs from Go.
+	if slices.Max([]float64{1, nan, 3}) != 3 {
+		t.Error("Max: want 3 with a NaN in the middle")
+	}
+	if slices.Max([]float64{nan, 1, 3}) != 3 {
+		t.Error("Max: want 3 with a NaN first")
+	}
+
+	// Max returns a NaN only if every element is a NaN.
+	if !math.IsNaN(slices.Max([]float64{nan, nan})) {
+		t.Error("Max: want NaN with every element a NaN")
+	}
+}
+
+func TestMinMaxFunc(t *testing.T) {
+	// MinFunc and MaxFunc return the first of the equal elements.
+	pairs := []intPair{{1, 0}, {2, 1}, {1, 2}, {2, 3}}
+	gotMin := slices.MinFunc(pairs, intPairCmp)
+	if gotMin.a != 1 || gotMin.b != 0 {
+		t.Error("wrong min element")
+	}
+	gotMax := slices.MaxFunc(pairs, intPairCmp)
+	if gotMax.a != 2 || gotMax.b != 1 {
+		t.Error("wrong max element")
+	}
+}
+
+func TestMinMaxFunc_Nil(t *testing.T) {
+	// A nil compare function falls back to a raw byte comparison.
+	type key struct{ a, b byte }
+	s := []key{{2, 0}, {1, 9}, {1, 3}}
+	gotMin := slices.MinFunc(s, nil)
+	if gotMin.a != 1 || gotMin.b != 3 {
+		t.Error("wrong min element")
+	}
+	gotMax := slices.MaxFunc(s, nil)
+	if gotMax.a != 2 || gotMax.b != 0 {
+		t.Error("wrong max element")
 	}
 }
 

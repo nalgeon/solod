@@ -33,6 +33,23 @@ func TestMakeCap(t *testing.T) {
 	}
 }
 
+func TestMake_Zero(t *testing.T) {
+	// A zero length allocates nothing.
+	alloc := t.Allocator()
+	s := slices.Make[int](alloc, 0)
+	if len(s) != 0 || cap(s) != 0 {
+		t.Error("unexpected len/cap")
+	}
+	slices.Free(alloc, s)
+}
+
+func TestFree_Nil(t *testing.T) {
+	// Free of a nil slice is a no-op.
+	alloc := t.Allocator()
+	var s []int
+	slices.Free(alloc, s)
+}
+
 func TestAppend(t *testing.T) {
 	// Append within capacity.
 	alloc := t.Allocator()
@@ -52,6 +69,70 @@ func TestAppend_Grow(t *testing.T) {
 	s = slices.Append(alloc, s, 3, 4, 5)
 	if len(s) != 5 || s[0] != 1 || s[4] != 5 {
 		t.Error("unexpected values")
+	}
+	slices.Free(alloc, s)
+}
+
+func TestAppend_NoElems(t *testing.T) {
+	// Append with no elements keeps the slice as it is.
+	alloc := t.Allocator()
+	s := slices.MakeCap[int](alloc, 0, 4)
+	s = slices.Append(alloc, s)
+	if len(s) != 0 || cap(s) != 4 {
+		t.Error("unexpected len/cap")
+	}
+	slices.Free(alloc, s)
+}
+
+func TestAppend_Cap(t *testing.T) {
+	alloc := t.Allocator()
+
+	// Growth doubles a capacity below the 256 element threshold.
+	small := slices.MakeCap[int](alloc, 4, 4)
+	small = slices.Append(alloc, small, 1)
+	if len(small) != 5 || cap(small) != 8 {
+		t.Errorf("small: len/cap = %d/%d, want 5/8", len(small), cap(small))
+	}
+	slices.Free(alloc, small)
+
+	// Growth adds about a quarter above the threshold.
+	large := slices.MakeCap[int](alloc, 300, 300)
+	large = slices.Append(alloc, large, 1)
+	if len(large) != 301 || cap(large) != 567 {
+		t.Errorf("large: len/cap = %d/%d, want 301/567", len(large), cap(large))
+	}
+	slices.Free(alloc, large)
+
+	// A request above twice the capacity takes the requested length.
+	exact := slices.MakeCap[int](alloc, 2, 2)
+	exact = slices.Extend(alloc, exact, []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10})
+	if len(exact) != 12 || cap(exact) != 12 {
+		t.Errorf("exact: len/cap = %d/%d, want 12/12", len(exact), cap(exact))
+	}
+	slices.Free(alloc, exact)
+}
+
+func TestAppend_GrowMany(t *testing.T) {
+	// Append one element at a time across the 256 element threshold.
+	const n = 300
+	alloc := t.Allocator()
+	var s []int
+	for i := range n {
+		s = slices.Append(alloc, s, i)
+		if len(s) != i+1 {
+			t.Errorf("len = %d, want %d", len(s), i+1)
+			return
+		}
+		if cap(s) < len(s) {
+			t.Errorf("cap = %d, want at least %d", cap(s), len(s))
+			return
+		}
+	}
+	for i := range n {
+		if s[i] != i {
+			t.Errorf("s[%d] = %d, want %d", i, s[i], i)
+			return
+		}
 	}
 	slices.Free(alloc, s)
 }
@@ -247,6 +328,28 @@ func TestIndex(t *testing.T) {
 	}
 }
 
+func TestIndex_Floats(t *testing.T) {
+	// Index compares with cmp.Equal, so a NaN equals a NaN.
+	// Go's slices.Index never finds a NaN.
+	nan := math.NaN()
+	s := []float64{1, nan, 3}
+	if slices.Index(s, nan) != 1 {
+		t.Error("Index(s, nan) != 1")
+	}
+	if !slices.Contains(s, nan) {
+		t.Error("Contains(s, nan) != true")
+	}
+
+	// And -0.0 equals 0.0.
+	z := []float64{1, 0.0}
+	if slices.Index(z, math.Copysign(0.0, -1)) != 1 {
+		t.Error("Index(z, -0.0) != 1")
+	}
+	if !slices.Contains(z, math.Copysign(0.0, -1)) {
+		t.Error("Contains(z, -0.0) != true")
+	}
+}
+
 func TestContains(t *testing.T) {
 	ints := []int{10, 20, 30, 20}
 	if !slices.Contains(ints, 20) {
@@ -261,42 +364,5 @@ func TestContains(t *testing.T) {
 	}
 	if slices.Contains(strs, "d") {
 		t.Error("Contains(strs, d) != false")
-	}
-}
-
-func TestMinMax_Ints(t *testing.T) {
-	ints := []int{3, 1, 4, 1, 5, 9}
-	if slices.Min(ints) != 1 {
-		t.Error("wrong min value")
-	}
-	if slices.Max(ints) != 9 {
-		t.Error("wrong max value")
-	}
-	one := []int{7}
-	if slices.Min(one) != 7 || slices.Max(one) != 7 {
-		t.Error("wrong min/max single value")
-	}
-}
-
-func TestMinMax_Strings(t *testing.T) {
-	strs := []string{"banana", "apple", "cherry"}
-	if slices.Min(strs) != "apple" {
-		t.Error("wrong min value")
-	}
-	if slices.Max(strs) != "cherry" {
-		t.Error("wrong max value")
-	}
-}
-
-func TestMinMaxFunc(t *testing.T) {
-	// MinFunc and MaxFunc return the first of the equal elements.
-	pairs := []intPair{{1, 0}, {2, 1}, {1, 2}, {2, 3}}
-	gotMin := slices.MinFunc(pairs, intPairCmp)
-	if gotMin.a != 1 || gotMin.b != 0 {
-		t.Error("wrong min element")
-	}
-	gotMax := slices.MaxFunc(pairs, intPairCmp)
-	if gotMax.a != 2 || gotMax.b != 1 {
-		t.Error("wrong max element")
 	}
 }

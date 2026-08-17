@@ -139,17 +139,25 @@ func Min[T gocmp.Ordered](x []T) T {
 // MinFunc returns the minimal value in x, using cmp to compare elements.
 // It panics if x is empty. If there is more than one minimal element
 // according to the cmp function, MinFunc returns the first one.
+// If cmp is nil, compares by raw byte value (memcmp).
 //
 //so:inline
 func MinFunc[T any](x []T, compare cmp.Func) T {
-	_x := x
+	_x, _cmp := x, compare
 	if len(_x) < 1 {
 		panic("slices: empty list")
 	}
+	_esize := c.Sizeof[T]()
 	_m := _x[0]
 	for _j := 1; _j < len(_x); _j++ {
 		_xj := _x[_j]
-		if compare(&_xj, &_m) < 0 {
+		var _c int
+		if _cmp != nil {
+			_c = _cmp(&_xj, &_m)
+		} else {
+			_c = mem.Compare(&_xj, &_m, _esize)
+		}
+		if _c < 0 {
 			_m = _xj
 		}
 	}
@@ -157,8 +165,9 @@ func MinFunc[T any](x []T, compare cmp.Func) T {
 }
 
 // Max returns the maximal value in x. It panics if x is empty.
-// For floating-point E, Max propagates NaNs (any NaN value in x
-// forces the output to be NaN).
+// For floating-point numbers, Max ignores NaNs. Max returns a NaN
+// only if every element in x is a NaN. This differs from Min,
+// which returns a NaN if any element in x is a NaN.
 //
 //so:inline
 func Max[T gocmp.Ordered](x []T) T {
@@ -168,17 +177,25 @@ func Max[T gocmp.Ordered](x []T) T {
 // MaxFunc returns the maximal value in x, using cmp to compare elements.
 // It panics if x is empty. If there is more than one maximal element
 // according to the cmp function, MaxFunc returns the first one.
+// If cmp is nil, compares by raw byte value (memcmp).
 //
 //so:inline
 func MaxFunc[T any](x []T, compare cmp.Func) T {
-	_x := x
+	_x, _cmp := x, compare
 	if len(_x) < 1 {
-		panic("slices.MaxFunc: empty list")
+		panic("slices: empty list")
 	}
+	_esize := c.Sizeof[T]()
 	_m := _x[0]
 	for _j := 1; _j < len(_x); _j++ {
 		_xj := _x[_j]
-		if compare(&_xj, &_m) > 0 {
+		var _c int
+		if _cmp != nil {
+			_c = _cmp(&_xj, &_m)
+		} else {
+			_c = mem.Compare(&_xj, &_m, _esize)
+		}
+		if _c > 0 {
 			_m = _xj
 		}
 	}

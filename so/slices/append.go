@@ -21,6 +21,9 @@ func Append[T any](a mem.Allocator, s []T, elems ...T) []T {
 // If the allocator is nil, uses the system allocator.
 // Returns an updated allocated slice; the caller owns it.
 //
+// The slices s and other must not overlap. Extend can move the backing
+// array of s. The move invalidates a pointer into the old array.
+//
 //so:extern
 func Extend[T any](a mem.Allocator, s []T, other []T) []T {
 	return append(s, other...)

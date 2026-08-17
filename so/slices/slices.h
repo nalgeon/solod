@@ -12,6 +12,7 @@
 // Extend appends all elements from another slice, growing if needed.
 // Returns the updated slice or panics on allocation failure.
 // If the allocator is nil, uses the system allocator.
+// The two slices must not overlap.
 #define slices_Extend(T, a, s, other)                     \
     slices_extend((a), (s), (other), (so_int)(sizeof(T)), \
                   (so_int)(alignof(so_typeof(T))))
