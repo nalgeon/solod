@@ -10,6 +10,7 @@ import (
 )
 
 // Build translates the Go package in srcDir to C and compiles it into outFile.
+// Creates the directory of outFile when the directory does not exist.
 // Uses CC (default "cc"), CFLAGS, and LDFLAGS environment variables.
 func Build(srcDir, outFile string, opts Options) error {
 	return build(dirSource(srcDir), outFile, opts)
@@ -36,6 +37,11 @@ func build(src source, outFile string, opts Options) error {
 	cFiles, err := findCFiles(tmpDir)
 	if err != nil {
 		return err
+	}
+
+	// Create the the output directory to match "go build" behavior.
+	if err := os.MkdirAll(filepath.Dir(outFile), 0o755); err != nil {
+		return fmt.Errorf("create output dir: %w", err)
 	}
 
 	copts.libs = libs
