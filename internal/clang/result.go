@@ -121,22 +121,21 @@ func (mr multiReturn) typeName() string {
 }
 
 // accessor returns the C accessor for position i of a multi-return.
-// Position 0 -> tmp.val
-// Position 1 -> tmp.err (T, error) or tmp.val2 (T, T)
 func (mr multiReturn) accessor(tmp string, i int) string {
-	if mr.resultType != "" {
-		if i == 0 {
-			return tmp + ".val"
-		}
-		return tmp + ".err"
-	}
+	return tmp + "." + mr.field(i)
+}
+
+// field returns the C field name for position i of a multi-return.
+// Position 0 -> val
+// Position 1 -> err (T, error) or val2 (T, T)
+func (mr multiReturn) field(i int) string {
 	if i == 0 {
-		return tmp + ".val"
+		return "val"
 	}
 	if mr.hasError {
-		return tmp + ".err"
+		return "err"
 	}
-	return tmp + ".val2"
+	return "val2"
 }
 
 // resultTypeInfo describes an auto-generated result struct for (T, error) returns.

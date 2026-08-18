@@ -45,6 +45,12 @@ func returnStruct() (File, error)        { return File{size: 42}, nil }
 func returnAny() (any, error)            { return &file, nil }
 func returnPtr() (*File, error)          { return &file, nil }
 
+// Nil and untyped values need the same conversion as a single return.
+func returnNilSlice() ([]int, error)  { return nil, nil }
+func returnNilPtr() (*File, error)    { return nil, nil }
+func returnAnyInt(v any) (any, error) { return v, nil }
+func returnAnyPair(v any) (any, bool) { return v, true }
+
 // func returnIface() (Reader, error)  { return &file, nil }
 
 func forwardInt() (int, error)            { return returnInt() }
@@ -104,6 +110,26 @@ func testReturnTypes() {
 	_ = ptr
 }
 
+func testNilValues() {
+	nilSlice, err := returnNilSlice()
+	if nilSlice != nil || len(nilSlice) != 0 || err != nil {
+		panic("Nil slice in multi-return failed")
+	}
+	nilPtr, err := returnNilPtr()
+	if nilPtr != nil || err != nil {
+		panic("Nil pointer in multi-return failed")
+	}
+	n := 42
+	anyInt, err := returnAnyInt(&n)
+	if anyInt.(int) != n || err != nil {
+		panic("Any value in multi-return failed")
+	}
+	anyPair, ok := returnAnyPair(&n)
+	if anyPair.(int) != n || !ok {
+		panic("Any value in (T, T) return failed")
+	}
+}
+
 func testForwarding() {
 	var err error
 	_ = err
@@ -152,6 +178,7 @@ func main() {
 	testBasic()
 	testIf()
 	testReturnTypes()
+	testNilValues()
 	testForwarding()
 	testStructExported()
 	testStructUnexported()

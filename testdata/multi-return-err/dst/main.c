@@ -28,6 +28,10 @@ static so_R_slice_err returnSlice(so_Slice s);
 static main_FileResult returnStruct(void);
 static so_R_ptr_err returnAny(void);
 static so_R_ptr_err returnPtr(void);
+static so_R_slice_err returnNilSlice(void);
+static so_R_ptr_err returnNilPtr(void);
+static so_R_ptr_err returnAnyInt(void* v);
+static so_R_ptr_bool returnAnyPair(void* v);
 static so_R_int_err forwardInt(void);
 static so_R_rune_err forwardRune(void);
 static so_R_str_err forwardString(void);
@@ -38,6 +42,7 @@ static so_R_ptr_err forwardPtr(void);
 static void testBasic(void);
 static void testIf(void);
 static void testReturnTypes(void);
+static void testNilValues(void);
 static void testForwarding(void);
 static void testStructExported(void);
 static void testStructUnexported(void);
@@ -96,6 +101,23 @@ static so_R_ptr_err returnAny(void) {
 
 static so_R_ptr_err returnPtr(void) {
     return (so_R_ptr_err){.val = &file, .err = (so_Error){}};
+}
+
+// Nil and untyped values need the same conversion as a single return.
+static so_R_slice_err returnNilSlice(void) {
+    return (so_R_slice_err){.val = (so_Slice){}, .err = (so_Error){}};
+}
+
+static so_R_ptr_err returnNilPtr(void) {
+    return (so_R_ptr_err){.val = NULL, .err = (so_Error){}};
+}
+
+static so_R_ptr_err returnAnyInt(void* v) {
+    return (so_R_ptr_err){.val = v, .err = (so_Error){}};
+}
+
+static so_R_ptr_bool returnAnyPair(void* v) {
+    return (so_R_ptr_bool){.val = v, .val2 = true};
 }
 
 // func returnIface() (Reader, error)  { return &file, nil }
@@ -200,6 +222,34 @@ static void testReturnTypes(void) {
     (void)ptr;
 }
 
+static void testNilValues(void) {
+    so_R_slice_err _res1 = returnNilSlice();
+    so_Slice nilSlice = _res1.val;
+    so_Error err = _res1.err;
+    if (nilSlice.ptr != NULL || so_len(nilSlice) != 0 || err.self != NULL) {
+        so_panic("Nil slice in multi-return failed");
+    }
+    so_R_ptr_err _res2 = returnNilPtr();
+    main_File* nilPtr = _res2.val;
+    err = _res2.err;
+    if (nilPtr != NULL || err.self != NULL) {
+        so_panic("Nil pointer in multi-return failed");
+    }
+    so_int n = 42;
+    so_R_ptr_err _res3 = returnAnyInt(&n);
+    void* anyInt = _res3.val;
+    err = _res3.err;
+    if ((*(so_int*)anyInt) != n || err.self != NULL) {
+        so_panic("Any value in multi-return failed");
+    }
+    so_R_ptr_bool _res4 = returnAnyPair(&n);
+    void* anyPair = _res4.val;
+    bool ok = _res4.val2;
+    if ((*(so_int*)anyPair) != n || !ok) {
+        so_panic("Any value in (T, T) return failed");
+    }
+}
+
 static void testForwarding(void) {
     so_Error err = {};
     (void)err;
@@ -270,6 +320,7 @@ int main(void) {
     testBasic();
     testIf();
     testReturnTypes();
+    testNilValues();
     testForwarding();
     testStructExported();
     testStructUnexported();

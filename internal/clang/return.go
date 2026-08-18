@@ -63,25 +63,15 @@ func (g *Generator) emitReturnExpr(w io.Writer, stmt *ast.ReturnStmt) {
 	}
 
 	// Multi-return: emit compound literal with per-signature result fields.
+	// Each value converts to the result type of its position.
 	multi := g.makeMultiReturn(stmt, g.state.funcSig)
-	if multi.resultType != "" {
-		fmt.Fprintf(w, "(%s){.val = ", multi.resultType)
-		g.emitExpr(w, stmt.Results[0])
-		fmt.Fprint(w, ", .err = ")
-		errType := g.state.funcSig.Results().At(1).Type()
-		g.emitExprAsType(w, stmt, stmt.Results[1], errType)
-		fmt.Fprint(w, "}")
-		return
-	}
-	fmt.Fprintf(w, "(%s){.val = ", multi.typeName())
-	g.emitExpr(w, stmt.Results[0])
-	if multi.hasError {
-		fmt.Fprint(w, ", .err = ")
-		errType := g.state.funcSig.Results().At(1).Type()
-		g.emitExprAsType(w, stmt, stmt.Results[1], errType)
-	} else {
-		fmt.Fprint(w, ", .val2 = ")
-		g.emitExpr(w, stmt.Results[1])
+	fmt.Fprintf(w, "(%s){", multi.typeName())
+	for i, res := range stmt.Results {
+		if i > 0 {
+			fmt.Fprint(w, ", ")
+		}
+		fmt.Fprintf(w, ".%s = ", multi.field(i))
+		g.emitExprAsType(w, stmt, res, g.state.funcSig.Results().At(i).Type())
 	}
 	fmt.Fprint(w, "}")
 }
