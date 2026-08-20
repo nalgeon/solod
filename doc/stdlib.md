@@ -76,7 +76,7 @@ Three language traits shape the whole library:
 
 [math/bits](https://pkg.go.dev/solod.dev/so/math/bits) counts and manipulates bits. Same API as Go's.
 
-[math/rand](https://pkg.go.dev/solod.dev/so/math/rand) generates pseudo-random numbers from a PCG source, either through a `Rand` you own or through top-level functions backed by a global one. Based on Go's `math/rand/v2`. Not suitable for security-sensitive work.
+[math/rand](https://pkg.go.dev/solod.dev/so/math/rand) generates pseudo-random numbers from a PCG source, either through a `Rand` you own or through top-level functions backed by a per-thread one. Based on Go's `math/rand/v2`. Not suitable for security-sensitive work.
 
 [crypto/crand](https://pkg.go.dev/solod.dev/so/crypto/crand) generates cryptographically secure random bytes and strings, which is what you want for keys, tokens, and identifiers.
 

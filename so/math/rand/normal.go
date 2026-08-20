@@ -79,7 +79,7 @@ func (r *Rand) NormFloat64() float64 {
 //
 // NormFloat64 calls [math.Log] and [math.Exp] for a small part of the results,
 // so it requires a hosted environment. A freestanding call panics.
-func NormFloat64() float64 { return globalRand.NormFloat64() }
+func NormFloat64() float64 { return global().NormFloat64() }
 
 var kn = [128]uint32{
 	0x76ad2212, 0x0, 0x600f1b53, 0x6ce447a6, 0x725b46a2,

@@ -9,8 +9,10 @@
 // Both types should be used by a single thread at a time: sharing among
 // multiple threads requires some kind of synchronization.
 //
-// Top-level functions, such as [Float64] and [IntN], use a global Rand with
-// a [PCG] source seeded by [runtime.Seed].
+// Top-level functions, such as [Float64] and [IntN], use a [Rand] with a [PCG]
+// source seeded by [runtime.Seed]. Each thread holds its own Rand, and the
+// first top-level call in a thread seeds it. The top-level functions are safe
+// for concurrent use.
 //
 // This package's outputs might be easily predictable regardless of how it's
 // seeded. For random numbers suitable for security-sensitive work, see the
@@ -229,76 +231,83 @@ func (r *Rand) Float32() float32 {
  */
 
 // globalSource is the source of random numbers for the top-level functions.
+// Each thread holds its own source.
 //
 //so:thread_local
 var globalSource PCG
 
 // globalRand is the Rand that top-level functions use.
+// Each thread holds its own Rand.
 //
 //so:thread_local
 var globalRand Rand
 
 // Int64 returns a non-negative pseudo-random 63-bit integer as an int64
 // from the default Source.
-func Int64() int64 { return globalRand.Int64() }
+func Int64() int64 { return global().Int64() }
 
 // Uint32 returns a pseudo-random 32-bit value as a uint32
 // from the default Source.
-func Uint32() uint32 { return globalRand.Uint32() }
+func Uint32() uint32 { return global().Uint32() }
 
 // Uint64N returns, as a uint64, a pseudo-random number in the half-open interval [0,n)
 // from the default Source.
 // It panics if n == 0.
-func Uint64N(n uint64) uint64 { return globalRand.Uint64N(n) }
+func Uint64N(n uint64) uint64 { return global().Uint64N(n) }
 
 // Uint32N returns, as a uint32, a pseudo-random number in the half-open interval [0,n)
 // from the default Source.
 // It panics if n == 0.
-func Uint32N(n uint32) uint32 { return globalRand.Uint32N(n) }
+func Uint32N(n uint32) uint32 { return global().Uint32N(n) }
 
 // Uint64 returns a pseudo-random 64-bit value as a uint64
 // from the default Source.
-func Uint64() uint64 { return globalRand.Uint64() }
+func Uint64() uint64 { return global().Uint64() }
 
 // Int32 returns a non-negative pseudo-random 31-bit integer as an int32
 // from the default Source.
-func Int32() int32 { return globalRand.Int32() }
+func Int32() int32 { return global().Int32() }
 
 // Int returns a non-negative pseudo-random int from the default Source.
-func Int() int { return globalRand.Int() }
+func Int() int { return global().Int() }
 
 // Uint returns a pseudo-random uint from the default Source.
-func Uint() uint { return globalRand.Uint() }
+func Uint() uint { return global().Uint() }
 
 // Int64N returns, as an int64, a pseudo-random number in the half-open interval [0,n)
 // from the default Source.
 // It panics if n <= 0.
-func Int64N(n int64) int64 { return globalRand.Int64N(n) }
+func Int64N(n int64) int64 { return global().Int64N(n) }
 
 // Int32N returns, as an int32, a pseudo-random number in the half-open interval [0,n)
 // from the default Source.
 // It panics if n <= 0.
-func Int32N(n int32) int32 { return globalRand.Int32N(n) }
+func Int32N(n int32) int32 { return global().Int32N(n) }
 
 // IntN returns, as an int, a pseudo-random number in the half-open interval [0,n)
 // from the default Source.
 // It panics if n <= 0.
-func IntN(n int) int { return globalRand.IntN(n) }
+func IntN(n int) int { return global().IntN(n) }
 
 // UintN returns, as a uint, a pseudo-random number in the half-open interval [0,n)
 // from the default Source.
 // It panics if n == 0.
-func UintN(n uint) uint { return globalRand.UintN(n) }
+func UintN(n uint) uint { return global().UintN(n) }
 
 // Float64 returns, as a float64, a pseudo-random number in the half-open interval [0.0,1.0)
 // from the default Source.
-func Float64() float64 { return globalRand.Float64() }
+func Float64() float64 { return global().Float64() }
 
 // Float32 returns, as a float32, a pseudo-random number in the half-open interval [0.0,1.0)
 // from the default Source.
-func Float32() float32 { return globalRand.Float32() }
+func Float32() float32 { return global().Float32() }
 
-func init() {
-	globalSource = NewPCG(runtime.Seed(), runtime.Seed())
-	globalRand = New(&globalSource)
+// global returns the Rand of the calling thread.
+// The first call in a thread seeds it.
+func global() *Rand {
+	if globalRand.src == nil {
+		globalSource = NewPCG(runtime.Seed(), runtime.Seed())
+		globalRand = New(&globalSource)
+	}
+	return &globalRand
 }
