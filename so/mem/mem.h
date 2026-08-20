@@ -32,16 +32,19 @@ static inline void mem_SwapByte(void* a, void* b, so_int n) {
 #if SO_HEAP_SIZE > 0
 
 // The whole program shares a single heap.
-extern char so_heap[SO_HEAP_SIZE];
+extern alignas(16) char so_heap[SO_HEAP_SIZE];
 extern size_t so_heap_offset;
 
 static inline void* malloc(size_t size) {
     if (size == 0) return NULL;
-    // Align to 16 bytes.
-    so_heap_offset = (so_heap_offset + 15) & ~(size_t)15;
-    if (so_heap_offset + size > SO_HEAP_SIZE) return NULL;
-    void* ptr = &so_heap[so_heap_offset];
-    so_heap_offset += size;
+    // Align to 16 bytes. The rounded offset can pass the
+    // end of the heap, so check it before the subtraction.
+    size_t offset = (so_heap_offset + 15) & ~(size_t)15;
+    if (offset > SO_HEAP_SIZE || size > SO_HEAP_SIZE - offset) {
+        return NULL;
+    }
+    void* ptr = &so_heap[offset];
+    so_heap_offset = offset + size;
     return ptr;
 }
 
