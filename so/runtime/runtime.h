@@ -18,6 +18,11 @@ static inline so_int runtime_NumCPU(void) {
 #endif
 }
 
+// runtime_crand_read fills buf with size bytes of the cryptographic random of
+// the operating system. It reports whether it filled the whole buffer. A
+// caller that needs an error message writes the message of its own package.
+bool runtime_crand_read(uint8_t* buf, so_int size);
+
 #else
 
 // NumCPU is fixed at 1 in freestanding environments.

@@ -7,26 +7,47 @@
 #include <stdlib.h>
 #elif defined(so_build_linux) || defined(so_build_freebsd) || defined(so_build_dragonfly)
 #include <sys/random.h>
+#include <sys/types.h>  // ssize_t
 #elif defined(so_build_wasm)
 #include <unistd.h>
 #endif
 
+// runtime_crand_read fills buf with size bytes of the
+// cryptographic random of the operating system.
+bool runtime_crand_read(uint8_t* buf, so_int size) {
+    if (size <= 0) return true;
+#if defined(so_build_darwin) || defined(so_build_netbsd) || defined(so_build_openbsd)
+    arc4random_buf(buf, (size_t)size);
+    return true;
+#elif defined(so_build_linux) || defined(so_build_freebsd) || defined(so_build_dragonfly)
+    while (size > 0) {
+        ssize_t n = getrandom(buf, (size_t)size, 0);
+        if (n < 0) return false;
+        buf += n;
+        size -= (so_int)n;
+    }
+    return true;
+#elif defined(so_build_wasm)
+    // getentropy reads 256 bytes at most.
+    while (size > 0) {
+        size_t n = size < 256 ? (size_t)size : 256;
+        if (getentropy(buf, n) != 0) return false;
+        buf += n;
+        size -= (so_int)n;
+    }
+    return true;
+#else
+    (void)buf;
+    return false;
+#endif
+}
+
+// Seed returns a random 64-bit seed.
 uint64_t runtime_Seed(void) {
     uint64_t seed = 0;
-#if defined(so_build_darwin) || defined(so_build_netbsd) || defined(so_build_openbsd)
-    arc4random_buf(&seed, sizeof(seed));
-#elif defined(so_build_linux) || defined(so_build_freebsd) || defined(so_build_dragonfly)
-    ssize_t n = getrandom(&seed, sizeof(seed), 0);
-    if (n != sizeof(seed)) {
+    if (!runtime_crand_read((uint8_t*)&seed, 8)) {
         so_panic("runtime: cryptographic random not available");
     }
-#elif defined(so_build_wasm)
-    if (getentropy(&seed, sizeof(seed)) != 0) {
-        so_panic("runtime: cryptographic random not available");
-    }
-#else
-    so_panic("runtime: cryptographic random not available");
-#endif
     return seed;
 }
 
@@ -35,6 +56,7 @@ uint64_t runtime_Seed(void) {
 // seed_ticket numbers the calls to the fallback sequence of Seed.
 static uint32_t seed_ticket = 0;
 
+// Seed returns a random 64-bit seed.
 uint64_t runtime_Seed(void) {
     uint64_t seed = 0;
     if (so_crand_read((uint8_t*)&seed, 8) == 8 && seed != 0) {
