@@ -1,5 +1,11 @@
 #include "so/builtin/builtin.h"
 
+// Atomic operations require either a hosted build or
+// a freestanding target with lock-free instructions.
+#if !defined(so_build_hosted) && __GCC_ATOMIC_BOOL_LOCK_FREE != 2
+#error "so/sync/atomic: the target has no lock-free atomic of any width, and a freestanding build links no libatomic"
+#endif
+
 // This package maps Go-style atomics onto the compiler's __atomic builtins,
 // which operate on ordinary (non-_Atomic) objects. Every operation uses
 // sequentially consistent ordering (__ATOMIC_SEQ_CST), matching Go's

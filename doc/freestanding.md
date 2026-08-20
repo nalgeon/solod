@@ -47,7 +47,7 @@ These packages work in freestanding mode with no restrictions:
 ```text
 bufio  bytealg  bytes  c  cmp  encoding  encoding/binary
 encoding/hex  encoding/json  errors  io  maps  math/bits  math/rand
-mem  path  runtime  slices  strconv  strings  sync/atomic  unicode
+mem  path  runtime  slices  strconv  strings  unicode
 unicode/utf8  unsafe
 ```
 
@@ -70,6 +70,27 @@ Only the part that needs no libm works. `Abs`, `Copysign`, `Dim`, `Inf`, `IsInf`
 **net/netip**
 
 A zone given as an interface name (`fe80::1%eth0`) resolves to no zone, because a freestanding environment has no network interfaces. A numeric zone (`fe80::1%2`) works.
+
+**sync/atomic**
+
+An atomic operation needs a lock-free instruction of its own width. A target with no such instruction calls libatomic instead. A freestanding build doesn't link it, so linking fails with an undefined `__atomic_*` symbol.
+
+The available widths depend on the target:
+
+| Target                                           | Types that work                      | Types that fail   |
+| ------------------------------------------------ | ------------------------------------ | ----------------- |
+| wasm32, x86-64, ARM64, RV64 with the A extension | all                                  | none              |
+| ARMv7-M, ARMv8-M, RV32 with the A extension      | `Bool`, `Int32`, `Uint32`, `Pointer` | `Int64`, `Uint64` |
+| ARMv6-M, RISC-V without the A extension          | none                                 | all               |
+
+On ARM, the M profile is the restricted one. ARMv6, ARMv7-A and ARMv7-R have every width. On RISC-V, the A extension decides the available widths, not the word size. RV64I without the A extension has no lock-free width. RV32 with the A extension has the 32-bit widths.
+
+This means `sync/atomic` won't work on ARMv6-M or on a RISC-V target without the A extension. A build for such a target fails with a compile-time error that names the cause.
+
+It can still work on ARMv7-M, ARMv8-M and RV32 with the A extension if both of these conditions are met:
+
+- You don't use 64-bit atomic types.
+- You build with `-ffunction-sections -fdata-sections -Wl,--gc-sections` to remove unused symbols.
 
 **testing**
 
@@ -103,13 +124,13 @@ conc  flag  log/slog  net  os  sync
 
 A freestanding environment has no standard output, no entropy source and no clock, and only the target knows how to reach its own hardware. So declares a C function for each of these, and the target defines the ones its program needs:
 
-| Hook            | Signature                                              | With no definition                            |
-| --------------- | ------------------------------------------------------ | --------------------------------------------- |
-| `so_crand_read` | `so_int so_crand_read(uint8_t* buf, so_int size)`      | `crypto/crand` panics, `runtime.Seed` repeats |
-| `so_time_wall`  | `so_R_i64_i32 so_time_wall(void)`                      | `time.Now` panics                             |
-| `so_time_mono`  | `int64_t so_time_mono(void)`                           | no monotonic clock                            |
-| `so_time_sleep` | `void so_time_sleep(int64_t ns)`                       | `time.Sleep` panics                           |
-| `so_write_out`  | `so_int so_write_out(const uint8_t* buf, so_int size)` | `panic` and `fmt` print nothing               |
+| Hook            | Description                     | With no definition                            |
+| --------------- | ------------------------------- | --------------------------------------------- |
+| `so_crand_read` | send some bytes to the output   | `crypto/crand` panics, `runtime.Seed` repeats |
+| `so_time_wall`  | read some random bytes          | `time.Now` panics                             |
+| `so_time_mono`  | get the current wall clock time | no monotonic clock                            |
+| `so_time_sleep` | get the current monotonic time  | `time.Sleep` panics                           |
+| `so_write_out`  | pause for a given duration      | `panic` and `fmt` print nothing               |
 
 Every hook has a weak default definition in `builtin.c`, so a program that never calls the package still links, and a program that calls it gets the behavior of the last column. A definition in the target replaces the default. Define the hooks in a C file and add it to the build, or embed it with `so:embed`:
 
@@ -162,6 +183,10 @@ The entire program shares a single heap of `SO_HEAP_SIZE` bytes.
 `malloc` takes the next range of the heap with an atomic compare and exchange, so more than one thread can allocate. A target with no lock-free atomics of pointer width gets a plain read and write. On such a target, `malloc` (and hence `mem.System`) is not thread-safe.
 
 It's best not to use `mem.System` in freestanding mode. Instead, use `mem.Arena` to control the heap size and reset it when needed.
+
+### Allocation statistics
+
+`mem.Tracker` counts allocated bytes and objects in 64-bit counters. A target with a lock-free 64-bit atomic adds to a counter atomically, so the tracker stats are thread-safe. A target with no such atomic gets a plain add. On such a target, tracker's stats could be inaccurate if it's shared across multiple threads.
 
 ### Deterministic random
 

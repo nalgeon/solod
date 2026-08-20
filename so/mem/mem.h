@@ -18,6 +18,29 @@ static inline void mem_SwapByte(void* a, void* b, so_int n) {
     memcpy(b, tmp, size);
 }
 
+// A counter is one statistic of a Tracker.
+//
+// A target with a lock-free 64-bit atomic gets an atomic add. Every other
+// target gets a plain add, which is not thread-safe.
+typedef struct {
+    uint64_t v;
+} mem_counter;
+
+#if __GCC_ATOMIC_LLONG_LOCK_FREE == 2
+
+#define mem_counter_Load(c) \
+    (__atomic_load_n(&(c)->v, __ATOMIC_SEQ_CST))
+
+#define mem_counter_Add(c, delta) \
+    ((void)__atomic_add_fetch(&(c)->v, (delta), __ATOMIC_SEQ_CST))
+
+#else
+
+#define mem_counter_Load(c) ((c)->v)
+#define mem_counter_Add(c, delta) ((void)((c)->v += (delta)))
+
+#endif  // __GCC_ATOMIC_LLONG_LOCK_FREE == 2
+
 #ifndef so_build_hosted
 
 // Bump allocator over a static buffer for freestanding environments.
