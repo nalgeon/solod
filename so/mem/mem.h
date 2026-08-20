@@ -35,17 +35,43 @@ static inline void mem_SwapByte(void* a, void* b, so_int n) {
 extern alignas(16) char so_heap[SO_HEAP_SIZE];
 extern size_t so_heap_offset;
 
+// so_heap_next rounds cur up to a 16 byte boundary and adds size to it. It
+// writes the rounded offset to off and the position of the next allocation
+// to next, and reports whether the allocation fits.
+static inline bool so_heap_next(size_t cur, size_t size, size_t* off, size_t* next) {
+    // The rounded offset can pass the end of the heap,
+    // so check it before the subtraction.
+    size_t offset = (cur + 15) & ~(size_t)15;
+    if (offset > SO_HEAP_SIZE || size > SO_HEAP_SIZE - offset) {
+        return false;
+    }
+    *off = offset;
+    *next = offset + size;
+    return true;
+}
+
+// malloc takes the next range of the heap. It uses a compare and exchange,
+// not a fetch and add: one atomic operation cannot align the offset and add
+// to it, and a failed add still advances the offset.
 static inline void* malloc(size_t size) {
     if (size == 0) return NULL;
-    // Align to 16 bytes. The rounded offset can pass the
-    // end of the heap, so check it before the subtraction.
-    size_t offset = (so_heap_offset + 15) & ~(size_t)15;
-    if (offset > SO_HEAP_SIZE || size > SO_HEAP_SIZE - offset) {
-        return NULL;
-    }
-    void* ptr = &so_heap[offset];
-    so_heap_offset = offset + size;
-    return ptr;
+    size_t offset, next;
+#if __GCC_ATOMIC_POINTER_LOCK_FREE == 2
+    // The target has a lock-free atomic of pointer width. so_heap_offset
+    // is modified in a compare-and-swap loop, so malloc is thread-safe.
+    size_t cur = __atomic_load_n(&so_heap_offset, __ATOMIC_RELAXED);
+    do {
+        if (!so_heap_next(cur, size, &offset, &next)) return NULL;
+    } while (!__atomic_compare_exchange_n(&so_heap_offset, &cur, next, false,
+                                          __ATOMIC_RELAXED, __ATOMIC_RELAXED));
+#else
+    // The target has no lock-free atomic of pointer width.
+    // so_heap_offset is modified with a plain read and write,
+    // so malloc is not thread-safe.
+    if (!so_heap_next(so_heap_offset, size, &offset, &next)) return NULL;
+    so_heap_offset = next;
+#endif
+    return &so_heap[offset];
 }
 
 static inline void* calloc(size_t num, size_t size) {
@@ -102,6 +128,9 @@ static inline void free(void* ptr) {
 // A hosted host reclaims memory through free, so the mark is always 0 and the
 // release does nothing. The freestanding heap is a bump allocator that never
 // reclaims, so the release is the only way to reuse the memory.
+//
+// The mark and the release are not thread-safe. They are intended only
+// for use by the testing package.
 
 #if !defined(so_build_hosted) && SO_HEAP_SIZE > 0
 

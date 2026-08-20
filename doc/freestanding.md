@@ -159,7 +159,9 @@ In this implementation `free` is a no-op; memory is never reclaimed. `realloc` a
 
 The entire program shares a single heap of `SO_HEAP_SIZE` bytes.
 
-It's best not to use `mem.System` in freestanding mode. Instead, use `mem.Arena` so you can control the heap size and reset it when needed.
+`malloc` takes the next range of the heap with an atomic compare and exchange, so more than one thread can allocate. A target with no lock-free atomics of pointer width gets a plain read and write. On such a target, `malloc` (and hence `mem.System`) is not thread-safe.
+
+It's best not to use `mem.System` in freestanding mode. Instead, use `mem.Arena` to control the heap size and reset it when needed.
 
 ### Deterministic random
 
