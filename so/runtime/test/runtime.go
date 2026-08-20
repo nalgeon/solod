@@ -56,6 +56,20 @@ func TestNumCPU(t *testing.T) {
 	}
 }
 
+func TestSeed(t *testing.T) {
+	// Seed reads a 0 from the so_crand_read hook as a broken hook, so 0 is
+	// the one value Seed never returns.
+	first := runtime.Seed()
+	if first == 0 {
+		t.Error("Seed must not be 0")
+	}
+	// Two calls return different values.
+	second := runtime.Seed()
+	if second == first {
+		t.Error("Seed must not repeat")
+	}
+}
+
 func TestVersion(t *testing.T) {
 	v := runtime.Version()
 	if len(v) == 0 {

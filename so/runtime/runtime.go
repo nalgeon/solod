@@ -22,6 +22,9 @@ package runtime
 //so:embed runtime.h
 var runtime_h string
 
+//so:embed runtime.c
+var runtime_c string
+
 // GOOS is the running program's operating system target:
 // one of darwin, linux, windows, and so on.
 //
@@ -82,14 +85,15 @@ func NumCPU() int {
 }
 
 // Seed returns a random 64-bit seed.
-// It reads the cryptographic random of the operating system, so it panics on a
-// hosted platform with no such source.
+//
+// In a hosted environment, Seed reads the cryptographic random of the
+// operating system, so it panics on a platform with no such source.
+// Seed is thread-safe there.
 //
 // In a freestanding environment, Seed reads the so_crand_read hook of the
-// target. A target with no hook gets a deterministic sequence, which repeats on
-// every run. See the [freestanding guide].
-//
-// [freestanding guide]: https://github.com/solod-dev/solod/blob/main/doc/freestanding.md
+// target, and is thread-safe if the hook is thread-safe. A target with no hook
+// gets a deterministic sequence, which repeats on every run. The sequence is
+// thread-safe only on a target with lock-free 32-bit atomics.
 //
 //so:extern
 func Seed() uint64 {

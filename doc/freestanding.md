@@ -163,7 +163,11 @@ It's best not to use `mem.System` in freestanding mode. Instead, use `mem.Arena`
 
 ### Deterministic random
 
-If the `so_crand_read` hook is not defined, `runtime.Seed` uses a deterministic generator with a fixed initial state. Each call returns a different value, but the sequence is the same on every run.
+If the `so_crand_read` hook is not defined, `runtime.Seed` mixes a counter into a 64-bit value. Each call returns a different value, but the sequence is the same on every run.
+
+The entire program uses one shared counter, so `math/rand` and `maps` draw from the same sequence. The counter uses an atomic add, so more than one thread can call `runtime.Seed`. A target with no lock-free 32-bit atomics gets a plain add. On such a target, the counter is not thread-safe.
+
+A target that defines `so_crand_read` never reads the counter. `runtime.Seed` is then thread-safe only if the hook is thread-safe.
 
 Packages that depend on `runtime.Seed` (like `math/rand` and `maps`) work but produce repeatable output.
 
