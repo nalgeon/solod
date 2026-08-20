@@ -8,7 +8,7 @@ Highlights:
 - Zero runtime. No garbage collection, no reference counting, no hidden allocations.
 - Rich standard library. Use familiar types and functions ported from Go's stdlib.
 - Native C interop. Call C from So and So from C — no CGO, no overhead.
-- Go tooling works out of the box. Syntax highlighting, LSP, linting and "go test".
+- Go tooling works out of the box. Syntax highlighting, LSP, linting and modules.
 
 So supports structs, methods, interfaces, slices, maps, multiple returns, and defer. Everything is stack-allocated by default; heap is opt-in through the standard library. There is limited support for generics, and concurrency is provided by the standard library instead of being built into the language.
 
