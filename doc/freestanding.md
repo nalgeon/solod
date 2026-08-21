@@ -126,11 +126,11 @@ A freestanding environment has no standard output, no entropy source and no cloc
 
 | Hook            | Description                     | With no definition                            |
 | --------------- | ------------------------------- | --------------------------------------------- |
-| `so_crand_read` | send some bytes to the output   | `crypto/crand` panics, `runtime.Seed` repeats |
-| `so_time_wall`  | read some random bytes          | `time.Now` panics                             |
-| `so_time_mono`  | get the current wall clock time | no monotonic clock                            |
-| `so_time_sleep` | get the current monotonic time  | `time.Sleep` panics                           |
-| `so_write_out`  | pause for a given duration      | `panic` and `fmt` print nothing               |
+| `so_crand_read` | read some random bytes          | `crypto/crand` panics, `runtime.Seed` repeats |
+| `so_time_wall`  | get the current wall clock time | `time.Now` panics                             |
+| `so_time_mono`  | get the current monotonic time  | no monotonic clock                            |
+| `so_time_sleep` | pause for a given duration      | `time.Sleep` panics                           |
+| `so_write_out`  | send some bytes to the output   | `panic` and `fmt` print nothing               |
 
 Every hook has a weak default definition in `builtin.c`, so a program that never calls the package still links, and a program that calls it gets the behavior of the last column. A definition in the target replaces the default. Define the hooks in a C file and add it to the build, or embed it with `so:embed`:
 
