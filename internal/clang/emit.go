@@ -1,6 +1,7 @@
 package clang
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/types"
@@ -22,6 +23,9 @@ type EmitOptions struct {
 
 // EmitResult holds information produced by Emit for later pipeline steps.
 type EmitResult struct {
+	// Header and Impl hold the generated .h and .c file contents.
+	Header []byte
+	Impl   []byte
 	// Libs lists the C libraries the package must link against, taken from
 	// its so:link directives. Names are given without the -l prefix.
 	Libs []string
@@ -30,7 +34,18 @@ type EmitResult struct {
 // Emit generates C code for the given Go package and all its subpackages,
 // and writes it to the specified output directory. Creates a single header
 // file with typedefs (.h) and a single implementation file (.c) for each package.
-func Emit(opts EmitOptions) (res EmitResult, err error) {
+func Emit(opts EmitOptions) (EmitResult, error) {
+	res, err := Generate(opts)
+	if err != nil {
+		return res, err
+	}
+	err = Write(opts.OutDir, opts.Pkg.Name, res.Header, res.Impl)
+	return res, err
+}
+
+// Generate generates C code for the given Go package and returns the contents
+// of the header file with typedefs (.h) and the implementation file (.c).
+func Generate(opts EmitOptions) (res EmitResult, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			f, ok := r.(*failure)
@@ -41,34 +56,35 @@ func Emit(opts EmitOptions) (res EmitResult, err error) {
 		}
 	}()
 
-	if err = os.MkdirAll(opts.OutDir, 0o755); err != nil {
-		return res, fmt.Errorf("create output directory %s: %w", opts.OutDir, err)
-	}
-
 	// Initialize the generator with package information.
 	g := newGenerator(opts)
 	g.collect()
 
-	// Emit header file.
-	hPath := filepath.Join(opts.OutDir, g.pkg.Name+".h")
-	hFile, err := os.Create(hPath)
-	if err != nil {
-		return res, fmt.Errorf("create header file %s: %w", hPath, err)
-	}
-	defer hFile.Close()
-	g.emitHeader(hFile)
+	var header, impl bytes.Buffer
+	g.emitHeader(&header)
+	g.emitImpl(&impl)
 
-	// Emit implementation file.
-	cPath := filepath.Join(opts.OutDir, g.pkg.Name+".c")
-	cFile, err := os.Create(cPath)
-	if err != nil {
-		return res, fmt.Errorf("create C file %s: %w", cPath, err)
-	}
-	defer cFile.Close()
-	g.emitImpl(cFile)
-
+	res.Header = header.Bytes()
+	res.Impl = impl.Bytes()
 	res.Libs = g.links
 	return res, nil
+}
+
+// Write writes the generated header and implementation
+// of the package named pkgName to outDir.
+func Write(outDir, pkgName string, header, impl []byte) error {
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		return fmt.Errorf("create output directory %s: %w", outDir, err)
+	}
+	hPath := filepath.Join(outDir, pkgName+".h")
+	if err := os.WriteFile(hPath, header, 0o644); err != nil {
+		return fmt.Errorf("write header file %s: %w", hPath, err)
+	}
+	cPath := filepath.Join(outDir, pkgName+".c")
+	if err := os.WriteFile(cPath, impl, 0o644); err != nil {
+		return fmt.Errorf("write C file %s: %w", cPath, err)
+	}
+	return nil
 }
 
 // Includes holds the C headers to be included in the emitted .h and .c files.
