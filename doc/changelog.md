@@ -2,6 +2,44 @@
 
 This document lists the main changes in the So version in development.
 
+- Language:
+  [Type parameters](#type-parameters) ·
+  [Constraint interfaces](#constraint-interfaces) ·
+  [Interface methods](#interface-methods) ·
+  [Interface comparison](#interface-comparison) ·
+  [Type embedding](#type-embedding) ·
+  [Switch statement](#switch-statement) ·
+  [Empty structs](#empty-structs) ·
+  [String literals](#string-and-character-literals) ·
+  [Integer constants](#integer-constants) ·
+  [Integer literals](#integer-literals) ·
+  [Float constants](#float-constants) ·
+  [Float literals](#float-literals)
+- Interop:
+  [Name overrides](#c-field-name-override) ·
+  [Variadic nodecay](#variadic-nodecay) ·
+  [Target-width types](#target-width-c-types) ·
+  [Assume](#assume)
+- Safety:
+  [Assertions](#assertions)
+- Stdlib:
+  [crypto/crand](#cryptocrand) ·
+  [encoding/json](#encodingjson) ·
+  [fmt](#fmt) ·
+  [math](#math) ·
+  [math/rand](#mathrand) ·
+  [net/netip](#netnetip) ·
+  [os](#os) ·
+  [runtime](#runtime) ·
+  [testing](#testing) ·
+  [time](#time) ·
+  [uuid](#uuid)
+- Tooling:
+  [so test](#so-test) ·
+  [so translate-test](#so-translate-test) ·
+  [Freestanding flag](#freestanding-flag) ·
+  [Test naming](#test-and-bench-package-naming)
+
 ## Language
 
 ### Type parameters
@@ -132,6 +170,9 @@ The zero value of an aggregate is now the empty initializer `{}`. It used to be 
 
 A struct with no fields has a size of zero, like in Go.
 
+[1cb1cb3](https://github.com/solod-dev/solod/commit/1cb1cb3919e4d81e72027651e83b993ea78598c2) ·
+[79eeb51](https://github.com/solod-dev/solod/commit/79eeb51d8aa2085e91c310f56cd9454a83c0a755)
+
 ### String and character literals
 
 A literal is decoded to its value and encoded again for C. The output no longer keeps the literal as written. A string keeps printable ASCII and UTF-8 as is, and escapes other bytes in octal. A byte or rune literal stays a character literal for printable ASCII. Any other value becomes a number:
@@ -188,6 +229,8 @@ func TrailingZeros32(x uint32) int {
 }
 ```
 
+[f0b39d0](https://github.com/solod-dev/solod/commit/f0b39d0d9a89f2b2e839f7f459a8c0cd65f7e27c)
+
 A constant shift with a negative left operand is now folded:
 
 ```go
@@ -199,6 +242,8 @@ The left operand of a constant shift now gets a cast to the C type of the shift:
 ```go
 var big int64 = (1 + 1) << 62 // was ((1 + 1) << 62), now ((int64_t)(1 + 1) << 62)
 ```
+
+[0d26001](https://github.com/solod-dev/solod/commit/0d26001eb5f6c85928c3757107626b97e57cfc52)
 
 ### Integer literals
 
@@ -232,7 +277,9 @@ A constant that does not fit the C float type is rejected:
 const huge = 1e200 * 1e200 // rejected: constant 1e+400 overflows float64
 ```
 
-### Float32 literals
+[0d81c8b](https://github.com/solod-dev/solod/commit/0d81c8b88c96d569f0e1428ed0ef9c1d5a22d4ce)
+
+### Float literals
 
 A `float32` literal now gets an `f` suffix in C:
 
@@ -283,6 +330,8 @@ measure("is", n, "abc")
 
 The call must list its arguments explicitly rather than using spread syntax. An `any` argument is an error.
 
+[efd7892](https://github.com/solod-dev/solod/commit/efd78920df8d065726c629b471ec8320682f5292)
+
 ### Target-width C types
 
 `so/c` now supports more common C types:
@@ -310,6 +359,8 @@ for i < len(hdib) {
 ```
 
 The behavior is undefined if the condition is false. Use `c.Assume` only for conditions that are provably true, such as when a pointer is known to be non-null but the compiler cannot see it. Use `c.Assert` for all other conditions.
+
+[1488dbc](https://github.com/solod-dev/solod/commit/1488dbc2840a9a1cdee264ee6a76e5992d801568)
 
 ## Safety
 
@@ -339,9 +390,14 @@ so_int so_crand_read(uint8_t* buf, so_int size) {
 
 The hook has a weak default definition, so a program that never calls `crypto/crand` still links. A call with no definition in the target panics.
 
+[451b213](https://github.com/solod-dev/solod/commit/451b213cb61d91c65b56665ba6a12587471afc51) ·
+[2d55a04](https://github.com/solod-dev/solod/commit/2d55a04beff2321d5d4f889eb18807e6bc4a1cf5)
+
 ### encoding/json
 
 The package now works in freestanding mode. It used `math.IsNaN` and `math.IsInf` to reject a non-finite float. The `math` package requires a hosted environment, so that import alone made `encoding/json` hosted. The package now uses a private finite check and doesn't import `math`.
+
+[211ccd7](https://github.com/solod-dev/solod/commit/211ccd73d8986da72262956f6a63d7ed564bb9b4)
 
 ### fmt
 
@@ -362,6 +418,9 @@ s := fmt.Sprintf(buf, "%d apples", n)
 
 `Buffer` existed because a `[]byte` argument decayed to a bare pointer, which lost the length. The print family is nodecay now, so the slice arrives whole.
 
+[efd7892](https://github.com/solod-dev/solod/commit/efd78920df8d065726c629b471ec8320682f5292) ·
+[f7a1eaa](https://github.com/solod-dev/solod/commit/f7a1eaade656450bd84804a24a8b60b82518a7c8)
+
 ### math
 
 The package now works in freestanding mode. It rejected a freestanding build with a compile-time error, because a freestanding environment has no libm. The build now succeeds, and only the part that needs libm panics. `Abs`, `Copysign`, `Dim`, `Inf`, `IsInf`, `IsNaN`, `Max`, `Min`, `NaN`, `Pow10`, `RoundToEven`, `Signbit`, the `Float64bits` family and every constant work.
@@ -369,6 +428,8 @@ The package now works in freestanding mode. It rejected a freestanding build wit
 `Abs`, `Copysign` and `Signbit` used to call libm. All three read the bits of the float now, the way Go does.
 
 ⚠️ `Max` and `Min` follow Go for NaN. Both wrapped C's `fmax` and `fmin`, which ignore a NaN operand, so `Max(2, NaN)` returned 2. Both are ported from Go now, and they match the documented special cases: a NaN operand gives NaN, `Max` gives `+Inf` before it gives NaN, and `Min` gives `-Inf` before it gives NaN.
+
+[fbfc173](https://github.com/solod-dev/solod/commit/fbfc173e1918d81f968a481f6d221a7c0b9ab453)
 
 ### math/rand
 
@@ -380,9 +441,13 @@ sample := rand.NormFloat64()*desiredStdDev + desiredMean
 
 `NormFloat64` calls `math.Log` and `math.Exp` for a small part of the results, so it requires a hosted environment.
 
+[76b74a5](https://github.com/solod-dev/solod/commit/76b74a5c5a5eee50722773043c3aa56231213d52)
+
 ### net/netip
 
 The package now works in freestanding mode. It included `<net/if.h>` for `if_nametoindex`, and that header made the whole package hosted. The include now sits behind a hosted guard, and a freestanding build gets a stub that returns 0. A zone given as an interface name resolves to no zone, the same result a hosted `if_nametoindex` gives for a name that matches no interface. A numeric zone works everywhere.
+
+[758b40d](https://github.com/solod-dev/solod/commit/758b40de473dac084668c3282d87eab3491d51ce)
 
 ### os
 
@@ -395,6 +460,8 @@ f.Sync() // the line is out of the buffer now
 
 The data can still wait in an operating system cache, so `Sync` does not guarantee that the data reached the storage device.
 
+[b10bac5](https://github.com/solod-dev/solod/commit/b10bac59bfe030cf159676f453a4ab78022a5b8c)
+
 ### runtime
 
 The new `Hosted` constant reports whether the program is running in a hosted environment (one with a C standard library). Use it to skip tests in freestanding mode:
@@ -406,7 +473,11 @@ if !runtime.Hosted {
 }
 ```
 
+[b69ffb5](https://github.com/solod-dev/solod/commit/b69ffb5eb99cc7d7d9483dd236275e2cbafdf672)
+
 `Seed` now reads the target entropy in freestanding mode. `Seed` used a deterministic generator with a fixed initial state, so `math/rand` and the hash of `maps` repeated on every run. `Seed` now reads the same `so_crand_read` hook as `crypto/crand`, so one definition covers both. A target with no hook keeps the deterministic generator: `math/rand` and `maps` promise nothing about unpredictability and must work on a board with no entropy source.
+
+[55c6936](https://github.com/solod-dev/solod/commit/55c69361731adaafad125f8305c9e9970d88eb7a)
 
 ### testing
 
@@ -415,6 +486,8 @@ The package now works in freestanding mode. It imported `os` for the standard ou
 `RunSuites`, `RunTests` and `RunBenchmarks` take an [Options](https://pkg.go.dev/solod.dev/so/testing#Options) value in place of the runner arguments. `so test` and `so bench` read `-run` from the command line themselves and write the value into the generated runner.
 
 ⚠️ If you have a main package of your own that calls `RunTests` or `RunBenchmarks`, pass a `testing.Options` value instead of `os.Args`.
+
+[c69d8c0](https://github.com/solod-dev/solod/commit/c69d8c0f34e4a44221104e72a87c961850826da6)
 
 ### time
 
@@ -436,9 +509,14 @@ void so_time_sleep(int64_t ns) {
 
 A board that counts elapsed time but does not know the date returns 0 seconds from `so_time_wall`. Every `Time` then dates at the epoch, and `Since` and `Until` stay exact, because they measure with the monotonic clock. A target with no `so_time_mono` still works: `time.Now` returns a wall clock reading alone.
 
+[f2c7963](https://github.com/solod-dev/solod/commit/f2c7963cf423014b9a27cd0c48a6fa85e64b44a9) ·
+[2d55a04](https://github.com/solod-dev/solod/commit/2d55a04beff2321d5d4f889eb18807e6bc4a1cf5)
+
 ### uuid
 
 The package now works in freestanding mode. It imports `crypto/crand`, so `New` and `NewV4` now work in a freestanding environment as soon as `so_crand_read` is defined, and `NewV7` works once `so_time_wall` is defined too.
+
+[451b213](https://github.com/solod-dev/solod/commit/451b213cb61d91c65b56665ba6a12587471afc51)
 
 ## Tooling
 
@@ -454,6 +532,8 @@ The whole run costs one translate, one compile and one execution, which is much 
 
 The packages share a process, so a hard crash in one package stops the packages after it.
 
+[b10bac5](https://github.com/solod-dev/solod/commit/b10bac59bfe030cf159676f453a4ab78022a5b8c)
+
 The `-pkg-file` flag limits the run to the packages a file lists:
 
 ```sh
@@ -468,6 +548,8 @@ so test -pkg-file=freestanding.txt ./so/...
 
 The file holds one package per line, as a path relative to the module root. Blank lines and the text after a `#` are ignored. The list is a filter over the packages the pattern selects, so a listed package that the pattern does not select is an error.
 
+[c69d8c0](https://github.com/solod-dev/solod/commit/c69d8c0f34e4a44221104e72a87c961850826da6)
+
 ### so translate-test
 
 The new `translate-test` command writes the C of the test program without a compile or a run, the way `so translate` does for an ordinary package:
@@ -475,6 +557,8 @@ The new `translate-test` command writes the C of the test program without a comp
 ```sh
 so translate-test -pkg-file=freestanding.txt -run=TestBuffer -o out ./so/...
 ```
+
+[c69d8c0](https://github.com/solod-dev/solod/commit/c69d8c0f34e4a44221104e72a87c961850826da6)
 
 ### Freestanding flag
 
@@ -490,6 +574,8 @@ The flag drops the libc dependencies declared with `so:link` in the standard lib
 
 The target still comes from `CFLAGS`; the flag doesn't affect it.
 
+[5bda474](https://github.com/solod-dev/solod/commit/5bda4746a4b85d3dc14ca43286e034568017212c)
+
 ### Test and bench package naming
 
 A test or bench directory declared `package main` before. The generated runner must import the package now, so `package main` is rejected. Two test packages of one run must also have distinct names, because the So compiler prefixes an exported C name with the package name.
@@ -499,3 +585,5 @@ A common convention is to name a test package after the package under test, with
 The runner is no longer written to disk. `so test` and `so bench` pass the generated runner to the Go loader as an in-memory overlay, so the committed `test/main.go` and `bench/main.go` files are gone. Adding, renaming or removing a `TestXxx` or `BenchmarkXxx` needs no other step.
 
 ⚠️ If you have test or benchmark subpackages, rename them from `main` to `{package}_test` or `{package}_bench`, and remove the `main.go` files.
+
+[b10bac5](https://github.com/solod-dev/solod/commit/b10bac59bfe030cf159676f453a4ab78022a5b8c)
