@@ -178,11 +178,12 @@ Writing extern declarations by hand is slow for a large C library. [sobind](http
 ```
 go install solod.dev/sobind@latest
 
-sobind -pkg main -o sqlite3.go sqlite3.h
-sobind -I . -o sdl3.go SDL3
+sobind -o sqlite3.go -pkg main sqlite3.h
+sobind -o extern.go -scope libsodium/include libsodium/include/sodium.h
+sobind -o sdl3.go -I . SDL3
 ```
 
-Given a directory, sobind processes every `.h` file in it. Use `-I` to add an include search directory.
+Given a directory, sobind processes every `.h` file in it. Use `-I` to add an include search directory, and `-scope` to process included headers in the specified directory.
 
 sobind might map some declarations incorrectly. Treat the generated file as a starting point, not as the final binding: read it, and correct the types that sobind could not map.
 
