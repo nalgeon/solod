@@ -5,11 +5,10 @@ LDLIBS ?= -lm
 
 # Toolchain commands.
 CLANG = clang
-GCC_NATIVE = gcc-15
-GCC_DOCKER = docker run --rm -v "$(shell pwd)":/src -w /src gcc:15.2.0
-RISCV64 = docker run --rm --platform linux/riscv64 -v "$(shell pwd)":/src -w /src solod/riscv64
-I386 = docker run --rm --platform linux/i386 -v "$(shell pwd)":/src -w /src solod/i386
-EMCC = emcc
+GCC_NATIVE = gcc-16
+GCC_DOCKER = docker run --rm -v "$(shell pwd)":/src -w /src gcc:16.2.0
+RISCV64 = docker run --rm --platform linux/riscv64 -v "$(shell pwd)":/src -w /src alpine:edge
+I386 = docker run --rm --platform linux/i386 -v "$(shell pwd)":/src -w /src alpine:edge
 ZIG = zig cc
 
 # Build mode (toolchain/target) to use. The default is $(CC) on the host machine.
@@ -45,16 +44,16 @@ else ifeq ($(mode), bare)
 	RUN_PREFIX = wasmtime --invoke main
 	RUN_SUFFIX = 0 0
 else ifeq ($(mode), riscv64)
-	CC = $(RISCV64) gcc
-	CFLAGS = $(CFLAGS_CORE)
+	CC = $(ZIG)
+	CFLAGS = $(CFLAGS_CORE) --target=riscv64-linux
 	RUN_PREFIX = $(RISCV64)
 else ifeq ($(mode), i386)
-	CC = $(I386) gcc
-	CFLAGS = $(CFLAGS_CORE)
+	CC = $(ZIG)
+	CFLAGS = $(CFLAGS_CORE) --target=x86-linux
 	RUN_PREFIX = $(I386)
 else ifeq ($(mode), wasm)
-	CC = $(EMCC)
-	CFLAGS = $(CFLAGS_CORE) -sSTANDALONE_WASM
+	CC = $(ZIG)
+	CFLAGS = $(CFLAGS_CORE) --target=wasm32-wasi -Wl,--no-entry -Wl,--export=main -DSO_PANIC_MODE=SO_PANIC_ABORT
 	OUT_EXT = .wasm
 	RUN_PREFIX = wasmtime
 endif
@@ -92,16 +91,6 @@ test:
 	@mkdir -p generated
 	@go test ./so/...
 	@go test ./internal/...
-
-prepare-riscv64:
-	@printf 'FROM alpine:edge\nRUN apk add --no-cache gcc musl-dev\n' \
-		| docker build --platform=linux/riscv64 -t solod/riscv64 -
-	@docker run --rm -it --platform=linux/riscv64 -v $(shell pwd):/src solod/riscv64 uname -m
-
-prepare-i386:
-	@printf 'FROM alpine:edge\nRUN apk add --no-cache gcc musl-dev\n' \
-		| docker build --platform=linux/i386 -t solod/i386 -
-	@docker run --rm -it --platform=linux/i386 -v $(shell pwd):/src solod/i386 uname -m
 
 update-dst:
 	make run-case name=$(name)
