@@ -37,7 +37,7 @@ This document lists the main changes in the So version in development.
 - Tooling:
   [so test](#so-test) ·
   [so translate-test](#so-translate-test) ·
-  [Freestanding flag](#freestanding-flag) ·
+  [Build flags](#build-flags) ·
   [Test naming](#test-and-bench-package-naming) ·
   [Windows](#windows)
 
@@ -561,21 +561,29 @@ so translate-test -pkg-file=freestanding.txt -run=TestBuffer -o out ./so/...
 
 [c69d8c0](https://github.com/solod-dev/solod/commit/c69d8c0f34e4a44221104e72a87c961850826da6)
 
-### Freestanding flag
+### Build flags
 
-The new `-freestanding` flag tells `so build`, `so test`, `so bench` and `so run` that the program targets a freestanding environment:
+`so build`, `so test`, `so bench` and `so run` take two new flags: `-target` and `-check`.
+
+`-target` names the target of a cross-compilation. It takes the value that `clang` and `zig cc` accept after `--target=`:
 
 ```sh
-export CC=clang
-export CFLAGS="--target=wasm32-freestanding -nostdlib -Wl,--no-entry -Wl,--export=main"
-so build -freestanding -o main.wasm .
+export CC="zig cc"
+so build -target=x86_64-windows-gnu -o app.exe .
+so build -target=wasm32-freestanding -o main.wasm .
 ```
 
-The flag drops the libc dependencies declared with `so:link` in the standard library, because a freestanding target has no host C library. It does not affect the libraries declared with `so:link` in user code.
+`-check` turns on checking of the build. It is off by default:
 
-The target still comes from `CFLAGS`; the flag doesn't affect it.
+```sh
+so test -check=warn .        # -Wall -Wextra -Werror -Wno-shadow -Wno-unused-label
+so test -check=sanitize .    # warn, plus AddressSanitizer and UndefinedBehaviorSanitizer
+so test -check=analyze .     # warn, plus the GCC static analyzer
+```
 
-[5bda474](https://github.com/solod-dev/solod/commit/5bda4746a4b85d3dc14ca43286e034568017212c)
+The default optimization level is `-O2`. Use `CFLAGS` to change it.
+
+⚠️ `-check=sanitize` replaces the `-sanitize` flag, and `-target` replaces the `-freestanding` flag.
 
 ### Test and bench package naming
 

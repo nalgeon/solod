@@ -15,11 +15,11 @@ import (
 
 // Options holds the options for the compiler pipeline.
 type Options struct {
-	Assert       string // assertions: "on" (default) or "off"
-	Freestanding bool   // compile for a freestanding environment
-	PanicMode    string // panic termination mode: "trace" (default), "exit", or "abort"
-	Sanitize     string // comma-separated sanitizers to enable; empty disables
-	TrackSource  bool   // track source locations for panics
+	Assert      string // assertions: "on" (default) or "off"
+	Check       string // build checks: "off" (default), "warn", "sanitize", or "analyze"
+	PanicMode   string // panic termination mode: "trace" (default), "exit", or "abort"
+	Target      string // C compiler target value; empty targets the host
+	TrackSource bool   // track source locations for panics
 }
 
 // source locates the entry package to translate. Most callers name a directory
@@ -59,9 +59,7 @@ func translate(src source, outDir string, opts Options) ([]string, error) {
 	ordered := topoSort(entry)
 
 	// main initializes os.Args when some package of the program uses os.
-	// A freestanding build has no so_args_init, so it keeps the plain main.
-	// The os package rejects such a build anyway.
-	initArgs := !opts.Freestanding && slices.ContainsFunc(ordered, isOSPackage)
+	initArgs := slices.ContainsFunc(ordered, isOSPackage)
 
 	// Translate each package, collecting the union of their link libraries.
 	libSet := make(map[string]bool)
@@ -80,7 +78,7 @@ func translate(src source, outDir string, opts Options) ([]string, error) {
 		// (libm, pthreads). A freestanding target provides neither, so these libraries
 		// are ignored here. Libraries linked by user packages remain, because only the
 		// user knows what the target provides.
-		if opts.Freestanding && isStdlib(pkg) {
+		if target(opts.Target).freestanding() && isStdlib(pkg) {
 			continue
 		}
 		for _, lib := range res.Libs {

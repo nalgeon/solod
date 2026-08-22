@@ -9,21 +9,27 @@ So can target freestanding (bare-metal) environments where no C standard library
 
 ## Compiling
 
-Set `CC` and `CFLAGS` to target a freestanding environment, and pass `-freestanding`. For example, using `zig cc` to target bare `wasm32`:
+Name a freestanding target with `-target`. For example, using `zig cc` to target bare `wasm32`:
 
 ```sh
 export CC="zig cc"
-export CFLAGS="-Oz --target=wasm32-freestanding -nostdlib -Wl,--no-entry -Wl,--export=main"
-so build -freestanding -o main.wasm .
+export CFLAGS="-Oz -nostdlib -Wl,--no-entry -Wl,--export=main"
+so build -target=wasm32-freestanding -o main.wasm .
 ```
 
-`CFLAGS` names the target. The `-freestanding` flag settles the hosted or freestanding question:
+A target whose OS is `freestanding` (zig) or `none` (LLVM) changes the behavior:
 
-- It passes `-ffreestanding` to the C compiler. The compiler then sets `__STDC_HOSTED__` to 0, and the stdlib takes its freestanding branch.
-- It drops the libc dependencies declared with `so:link` in the standard library. It does not affect the libraries declared with `so:link` in user code.
-- It drops the panic trace flags, which a freestanding build has no use for.
+- Passes `-ffreestanding` to the C compiler. The compiler then sets `__STDC_HOSTED__` to 0, and the stdlib takes its freestanding branch.
+- Drops the libc dependencies declared with `so:link` in the standard library. It does not affect the libraries declared with `so:link` in user code.
+- Drops the panic trace flags, which a freestanding build has no use for.
 
-`so test`, `so bench` and `so run` take the same flag. `so translate` does not, because it never invokes the C compiler.
+`so test`, `so bench` and `so run` take the same flag.
+
+So doesn't infer linker flags, so the three above stay in `CFLAGS`:
+
+- `-nostdlib`, because some freestanding targets link a small C library of their own.
+- `-Wl,--no-entry`, because it is a `wasm-ld` option that GNU ld rejects.
+- `-Wl,--export=main`, because it describes how the caller reaches the output, not the target.
 
 Or transpile to C first and compile separately:
 

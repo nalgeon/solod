@@ -73,12 +73,12 @@ Run 'so <command> -h' for details.
 }
 
 const (
-	pkgFileUsage      = "select only the packages this file lists"
-	assertUsage       = "assertions: on (default) or off"
-	freestandingUsage = "compile for a freestanding environment"
-	panicModeUsage    = "panic termination mode: trace (default), exit, or abort"
-	sanitizeUsage     = "comma-separated list of C sanitizers"
-	trackSourceUsage  = "track source locations for panics"
+	pkgFileUsage     = "select only the packages this file lists"
+	assertUsage      = "assertions: on (default) or off"
+	checkUsage       = "build checks: off (default), warn, sanitize, or analyze"
+	panicModeUsage   = "panic termination mode: trace (default), exit, or abort"
+	targetUsage      = "C compiler target (default: the host)"
+	trackSourceUsage = "track source locations for panics"
 )
 
 func translate(args []string) error {
@@ -128,9 +128,9 @@ func build(args []string) error {
 	flags := flag.NewFlagSet("build", flag.ContinueOnError)
 	outFile := flags.String("o", "", "output file (default: basename of package directory)")
 	assert := flags.String("assert", "on", assertUsage)
-	freestanding := flags.Bool("freestanding", false, freestandingUsage)
-	panicMode := flags.String("panic", "trace", panicModeUsage)
-	sanitize := sanitizeFlag(flags, "sanitize", sanitizeUsage)
+	check := flags.String("check", "off", checkUsage)
+	panicMode := flags.String("panic", "", panicModeUsage)
+	target := flags.String("target", "", targetUsage)
 	trackSource := flags.Bool("track-source", false, trackSourceUsage)
 	if err := flags.Parse(args); err != nil {
 		return err
@@ -151,11 +151,11 @@ func build(args []string) error {
 	}
 
 	opts := compiler.Options{
-		Assert:       *assert,
-		Freestanding: *freestanding,
-		PanicMode:    *panicMode,
-		Sanitize:     sanitize.list,
-		TrackSource:  *trackSource,
+		Assert:      *assert,
+		Check:       *check,
+		PanicMode:   *panicMode,
+		Target:      *target,
+		TrackSource: *trackSource,
 	}
 	return compiler.Build(pkg, out, opts)
 }
@@ -165,9 +165,9 @@ func test(args []string) error {
 	pkgFile := flags.String("pkg-file", "", pkgFileUsage)
 	run := flags.String("run", "", "run only tests whose names start with this prefix")
 	assert := flags.String("assert", "on", assertUsage)
-	freestanding := flags.Bool("freestanding", false, freestandingUsage)
-	panicMode := flags.String("panic", "trace", panicModeUsage)
-	sanitize := sanitizeFlag(flags, "sanitize", sanitizeUsage)
+	check := flags.String("check", "off", checkUsage)
+	panicMode := flags.String("panic", "", panicModeUsage)
+	target := flags.String("target", "", targetUsage)
 	trackSource := flags.Bool("track-source", false, trackSourceUsage)
 	if err := flags.Parse(args); err != nil {
 		return err
@@ -179,11 +179,11 @@ func test(args []string) error {
 	}
 
 	opts := compiler.Options{
-		Assert:       *assert,
-		Freestanding: *freestanding,
-		PanicMode:    *panicMode,
-		Sanitize:     sanitize.list,
-		TrackSource:  *trackSource,
+		Assert:      *assert,
+		Check:       *check,
+		PanicMode:   *panicMode,
+		Target:      *target,
+		TrackSource: *trackSource,
 	}
 	sel := compiler.Selection{PkgFile: *pkgFile, Run: *run}
 	return compiler.Test(pkg, sel, opts)
@@ -193,9 +193,9 @@ func bench(args []string) error {
 	flags := flag.NewFlagSet("bench", flag.ContinueOnError)
 	run := flags.String("run", "", "run only benchmarks whose names start with this prefix")
 	assert := flags.String("assert", "on", assertUsage)
-	freestanding := flags.Bool("freestanding", false, freestandingUsage)
-	panicMode := flags.String("panic", "trace", panicModeUsage)
-	sanitize := sanitizeFlag(flags, "sanitize", sanitizeUsage)
+	check := flags.String("check", "off", checkUsage)
+	panicMode := flags.String("panic", "", panicModeUsage)
+	target := flags.String("target", "", targetUsage)
 	trackSource := flags.Bool("track-source", false, trackSourceUsage)
 	if err := flags.Parse(args); err != nil {
 		return err
@@ -207,11 +207,11 @@ func bench(args []string) error {
 	}
 
 	opts := compiler.Options{
-		Assert:       *assert,
-		Freestanding: *freestanding,
-		PanicMode:    *panicMode,
-		Sanitize:     sanitize.list,
-		TrackSource:  *trackSource,
+		Assert:      *assert,
+		Check:       *check,
+		PanicMode:   *panicMode,
+		Target:      *target,
+		TrackSource: *trackSource,
 	}
 	return compiler.Bench(pkg, *run, opts)
 }
@@ -219,9 +219,9 @@ func bench(args []string) error {
 func run(args []string) error {
 	flags := flag.NewFlagSet("run", flag.ContinueOnError)
 	assert := flags.String("assert", "on", assertUsage)
-	freestanding := flags.Bool("freestanding", false, freestandingUsage)
-	panicMode := flags.String("panic", "trace", panicModeUsage)
-	sanitize := sanitizeFlag(flags, "sanitize", sanitizeUsage)
+	check := flags.String("check", "off", checkUsage)
+	panicMode := flags.String("panic", "", panicModeUsage)
+	target := flags.String("target", "", targetUsage)
 	trackSource := flags.Bool("track-source", false, trackSourceUsage)
 	if err := flags.Parse(args); err != nil {
 		return err
@@ -235,11 +235,11 @@ func run(args []string) error {
 	}
 
 	opts := compiler.Options{
-		Assert:       *assert,
-		Freestanding: *freestanding,
-		PanicMode:    *panicMode,
-		Sanitize:     sanitize.list,
-		TrackSource:  *trackSource,
+		Assert:      *assert,
+		Check:       *check,
+		PanicMode:   *panicMode,
+		Target:      *target,
+		TrackSource: *trackSource,
 	}
 	return compiler.Run(pkg, runArgs, opts)
 }
@@ -252,29 +252,3 @@ func outOrDot(outDir string) string {
 	}
 	return outDir
 }
-
-// sanitizeValue is the flag.Value for -sanitize. Bare -sanitize enables the
-// default set; -sanitize=address,undefined enables a specific list. The zero
-// value (flag absent) enables no sanitizers.
-type sanitizeValue struct{ list string }
-
-func sanitizeFlag(flags *flag.FlagSet, name, usage string) *sanitizeValue {
-	s := new(sanitizeValue)
-	flags.Var(s, name, usage)
-	return s
-}
-
-func (s *sanitizeValue) String() string { return s.list }
-
-func (s *sanitizeValue) Set(v string) error {
-	if v == "" || v == "true" {
-		s.list = "address,undefined"
-	} else {
-		s.list = v
-	}
-	return nil
-}
-
-// IsBoolFlag lets -sanitize be given without a value, defaulting to the
-// standard set, while still accepting -sanitize=list.
-func (s *sanitizeValue) IsBoolFlag() bool { return true }

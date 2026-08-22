@@ -4,10 +4,11 @@ So builds for `windows/amd64` and `windows/arm64`. The build requires GCC or Cla
 
 ```sh
 export CC="zig cc"
-export CFLAGS="--target=x86_64-windows-gnu"
 export LDFLAGS="-lbcrypt -liphlpapi"
-so build -o app.exe .
+so build -target=x86_64-windows-gnu -o app.exe .
 ```
+
+When using `zig cc`, pass `-target=x86_64-windows-gnu` for `windows/amd64` and `-target=aarch64-windows-gnu` for `windows/arm64`. A build with a MinGW compiler needs no `-target`, because the compiler already targets Windows.
 
 Make sure to link the system libraries manually, as shown above, because `so build` can't link them automatically yet.
 

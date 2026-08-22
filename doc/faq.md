@@ -22,11 +22,13 @@ So has extra safeguards beyond Go's default type checking:
 
 However, escape analysis doesn't catch every case, and the leak checker won't detect double-free or use-after-free errors by itself.
 
-Most memory-related problems can be caught with AddressSanitizer in modern compilers. I strongly recommend turning on sanitizers with the `-sanitize` flag while developing. Or set the flags in `CFLAGS` yourself:
+Most memory-related problems can be caught with AddressSanitizer in modern compilers. I strongly recommend turning on sanitizers with the `-check=sanitize` flag while developing:
 
-```text
--g -fno-omit-frame-pointer -fsanitize=address,undefined
+```sh
+so test -check=sanitize .
 ```
+
+See [Checks](building.md#checks) for what the flag sets.
 
 _What about concurrency?_
 

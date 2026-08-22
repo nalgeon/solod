@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime/debug"
+	"slices"
 	"strings"
 )
 
@@ -118,7 +119,12 @@ type compileOptions struct {
 
 // newCompileOptions derives the C defines and flags from opts.
 func newCompileOptions(opts Options) (compileOptions, error) {
-	panicDef, panicFlags, err := panicMode(opts.PanicMode, ccName(), opts.Freestanding)
+	cc := ccName()
+	tgt := target(opts.Target)
+	if tgt != "" && isGCC(cc) {
+		return compileOptions{}, fmt.Errorf("-target needs clang or zig cc, but CC is %q", cc)
+	}
+	panicDef, panicFlags, err := panicMode(opts.PanicMode, cc, tgt)
 	if err != nil {
 		return compileOptions{}, err
 	}
@@ -126,13 +132,23 @@ func newCompileOptions(opts Options) (compileOptions, error) {
 	if err != nil {
 		return compileOptions{}, err
 	}
-	flags := append(panicFlags, sanitizeFlags(opts.Sanitize)...)
-	if opts.Freestanding {
+	checkFlags, err := checkMode(opts.Check, cc, tgt)
+	if err != nil {
+		return compileOptions{}, err
+	}
+
+	var flags []string
+	if tgt != "" {
+		flags = append(flags, "--target="+string(tgt))
+	}
+	if tgt.freestanding() {
 		// builtin.h derives so_build_hosted from __STDC_HOSTED__, which
-		// -ffreestanding sets to 0. The flag comes before CFLAGS, so the
-		// caller can still override it.
+		// -ffreestanding sets to 0.
 		flags = append(flags, "-ffreestanding")
 	}
+	flags = append(flags, panicFlags...)
+	flags = append(flags, checkFlags...)
+
 	defines := append([]string{panicDef}, assertDefs...)
 	return compileOptions{
 		defines: defines,
@@ -142,10 +158,14 @@ func newCompileOptions(opts Options) (compileOptions, error) {
 
 // compileC invokes the C compiler to produce an executable.
 func compileC(includeDir string, cFiles []string, outFile string, copts compileOptions) error {
-	cc := ccName()
+	// CC may name a compiler that takes an argument of its own, as in
+	// CC="zig cc", so the first word is the program and the rest are args.
+	cc := splitFlags(ccName())
 
-	args := []string{"-I" + includeDir}
+	args := append(slices.Clone(cc[1:]), "-I"+includeDir)
 	args = append(args, fmt.Sprintf(`-Dso_version="%s"`, Version()))
+	// -O2 comes before CFLAGS, so a level from CFLAGS replaces it.
+	args = append(args, "-O2")
 	args = append(args, copts.defines...)
 	args = append(args, copts.flags...)
 	args = append(args, splitFlags(os.Getenv("CFLAGS"))...)
@@ -158,7 +178,7 @@ func compileC(includeDir string, cFiles []string, outFile string, copts compileO
 	}
 	args = append(args, splitFlags(os.Getenv("LDFLAGS"))...)
 
-	cmd := exec.Command(cc, args...)
+	cmd := exec.Command(cc[0], args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -168,19 +188,26 @@ func compileC(includeDir string, cFiles []string, outFile string, copts compileO
 }
 
 // panicMode maps a panic mode name to the -DSO_PANIC_MODE define and any
-// extra C compiler flags the mode needs, given the C compiler cc.
-// An empty mode defaults to "trace".
-func panicMode(mode, cc string, freestanding bool) (define string, flags []string, err error) {
+// extra C compiler flags the mode needs, given the C compiler cc and the
+// target tgt. An empty mode defaults to "trace", or to "exit" on musl,
+// where the trace comes out empty.
+func panicMode(mode, cc string, tgt target) (define string, flags []string, err error) {
+	if mode == "" {
+		mode = "trace"
+		if tgt.musl() {
+			mode = "exit"
+		}
+	}
 	switch mode {
-	case "", "trace":
+	case "trace":
 		// A freestanding build traps whatever the mode is, so it needs no flags.
-		if freestanding {
+		if tgt.freestanding() {
 			return "-DSO_PANIC_MODE=SO_PANIC_TRACE", nil, nil
 		}
 		// Needs frame pointers to unwind and -rdynamic for symbol names.
 		// MinGW rejects -rdynamic, so we skip it there.
 		flags := []string{"-fno-omit-frame-pointer"}
-		if !isMinGW(cc) {
+		if !tgt.windows() && !isMinGW(cc) {
 			flags = append(flags, "-rdynamic")
 		}
 		return "-DSO_PANIC_MODE=SO_PANIC_TRACE", flags, nil
@@ -206,19 +233,36 @@ func assertMode(mode string) (defines []string, err error) {
 	}
 }
 
-// sanitizeFlags returns the C compiler flags for the requested sanitizers.
-// list is a comma-separated set (e.g. "address,undefined"); empty enables none.
-func sanitizeFlags(list string) []string {
-	names := splitList(list)
-	if len(names) == 0 {
-		return nil
+// warnFlags are the C compiler flags of the "warn" check mode.
+var warnFlags = []string{
+	"-Wall", "-Wextra", "-Werror", "-Wno-shadow", "-Wno-unused-label",
+}
+
+// checkMode maps a check mode name to the C compiler flags of the mode, given
+// the C compiler cc and the target tgt. An empty mode defaults to "off".
+func checkMode(mode, cc string, tgt target) (flags []string, err error) {
+	switch mode {
+	case "", "off":
+		return nil, nil
+	case "warn":
+		return slices.Clone(warnFlags), nil
+	case "sanitize":
+		if tgt.freestanding() {
+			return nil, fmt.Errorf("-check=sanitize needs a hosted target, but %s is freestanding", tgt)
+		}
+		// -g makes the reports carry readable file:line stack traces.
+		return slices.Concat(warnFlags, []string{
+			"-g", "-fsanitize=address,undefined",
+			"-fno-sanitize-recover=all", "-fno-omit-frame-pointer",
+		}), nil
+	case "analyze":
+		if isClang(cc) {
+			return nil, fmt.Errorf("-check=analyze needs GCC, but CC is %q", cc)
+		}
+		return slices.Concat(warnFlags, []string{"-fanalyzer"}), nil
+	default:
+		return nil, fmt.Errorf("invalid check mode %q", mode)
 	}
-	// Add these so reports carry readable file:line stack traces.
-	flags := []string{"-g", "-fno-omit-frame-pointer"}
-	for _, name := range names {
-		flags = append(flags, "-fsanitize="+name)
-	}
-	return flags
 }
 
 // splitFlags splits a space-separated flags string into individual args.
@@ -228,17 +272,6 @@ func splitFlags(s string) []string {
 		return nil
 	}
 	return strings.Fields(s)
-}
-
-// splitList splits a comma-separated string into trimmed, non-empty items.
-func splitList(s string) []string {
-	var items []string
-	for item := range strings.SplitSeq(s, ",") {
-		if item = strings.TrimSpace(item); item != "" {
-			items = append(items, item)
-		}
-	}
-	return items
 }
 
 // ccName returns the C compiler to invoke, from CC (default "cc").
@@ -252,4 +285,16 @@ func ccName() string {
 // isMinGW reports whether cc names a MinGW compiler, which targets Windows.
 func isMinGW(cc string) bool {
 	return strings.Contains(strings.ToLower(cc), "mingw")
+}
+
+// isGCC reports whether cc names GCC.
+func isGCC(cc string) bool {
+	cc = strings.ToLower(cc)
+	return strings.Contains(cc, "gcc") && !isClang(cc)
+}
+
+// isClang reports whether cc names a clang compiler. zig cc is clang.
+func isClang(cc string) bool {
+	cc = strings.ToLower(cc)
+	return strings.Contains(cc, "clang") || strings.Contains(cc, "zig")
 }

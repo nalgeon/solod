@@ -39,6 +39,7 @@ func TestTranslateBad(t *testing.T) {
 }
 
 func TestFreestandingLibs(t *testing.T) {
+	const bareTarget = "wasm32-freestanding"
 	// A freestanding build drops the stdlib so:link libraries,
 	// but keeps the ones a user package declares.
 
@@ -47,12 +48,12 @@ func TestFreestandingLibs(t *testing.T) {
 	be.Err(t, err, nil)
 	be.Equal(t, hosted, []string{"m"})
 
-	bare, err := Translate("../../so/math", t.TempDir(), Options{Freestanding: true})
+	bare, err := Translate("../../so/math", t.TempDir(), Options{Target: bareTarget})
 	be.Err(t, err, nil)
 	be.Equal(t, bare, nil)
 
 	// The link case declares so:link m and so:link pthread in its own packages.
-	user, err := Translate("../../testdata/link/src", t.TempDir(), Options{Freestanding: true})
+	user, err := Translate("../../testdata/link/src", t.TempDir(), Options{Target: bareTarget})
 	be.Err(t, err, nil)
 	be.Equal(t, user, []string{"m", "pthread"})
 }
@@ -69,15 +70,10 @@ func TestInitArgs(t *testing.T) {
 		return string(code)
 	}
 
-	// A hosted build initializes os.Args from argc/argv.
+	// A build that imports os initializes os.Args from argc/argv.
 	hosted := runnerMain(t, Options{})
 	be.True(t, strings.Contains(hosted, "int main(int argc, char* argv[])"))
 	be.True(t, strings.Contains(hosted, "so_args_init(argc, argv, _so_argv);"))
-
-	// A freestanding build has no so_args_init, so it keeps the plain main.
-	bare := runnerMain(t, Options{Freestanding: true})
-	be.True(t, strings.Contains(bare, "int main(void)"))
-	be.True(t, !strings.Contains(bare, "so_args_init"))
 }
 
 func caseDirs(t *testing.T, pattern string) []string {
