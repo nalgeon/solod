@@ -12,11 +12,11 @@
 // Signbit and the Float64bits family need no libm, so they work in a
 // freestanding environment.
 
-#ifdef so_build_hosted
+#if defined(so_build_hosted)
 
 #include <math.h>
 
-#else
+#else  // !so_build_hosted
 
 // clang-format off
 

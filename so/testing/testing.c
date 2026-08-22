@@ -1,14 +1,14 @@
 //go:build ignore
 #include "testing.h"
 
-#ifdef so_build_hosted
+#if defined(so_build_hosted)
 
 // exitFail ends the program with a failure status.
 static void testing_exitFail(void) {
     exit(1);
 }
 
-#else
+#else  // !so_build_hosted
 
 // A freestanding host has no exit status, so exitFail traps.
 static void testing_exitFail(void) {

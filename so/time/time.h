@@ -1,12 +1,12 @@
 #include "so/builtin/builtin.h"
 
-#ifdef so_build_hosted
+#if defined(so_build_hosted)
 #include <errno.h>
 #include <time.h>
 
 #define time_tm struct tm
 
-#ifdef so_build_windows
+#if defined(so_build_windows)
 
 static inline char* strptime(const char* str, const char* format, struct tm* tm) {
     (void)str;
@@ -16,7 +16,7 @@ static inline char* strptime(const char* str, const char* format, struct tm* tm)
     return NULL;
 }
 
-#else
+#else  // !so_build_windows
 
 // strptime may not be declared without _XOPEN_SOURCE before system headers.
 // Provide an explicit declaration for portability (e.g. glibc with gcc).
@@ -51,7 +51,7 @@ static inline void time_sleep(int64_t ns) {
     }
 }
 
-#else
+#else  // !so_build_hosted
 
 typedef struct {
     int tm_sec;    // seconds after the minute [0-60]

@@ -41,14 +41,14 @@ typedef struct {
 
 #endif  // __GCC_ATOMIC_LLONG_LOCK_FREE == 2
 
-#ifndef so_build_hosted
+#if !defined(so_build_hosted)
 
 // Bump allocator over a static buffer for freestanding environments.
 // Memory is never reclaimed: free is a no-op, realloc copies into a new bump.
 // Suitable for short-lived programs that don't need much memory.
 // The heap is off by default, enable with -DSO_HEAP_SIZE=N.
 
-#ifndef SO_HEAP_SIZE
+#if !defined(SO_HEAP_SIZE)
 #define SO_HEAP_SIZE (0)  // in bytes
 #endif
 
@@ -117,7 +117,7 @@ static inline void* realloc(void* ptr, size_t new_size) {
     return new_ptr;
 }
 
-#else
+#else  // SO_HEAP_SIZE <= 0
 
 static inline void* malloc(size_t size) {
     (void)size;

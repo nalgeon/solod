@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include "so/builtin/builtin.h"
 
-#ifndef so_build_hosted
+#if !defined(so_build_hosted)
 static inline int printf(const char* format, ...) {
     (void)format;
     return 0;

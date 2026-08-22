@@ -32,7 +32,7 @@
 #define PRId64 "lld"
 #define PRIu64 "llu"
 
-#ifdef NDEBUG
+#if defined(NDEBUG)
 #define assert(cond) ((void)0)
 #else
 #define assert(cond)                   \
@@ -117,7 +117,7 @@ typedef uint64_t so_uint;
 
 // MaxAllocaSize is the maximum size that can be
 // allocated with alloca (64 KB by default).
-#ifndef SO_MAX_ALLOCA_SIZE
+#if !defined(SO_MAX_ALLOCA_SIZE)
 #define SO_MAX_ALLOCA_SIZE (64 << 10)  // in bytes
 #endif
 
@@ -265,7 +265,7 @@ so_int so_utf8_encode(so_rune r, char* buf);
 // Returns the decoded rune, or 0xFFFD for invalid UTF-8.
 so_rune so_utf8_decode(so_String s, so_int i, so_int* w);
 
-#ifndef so_build_hosted
+#if !defined(so_build_hosted)
 static inline size_t strlen(const char* s) {
     const char* p = s;
     while (*p) p++;
@@ -531,7 +531,7 @@ static inline so_String so_error_error(void* self) {
     _err_str;                                          \
 })
 
-#ifndef so_build_hosted
+#if !defined(so_build_hosted)
 
 // so_write_out is the target's output hook for a freestanding environment.
 // The default definition in builtin.c drops the bytes and reports a full write.
@@ -561,11 +561,11 @@ static inline void so_write_str(const char* s) {
 #define SO_PANIC_EXIT 0
 #define SO_PANIC_ABORT 1
 #define SO_PANIC_TRACE 2
-#ifndef SO_PANIC_MODE
+#if !defined(SO_PANIC_MODE)
 #define SO_PANIC_MODE SO_PANIC_EXIT
 #endif
 
-#ifdef so_build_hosted
+#if defined(so_build_hosted)
 
 #if SO_PANIC_MODE == SO_PANIC_TRACE
 // print_trace writes a symbolized backtrace of the current call stack
@@ -606,7 +606,7 @@ void so_print_trace(void);
 // assert panics with the given message if the condition is false.
 // SO_NO_ASSERT removes the check entirely, so cond must be free of side
 // effects. NDEBUG has no effect here.
-#ifdef SO_NO_ASSERT
+#if defined(SO_NO_ASSERT)
 #define so_assert(cond, msg) ((void)0)
 #else
 #define so_assert(cond, msg) \
@@ -733,7 +733,7 @@ static inline void* unsafe_SliceData(so_Slice s) {
 // Command-line arguments, populated by main().
 extern so_Slice os_Args;
 
-#ifdef so_build_hosted
+#if defined(so_build_hosted)
 // so_args_init populates os_Args from C argc/argv.
 // buf must be a so_String array of at least argc elements (VLA on main's stack).
 static inline void so_args_init(int argc, char* argv[], so_String* buf) {

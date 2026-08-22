@@ -1,7 +1,7 @@
 #include "so/builtin/builtin.h"
 #include "so/runtime/runtime.h"
 
-#ifdef so_build_hosted
+#if defined(so_build_hosted)
 
 // read fills buf with size cryptographically secure random bytes.
 // Panics if the operating system has no cryptographic random.
@@ -12,7 +12,7 @@ static inline void crand_read(uint8_t* buf, so_int size) {
     }
 }
 
-#else
+#else  // !so_build_hosted
 
 // so_crand_read fills buf with size cryptographically secure random bytes and
 // returns the number of bytes written. A freestanding environment has no

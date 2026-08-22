@@ -4,7 +4,7 @@
 
 //go:build ignore
 
-#ifndef so_build_hosted
+#if !defined(so_build_hosted)
 
 // This case stands in for the board. A freestanding environment has no entropy
 // source and no clock, so it defines the target hooks that crypto/crand and

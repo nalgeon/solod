@@ -1,6 +1,6 @@
 #include "so/builtin/builtin.h"
 
-#ifdef so_build_hosted
+#if defined(so_build_hosted)
 
 #if defined(so_build_darwin) || defined(so_build_linux) || defined(so_build_freebsd) || defined(so_build_netbsd) || defined(so_build_openbsd) || defined(so_build_dragonfly)
 #include <unistd.h>
@@ -23,7 +23,7 @@ static inline so_int runtime_NumCPU(void) {
 // caller that needs an error message writes the message of its own package.
 bool runtime_crand_read(uint8_t* buf, so_int size);
 
-#else
+#else  // !so_build_hosted
 
 // NumCPU is fixed at 1 in freestanding environments.
 static inline so_int runtime_NumCPU(void) {
@@ -40,7 +40,7 @@ so_int so_crand_read(uint8_t* buf, so_int size);
 // Seed returns a random 64-bit seed.
 uint64_t runtime_Seed(void);
 
-#ifdef so_build_hosted
+#if defined(so_build_hosted)
 #define runtime_Hosted true
 #else
 #define runtime_Hosted false

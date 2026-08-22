@@ -1,6 +1,6 @@
 #include "so/builtin/builtin.h"
 
-#ifndef so_build_hosted
+#if !defined(so_build_hosted)
 // Pure C memchr implementation for freestanding environments.
 static inline void* memchr(const void* s, int c, size_t n) {
     const unsigned char* p = s;

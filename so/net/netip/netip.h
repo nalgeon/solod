@@ -5,14 +5,13 @@
 // if_nametoindex requires iphlpapi. Link the program with -liphlpapi,
 // because a so:link directive cannot depend on the target.
 #include <winsock2.h>
-
 #include <iphlpapi.h>
 
 #elif defined(so_build_hosted) && !defined(so_build_wasm)
 
 #include <net/if.h>
 
-#else
+#else  // !so_build_hosted || so_build_wasm
 
 // A freestanding or WASM environment has no network interfaces, so an interface
 // name can't be resolved to an index. Returning 0 matches the behavior in hosted

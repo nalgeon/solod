@@ -1,7 +1,7 @@
 //go:build ignore
 #include "runtime.h"
 
-#ifdef so_build_hosted
+#if defined(so_build_hosted)
 
 #if defined(so_build_darwin) || defined(so_build_netbsd) || defined(so_build_openbsd)
 #include <stdlib.h>
@@ -70,7 +70,7 @@ uint64_t runtime_Seed(void) {
     return seed;
 }
 
-#else
+#else  // !so_build_hosted
 
 // seed_ticket numbers the calls to the fallback sequence of Seed.
 static uint32_t seed_ticket = 0;

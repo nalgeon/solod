@@ -1,7 +1,7 @@
 #include <stdarg.h>
 #include "builtin.h"
 
-#ifdef so_build_hosted
+#if defined(so_build_hosted)
 #include <stdio.h>
 #endif
 
@@ -90,7 +90,7 @@ __attribute__((constructor)) static void so_install_fault_handler(void) {
 // Each hook is declared where it is called: so_write_out in builtin.h,
 // so_crand_read in crypto/crand and runtime, and the three clock hooks in
 // time.
-#ifndef so_build_hosted
+#if !defined(so_build_hosted)
 
 // so_write_out drops the bytes and reports a full write, so panic and fmt
 // print nothing and report no error.
@@ -312,7 +312,7 @@ void so_map_set_impl(so_Map* m, const void* key, size_t key_size,
     }
 }
 
-#ifdef so_build_hosted
+#if defined(so_build_hosted)
 
 // print writes the formatted string to stdout.
 // Returns the number of bytes written.
@@ -335,7 +335,7 @@ int so_println(const char* format, ...) {
     return n + 1;
 }
 
-#else
+#else  // !so_build_hosted
 
 int so_print(const char* format, ...) {
     (void)format;

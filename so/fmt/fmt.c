@@ -6,7 +6,7 @@ so_Error fmt_ErrScan = errors_New("scan failure");
 
 // --- Output ---
 
-#ifdef so_build_hosted
+#if defined(so_build_hosted)
 
 // writeOut writes p to the standard output.
 static so_int fmt_writeOut(so_Slice p) {
@@ -21,7 +21,7 @@ void fmt_flushOut(void) {
     fflush(stdout);
 }
 
-#else
+#else  // !so_build_hosted
 
 // A freestanding host has no standard output, so writeOut writes through the
 // so_write_out hook of the target. A target with no hook drops the bytes and
@@ -142,7 +142,7 @@ so_R_int_err fmt_Fprintf(io_Writer w, so_String format, ...) {
 
 // --- Scan ---
 
-#ifdef so_build_hosted
+#if defined(so_build_hosted)
 
 // scanSize is the size of the buffer that Fscanf reads a line into. A longer
 // line is truncated.
@@ -185,7 +185,7 @@ so_R_int_err fmt_Fscanf(io_Reader r, const char* format, ...) {
     return (so_R_int_err){.val = n, .err = err};
 }
 
-#else
+#else  // !so_build_hosted
 
 // A freestanding host has no stdio, so the scan family panics there.
 

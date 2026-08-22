@@ -1,6 +1,6 @@
 #include "so/builtin/builtin.h"
 
-#ifndef so_build_hosted
+#if !defined(so_build_hosted)
 #error "sync: hosted environment required"
 #endif
 
