@@ -1,22 +1,29 @@
 #include "so/builtin/builtin.h"
 
+// NumCPU returns the number of online logical CPUs, always >= 1.
+//
+// A POSIX target reads _SC_NPROCESSORS_ONLN. This macro is not POSIX, but is
+// widely available. Other hosted and freestanding targets always return 1.
+static inline so_int runtime_NumCPU(void);
+
 #if defined(so_build_hosted)
 
-#if defined(so_build_darwin) || defined(so_build_linux) || defined(so_build_freebsd) || defined(so_build_netbsd) || defined(so_build_openbsd) || defined(so_build_dragonfly)
-#include <unistd.h>
-#endif
+#if defined(so_build_posix)
 
-// NumCPU returns the number of online logical CPUs, always >= 1.
-// _SC_NPROCESSORS_ONLN is not POSIX but is widely available.
-// Other hosted targets fall back to 1.
+#include <unistd.h>
+
 static inline so_int runtime_NumCPU(void) {
-#if defined(so_build_darwin) || defined(so_build_linux) || defined(so_build_freebsd) || defined(so_build_netbsd) || defined(so_build_openbsd) || defined(so_build_dragonfly)
     long n = sysconf(_SC_NPROCESSORS_ONLN);
     return n > 0 ? (so_int)n : 1;
-#else
-    return 1;
-#endif
 }
+
+#else  // !so_build_posix
+
+static inline so_int runtime_NumCPU(void) {
+    return 1;
+}
+
+#endif  // so_build_posix
 
 // runtime_crand_read fills buf with size bytes of the cryptographic random of
 // the operating system. It reports whether it filled the whole buffer. A
@@ -25,7 +32,6 @@ bool runtime_crand_read(uint8_t* buf, so_int size);
 
 #else  // !so_build_hosted
 
-// NumCPU is fixed at 1 in freestanding environments.
 static inline so_int runtime_NumCPU(void) {
     return 1;
 }

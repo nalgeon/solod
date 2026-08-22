@@ -51,16 +51,22 @@
 
 #if defined(__APPLE__)
 #define so_build_darwin
+#define so_build_posix
 #elif defined(__linux__)
 #define so_build_linux
+#define so_build_posix
 #elif defined(__FreeBSD__)
 #define so_build_freebsd
+#define so_build_posix
 #elif defined(__NetBSD__)
 #define so_build_netbsd
+#define so_build_posix
 #elif defined(__OpenBSD__)
 #define so_build_openbsd
+#define so_build_posix
 #elif defined(__DragonFly__)
 #define so_build_dragonfly
+#define so_build_posix
 #elif defined(__wasm__)
 #define so_build_wasm
 #elif defined(_WIN32)

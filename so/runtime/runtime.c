@@ -4,28 +4,24 @@
 #if defined(so_build_hosted)
 
 #if defined(so_build_darwin) || defined(so_build_netbsd) || defined(so_build_openbsd)
-#include <stdlib.h>
-#elif defined(so_build_linux) || defined(so_build_freebsd) || defined(so_build_dragonfly)
-#include <sys/random.h>
-#include <sys/types.h>  // ssize_t
-#elif defined(so_build_wasm)
-#include <unistd.h>
-#elif defined(so_build_windows)
-// BCryptGenRandom requires bcrypt. Link the program with -lbcrypt,
-// because a so:link directive cannot depend on the target.
-#include <windows.h>
 
-#include <bcrypt.h>
-#endif
+#include <stdlib.h>
 
 // runtime_crand_read fills buf with size bytes of the
 // cryptographic random of the operating system.
 bool runtime_crand_read(uint8_t* buf, so_int size) {
     if (size <= 0) return true;
-#if defined(so_build_darwin) || defined(so_build_netbsd) || defined(so_build_openbsd)
     arc4random_buf(buf, (size_t)size);
     return true;
+}
+
 #elif defined(so_build_linux) || defined(so_build_freebsd) || defined(so_build_dragonfly)
+
+#include <sys/random.h>
+#include <sys/types.h>  // ssize_t
+
+bool runtime_crand_read(uint8_t* buf, so_int size) {
+    if (size <= 0) return true;
     while (size > 0) {
         ssize_t n = getrandom(buf, (size_t)size, 0);
         if (n < 0) return false;
@@ -33,7 +29,14 @@ bool runtime_crand_read(uint8_t* buf, so_int size) {
         size -= (so_int)n;
     }
     return true;
+}
+
 #elif defined(so_build_wasm)
+
+#include <unistd.h>
+
+bool runtime_crand_read(uint8_t* buf, so_int size) {
+    if (size <= 0) return true;
     // getentropy reads 256 bytes at most.
     while (size > 0) {
         size_t n = size < 256 ? (size_t)size : 256;
@@ -42,7 +45,17 @@ bool runtime_crand_read(uint8_t* buf, so_int size) {
         size -= (so_int)n;
     }
     return true;
+}
+
 #elif defined(so_build_windows)
+
+// BCryptGenRandom requires bcrypt. Link the program with -lbcrypt,
+// because a so:link directive cannot depend on the target.
+#include <windows.h>
+#include <bcrypt.h>
+
+bool runtime_crand_read(uint8_t* buf, so_int size) {
+    if (size <= 0) return true;
     // BCryptGenRandom counts the bytes in 32 bits, so a larger buffer
     // needs more calls. A null algorithm handle draws from the preferred
     // generator of the system.
@@ -55,11 +68,17 @@ bool runtime_crand_read(uint8_t* buf, so_int size) {
         size -= (so_int)n;
     }
     return true;
-#else
+}
+
+#else  // other hosted targets
+
+bool runtime_crand_read(uint8_t* buf, so_int size) {
+    if (size <= 0) return true;
     (void)buf;
     return false;
-#endif
 }
+
+#endif  // so_build_{goos}
 
 // Seed returns a random 64-bit seed.
 uint64_t runtime_Seed(void) {
