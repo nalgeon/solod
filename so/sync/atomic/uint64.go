@@ -2,6 +2,8 @@ package atomic
 
 // Uint64 is an atomic uint64. The zero value is zero.
 // Uint64 must not be copied after first use.
+//
+//so:attr aligned(8)
 type Uint64 struct {
 	v uint64
 }

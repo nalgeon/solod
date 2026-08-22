@@ -2,6 +2,8 @@ package atomic
 
 // Int64 is an atomic int64. The zero value is zero.
 // Int64 must not be copied after first use.
+//
+//so:attr aligned(8)
 type Int64 struct {
 	v int64
 }

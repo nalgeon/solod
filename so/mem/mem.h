@@ -23,7 +23,7 @@ static inline void mem_SwapByte(void* a, void* b, so_int n) {
 // A target with a lock-free 64-bit atomic gets an atomic add. Every other
 // target gets a plain add, which is not thread-safe.
 typedef struct {
-    uint64_t v;
+    alignas(8) uint64_t v;
 } mem_counter;
 
 #if __GCC_ATOMIC_LLONG_LOCK_FREE == 2
