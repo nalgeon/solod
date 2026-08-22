@@ -7,6 +7,10 @@ var ErrParse = errors.New("time: cannot parse")
 
 // Parse parses value per layout (strptime verbs) and returns the Time.
 // offset specifies what timezone the input value is in.
+//
+// A named layout ([RFC3339], [DateOnly] and so on) works in every build.
+// A custom layout needs strptime, so it panics on Windows and in a
+// freestanding environment.
 func Parse(layout string, value string, offset Offset) (Time, error) {
 	// Fast paths for known layouts - avoid strptime
 	// overhead and verb issues (%z, %f).

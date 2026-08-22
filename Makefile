@@ -10,11 +10,14 @@ GCC_DOCKER = docker run --rm -v "$(shell pwd)":/src -w /src gcc:16.2.0
 RISCV64 = docker run --rm --platform linux/riscv64 -v "$(shell pwd)":/src -w /src alpine:edge
 I386 = docker run --rm --platform linux/i386 -v "$(shell pwd)":/src -w /src alpine:edge
 ZIG = zig cc
+WINE ?= wine
 
 # Build mode (toolchain/target) to use. The default is $(CC) on the host machine.
 mode =
 # Heap size for a freestanding build in bytes (default: 256 KB).
 heap = 262144
+# Target architecture of a Windows build.
+arch = x86_64
 
 # Internal build mode helpers.
 OUT_EXT =
@@ -51,6 +54,12 @@ else ifeq ($(mode), i386)
 	CC = $(ZIG)
 	CFLAGS = $(CFLAGS_CORE) --target=x86-linux
 	RUN_PREFIX = $(I386)
+else ifeq ($(mode), windows)
+	CC = $(ZIG)
+	CFLAGS = $(CFLAGS_CORE) --target=$(arch)-windows-gnu
+	LDLIBS = -lm -lbcrypt -liphlpapi
+	OUT_EXT = .exe
+	RUN_PREFIX = $(WINE)
 else ifeq ($(mode), wasm)
 	CC = $(ZIG)
 	CFLAGS = $(CFLAGS_CORE) --target=wasm32-wasi -Wl,--no-entry -Wl,--export=main -DSO_PANIC_MODE=SO_PANIC_ABORT
@@ -150,6 +159,18 @@ test-std-bare:
 	@$(SO) translate-test -o generated/bare -pkg-file=so/testing/bare/packages.txt ./so/...
 	@cp so/testing/bare/harness.c generated/bare/
 	@make run-c path=generated/bare mode=bare heap=$(heap)
+
+# The build mode of test-std-windows. It cross-compiles with zig cc and runs
+# the binary with wine by default. On a Windows machine, pass mode=fast to
+# build with the native toolchain and run the binary directly.
+win_mode = $(if $(mode),$(mode),windows)
+
+# Runs the tests of the freestanding stdlib packages on Windows.
+test-std-windows:
+	@rm -rf generated/windows
+	@mkdir -p generated/windows
+	@$(SO) translate-test -o generated/windows -pkg-file=so/testing/bare/packages.txt ./so/...
+	@make run-c path=generated/windows mode=$(win_mode) LDLIBS="-lm -lbcrypt -liphlpapi"
 
 # Transpiles, compiles and runs a single test case in testdata/$(name),
 # leaving the generated C in generated/$(name) for inspection.

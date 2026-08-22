@@ -214,7 +214,7 @@ So generates C11 code that relies on several GCC/Clang extensions:
 
 Supported compilers: GCC, Clang, Emscripten, and `zig cc`. MSVC is not supported.
 
-Supported operating systems: Linux, macOS, and Windows (core language only).
+Supported operating systems: Linux, macOS, and [Windows](doc/windows.md).
 
 Supported platforms: amd64, arm64, riscv64, i386, and wasm32.
 

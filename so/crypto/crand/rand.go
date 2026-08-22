@@ -22,10 +22,8 @@ var rand_h string
 //
 //   - On Linux, FreeBSD, and Dragonfly, uses getrandom(2).
 //   - On macOS, NetBSD, and OpenBSD, uses arc4random_buf(3).
+//   - On Windows, uses BCryptGenRandom.
 //   - In a freestanding environment, uses so_crand_read from the target.
-//     See the [freestanding guide] for details.
-//
-// [freestanding guide]: https://github.com/solod-dev/solod/blob/main/doc/freestanding.md
 var Reader io.Reader = &R{}
 
 type R struct{}
@@ -37,7 +35,6 @@ func (*R) Read(b []byte) (int, error) {
 
 // Read fills b with cryptographically secure random bytes.
 // It never returns an error, and always fills b entirely.
-// Uses arc4random_buf on macOS/BSD and getrandom on Linux.
 func Read(b []byte) (int, error) {
 	if len(b) == 0 {
 		return 0, nil

@@ -160,8 +160,8 @@ func TestParse_TimeOnly(t *testing.T) {
 }
 
 func TestParse_Custom(t *testing.T) {
-	if !runtime.Hosted {
-		t.Skip("a custom layout needs a hosted environment")
+	if !runtime.Hosted || runtime.GOOS == "windows" {
+		t.Skip("a custom layout needs a POSIX environment")
 		return
 	}
 	tm, err := time.Parse("%d.%m.%Y", "15.03.2024", time.UTC)

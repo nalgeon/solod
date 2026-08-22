@@ -2,6 +2,17 @@
 
 So programs are built with the `so build` command, which transpiles the package to C and compiles it with a system C compiler. The `run`, `test`, and `bench` commands build the same way before running. This guide covers the build options they share.
 
+[Compiler and flags](#compiler-and-flags) •
+[Panic mode](#panic-mode) •
+[Assertions](#assertions) •
+[Source locations](#source-locations) •
+[Sanitizers](#sanitizers)
+
+POSIX targets are fully supported. Other targets have some restrictions. For more information, see these links:
+
+- [Freestanding](freestanding.md) (bare-metal) targets.
+- [Windows](windows.md).
+
 ## Compiler and flags
 
 So invokes the compiler named by the `CC` environment variable (default `cc`) and passes along `CFLAGS` and `LDFLAGS`:
@@ -13,8 +24,6 @@ so build -o app .
 ```
 
 `so build` writes the executable to the path given by `-o`, or to the package directory's basename if `-o` is omitted.
-
-For freestanding (bare-metal) targets, see [Freestanding mode](freestanding.md).
 
 ## Panic mode
 

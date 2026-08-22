@@ -6,9 +6,23 @@
 
 #define time_tm struct tm
 
+#ifdef so_build_windows
+
+static inline char* strptime(const char* str, const char* format, struct tm* tm) {
+    (void)str;
+    (void)format;
+    (void)tm;
+    so_panic("time: parsing a custom layout requires a POSIX environment");
+    return NULL;
+}
+
+#else
+
 // strptime may not be declared without _XOPEN_SOURCE before system headers.
 // Provide an explicit declaration for portability (e.g. glibc with gcc).
 char* strptime(const char*, const char*, struct tm*);
+
+#endif  // so_build_windows
 
 // wall returns the current wall clock time.
 static inline so_R_i64_i32 time_wall() {

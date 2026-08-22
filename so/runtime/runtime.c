@@ -10,6 +10,12 @@
 #include <sys/types.h>  // ssize_t
 #elif defined(so_build_wasm)
 #include <unistd.h>
+#elif defined(so_build_windows)
+// BCryptGenRandom requires bcrypt. Link the program with -lbcrypt,
+// because a so:link directive cannot depend on the target.
+#include <windows.h>
+
+#include <bcrypt.h>
 #endif
 
 // runtime_crand_read fills buf with size bytes of the
@@ -32,6 +38,19 @@ bool runtime_crand_read(uint8_t* buf, so_int size) {
     while (size > 0) {
         size_t n = size < 256 ? (size_t)size : 256;
         if (getentropy(buf, n) != 0) return false;
+        buf += n;
+        size -= (so_int)n;
+    }
+    return true;
+#elif defined(so_build_windows)
+    // BCryptGenRandom counts the bytes in 32 bits, so a larger buffer
+    // needs more calls. A null algorithm handle draws from the preferred
+    // generator of the system.
+    while (size > 0) {
+        ULONG n = size > 0x40000000 ? 0x40000000 : (ULONG)size;
+        if (BCryptGenRandom(NULL, buf, n, BCRYPT_USE_SYSTEM_PREFERRED_RNG) != 0) {
+            return false;
+        }
         buf += n;
         size -= (so_int)n;
     }

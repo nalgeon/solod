@@ -38,7 +38,8 @@ This document lists the main changes in the So version in development.
   [so test](#so-test) ·
   [so translate-test](#so-translate-test) ·
   [Freestanding flag](#freestanding-flag) ·
-  [Test naming](#test-and-bench-package-naming)
+  [Test naming](#test-and-bench-package-naming) ·
+  [Windows](#windows)
 
 ## Language
 
@@ -587,3 +588,16 @@ The runner is no longer written to disk. `so test` and `so bench` pass the gener
 ⚠️ If you have test or benchmark subpackages, rename them from `main` to `{package}_test` or `{package}_bench`, and remove the `main.go` files.
 
 [b10bac5](https://github.com/solod-dev/solod/commit/b10bac59bfe030cf159676f453a4ab78022a5b8c)
+
+### Windows
+
+The standard library now builds for `windows/amd64` and `windows/arm64`. Every package of the freestanding set works. The packages that need POSIX (`conc`, `flag`, `log/slog`, `net`, `os`, `sync`) are not supported.
+
+Use `zig cc` to cross-compile for Windows:
+
+```sh
+export CC="zig cc"
+export CFLAGS="--target=x86_64-windows-gnu"
+export LDFLAGS="-lbcrypt -liphlpapi"
+so build -o app.exe .
+```
