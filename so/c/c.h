@@ -19,10 +19,6 @@ static inline so_Slice c_Bytes(void* ptr, so_int n) {
     return ptr ? (so_Slice){ptr, n, n} : (so_Slice){};
 }
 
-static inline char* c_CharPtr(void* ptr) {
-    return (char*)ptr;
-}
-
 #define c_PtrAdd(T, ptr, offset) ((ptr) + (size_t)(offset))
 
 #define c_PtrAs(T, ptr) ((T*)(ptr))
@@ -36,9 +32,14 @@ static inline char* c_CharPtr(void* ptr) {
     (_sptr ? (so_Slice){_sptr, (len), (cap)} : (so_Slice){}); \
 })
 
+// The element type V does not change the cast, so the macro ignores it.
+#define c_SliceData(T, V, s) ((T*)((s).ptr))
+
 #define c_String(T, ptr) ({                                           \
     const char* _ptr = (const char*)(ptr);                            \
     (_ptr ? (so_String){_ptr, (so_int)strlen(_ptr)} : (so_String){}); \
 })
+
+#define c_StringData(T, s) ((T*)((s).ptr))
 
 #define c_Zero(T) ((T){})

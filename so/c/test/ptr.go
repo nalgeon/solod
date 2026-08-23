@@ -1,6 +1,8 @@
 package c_test
 
 import (
+	"unsafe"
+
 	"solod.dev/so/c"
 	"solod.dev/so/testing"
 )
@@ -168,5 +170,42 @@ func TestSliceNil(t *testing.T) {
 	}
 	if len(s) != 0 || cap(s) != 0 {
 		t.Errorf("Slice(nil, 2, 4): len = %d, cap = %d, want 0 and 0", len(s), cap(s))
+	}
+}
+
+func TestSliceData(t *testing.T) {
+	b := []byte{1, 2, 3}
+
+	// The pointer reads the slice data as a C type.
+	if n := sum_bytes(c.SliceData[c.UChar](b), c.Size(len(b))); n != 6 {
+		t.Errorf("sum_bytes(b) = %d, want 6", n)
+	}
+
+	// The pointer shares the memory of the slice, without a copy.
+	p := c.SliceData[byte](b)
+	*p = 9
+	if b[0] != 9 {
+		t.Errorf("b[0] = %d, want 9", b[0])
+	}
+	if c.SliceData[byte](b) != unsafe.SliceData(b) {
+		t.Error("SliceData returns a copy, want the slice data")
+	}
+}
+
+func TestSliceDataType(t *testing.T) {
+	// The element type of the slice and the pointer type are independent,
+	// so a []int32 also reads as bytes. The byte order does not change
+	// the sum, so the test does not depend on the endianness.
+	nums := []int32{1, 2, 3, 4}
+	n := c.Size(len(nums) * c.Sizeof[int32]())
+	if sum := sum_bytes(c.SliceData[c.UChar](nums), n); sum != 10 {
+		t.Errorf("sum_bytes(nums) = %d, want 10", sum)
+	}
+}
+
+func TestSliceDataNil(t *testing.T) {
+	var b []byte
+	if c.SliceData[byte](b) != nil {
+		t.Error("SliceData(nil) != nil")
 	}
 }

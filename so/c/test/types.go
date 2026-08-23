@@ -30,6 +30,12 @@ func ptr_addr(p any) c.Intptr {
 }
 
 //so:extern
+func find_first(items *c.ConstVoid, count c.Size, size c.Size, match func(item *c.ConstVoid) bool) c.SSize {
+	_, _, _, _ = items, count, size, match
+	return 0
+}
+
+//so:extern
 func ld_half(x c.LongDouble) c.LongDouble {
 	_ = x
 	return 0
@@ -173,5 +179,25 @@ func TestPtrTypes(t *testing.T) {
 	}
 	if ptr_addr(q)-ptr_addr(p) != 3 {
 		t.Error("ptr_addr(q) - ptr_addr(p) != 3")
+	}
+}
+
+// isOdd reports whether the item is an odd number.
+func isOdd(item *c.ConstVoid) bool {
+	return *c.PtrAs[int32](item)%2 != 0
+}
+
+func TestConstVoid(t *testing.T) {
+	// ConstVoid matches a C const void* parameter,
+	// in a function and in a function pointer.
+	nums := []int32{4, 8, 9, 12}
+	items := c.SliceData[c.ConstVoid](nums)
+	size := c.Size(c.Sizeof[int32]())
+
+	if i := find_first(items, c.Size(len(nums)), size, isOdd); i != 2 {
+		t.Errorf("find_first(nums, isOdd) = %d, want 2", i)
+	}
+	if i := find_first(items, 2, size, isOdd); i != -1 {
+		t.Errorf("find_first(nums[:2], isOdd) = %d, want -1", i)
 	}
 }

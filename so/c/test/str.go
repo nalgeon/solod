@@ -1,9 +1,17 @@
 package c_test
 
 import (
+	"unsafe"
+
 	"solod.dev/so/c"
 	"solod.dev/so/testing"
 )
+
+//so:extern
+func sum_bytes(p *c.UChar, n c.Size) c.UInt {
+	_, _ = p, n
+	return 0
+}
 
 //so:extern
 func get_cstring(s string) *c.ConstChar {
@@ -70,5 +78,30 @@ func TestCStringCopy(t *testing.T) {
 	}
 	if str := c.String(q); str != "hello" {
 		t.Errorf("String(q) = %s, want hello", str)
+	}
+}
+
+func TestStringData(t *testing.T) {
+	s := "abc"
+
+	// The pointer reads the string data as a C type.
+	if n := sum_bytes(c.StringData[c.UChar](s), c.Size(len(s))); n != 294 {
+		t.Errorf("sum_bytes(abc) = %d, want 294", n)
+	}
+
+	// The pointer keeps the address of the string data, without a copy.
+	if p := c.StringData[byte](s); *p != 'a' {
+		t.Errorf("*StringData(abc) = %c, want a", *p)
+	}
+	if c.StringData[byte](s) != unsafe.StringData(s) {
+		t.Error("StringData returns a copy, want the string data")
+	}
+}
+
+func TestStringDataSub(t *testing.T) {
+	s := "hello"
+	// A substring shares the data of the string, so the pointer moves with it.
+	if p := c.StringData[byte](s[2:]); *p != 'l' {
+		t.Errorf("*StringData(s[2:]) = %c, want l", *p)
 	}
 }

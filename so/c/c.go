@@ -94,6 +94,12 @@ type Ptrdiff int
 //so:extern intptr_t
 type Intptr int
 
+// ConstVoid represents a C void type with a const modifier.
+// Use *ConstVoid for a C const void* pointer.
+//
+//so:extern const void
+type ConstVoid byte
+
 // Alignof returns the alignment of type T in bytes.
 //
 //	alignof(T)
@@ -224,6 +230,16 @@ func Slice[T any](ptr *T, len int, cap int) []T {
 	return s[:len]
 }
 
+// SliceData returns a pointer to the underlying array of the slice,
+// typed as *T. If the slice is nil, returns nil.
+//
+//	(T*)(s.ptr)
+//
+//so:extern
+func SliceData[T, V any](s []V) *T {
+	return (*T)(unsafe.Pointer(unsafe.SliceData(s)))
+}
+
 // String converts a null-terminated C string to a So string.
 // If ptr is nil, returns "".
 //
@@ -231,6 +247,17 @@ func Slice[T any](ptr *T, len int, cap int) []T {
 //
 //so:extern
 func String[T Char | ConstChar](ptr *T) string { _ = ptr; return "" }
+
+// StringData returns a pointer to the underlying bytes of the string,
+// typed as *T. The bytes are read-only, so a write through the pointer
+// is undefined behavior.
+//
+//	(T*)(s.ptr)
+//
+//so:extern
+func StringData[T any](s string) *T {
+	return (*T)(unsafe.Pointer(unsafe.StringData(s)))
+}
 
 // Val emits a typed C expression.
 //

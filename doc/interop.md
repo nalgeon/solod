@@ -345,6 +345,7 @@ Functions:
 - `Bytes`, `Slice` and `String` wrap C pointers to So types.
 - `CString` converts a So string to a null-terminated C string.
 - `PtrAdd`, `PtrAs` and `PtrAt` manipulate pointers.
+- `SliceData` and `StringData` return a typed pointer to the slice or string data.
 - `Zero` returns the zero value of type T.
 
 Types:
@@ -352,3 +353,4 @@ Types:
 - `Char` and `ConstChar` represent a C `char` type.
 - `Int`, `UInt`, `Long`, `ULong`, etc. represent numeric C types.
 - `Size`, `SSize`, `Ptrdiff` and `Intptr` represent C types whose width follows the target.
+- `ConstVoid` represents a C `const void` type. Use `*ConstVoid` for a `const void*` pointer.

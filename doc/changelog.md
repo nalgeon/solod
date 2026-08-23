@@ -19,6 +19,8 @@ This document lists the main changes in the So version in development.
   [Name overrides](#c-field-name-override) ·
   [Variadic nodecay](#variadic-nodecay) ·
   [Target-width types](#target-width-c-types) ·
+  [Const void](#const-void) ·
+  [String and slice data](#string-and-slice-data) ·
   [Assume](#assume)
 - Safety:
   [Assertions](#assertions)
@@ -346,6 +348,33 @@ long double - c.LongDouble
 ```
 
 [c06b294](https://github.com/solod-dev/solod/commit/c06b29494cda8c822a4191843120fb6a6091a25d)
+
+### Const void
+
+`c.ConstVoid` maps to a C `const void` type. Use `*c.ConstVoid` where C expects a `const void*` pointer, which `any` (a plain `void*`) cannot express:
+
+```go
+//so:extern
+func find_first(items *c.ConstVoid, count c.Size, size c.Size,
+    match func(item *c.ConstVoid) bool) c.SSize
+```
+
+```c
+so_ssize_t find_first(const void* items, size_t count, size_t size,
+                      bool (*match)(const void*));
+```
+
+### String and slice data
+
+`c.StringData` and `c.SliceData` return a pointer to the string or slice data, typed as `*T`:
+
+```go
+b := []byte{1, 2, 3}
+p := c.SliceData[c.UChar](b)     // unsigned char*
+q := c.StringData[c.UChar]("ab") // unsigned char*
+```
+
+They replace `(*T)(unsafe.SliceData(b))` and `(*T)(unsafe.StringData(s))`.
 
 ### Assume
 
