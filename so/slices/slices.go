@@ -29,7 +29,7 @@ type Slice struct {
 //so:extern
 func Header[T any](s []T) Slice {
 	return Slice{
-		ptr: c.PtrAs[byte](unsafe.SliceData(s)),
+		ptr: c.SliceData[byte](s),
 		len: len(s),
 		cap: cap(s),
 	}

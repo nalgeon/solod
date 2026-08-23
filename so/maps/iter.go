@@ -41,7 +41,7 @@ func (it *Iter[K, V]) Next() bool {
 //so:inline
 func (it *Iter[K, V]) Key() K {
 	c.Assert(it.i > 0, "maps: Iter.Key called before Next")
-	_keys := c.PtrAs[K](unsafe.SliceData(it.keys))
+	_keys := c.SliceData[K](it.keys)
 	return *c.PtrAt(_keys, it.i-1)
 }
 
@@ -50,6 +50,6 @@ func (it *Iter[K, V]) Key() K {
 //so:inline
 func (it *Iter[K, V]) Value() V {
 	c.Assert(it.i > 0, "maps: Iter.Value called before Next")
-	_vals := c.PtrAs[V](unsafe.SliceData(it.vals))
+	_vals := c.SliceData[V](it.vals)
 	return *c.PtrAt(_vals, it.i-1)
 }

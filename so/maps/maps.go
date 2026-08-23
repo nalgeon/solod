@@ -49,7 +49,7 @@ func (m *Map[K, V]) Has(key K) bool {
 		_hash := keyHash(&_key, _m.seed)
 		_i := _hash & _m.mask
 		_hdib := unsafe.SliceData(_m.hdib)
-		_keys := c.PtrAs[K](unsafe.SliceData(_m.keys))
+		_keys := c.SliceData[K](_m.keys)
 		_dist := 1
 		for {
 			_ehdib := *c.PtrAt(_hdib, _i)
@@ -80,8 +80,8 @@ func (m *Map[K, V]) Get(key K) V {
 		_hash := keyHash(&_key, _m.seed)
 		_i := _hash & _m.mask
 		_hdib := unsafe.SliceData(_m.hdib)
-		_keys := c.PtrAs[K](unsafe.SliceData(_m.keys))
-		_vals := c.PtrAs[V](unsafe.SliceData(_m.vals))
+		_keys := c.SliceData[K](_m.keys)
+		_vals := c.SliceData[V](_m.vals)
 		_dist := 1
 		for {
 			_ehdib := *c.PtrAt(_hdib, _i)
@@ -117,8 +117,8 @@ func (m *Map[K, V]) Set(key K, value V) {
 	_ehdib := (uint64(_hash) << 16) | 1
 	_i := _hash & _m.mask
 	_hdib := unsafe.SliceData(_m.hdib)
-	_keys := c.PtrAs[K](unsafe.SliceData(_m.keys))
-	_vals := c.PtrAs[V](unsafe.SliceData(_m.vals))
+	_keys := c.SliceData[K](_m.keys)
+	_vals := c.SliceData[V](_m.vals)
 	_ekey := _key
 	_eval := _val
 	for {
@@ -155,8 +155,8 @@ func (m *Map[K, V]) Delete(key K) {
 	_hash := keyHash(&_key, _m.seed)
 	_i := _hash & _m.mask
 	_hdib := unsafe.SliceData(_m.hdib)
-	_keys := c.PtrAs[K](unsafe.SliceData(_m.keys))
-	_vals := c.PtrAs[V](unsafe.SliceData(_m.vals))
+	_keys := c.SliceData[K](_m.keys)
+	_vals := c.SliceData[V](_m.vals)
 	_dist := 1
 	for len(_m.hdib) > 0 {
 		_hdi := c.PtrAt(_hdib, _i)

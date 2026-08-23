@@ -183,7 +183,7 @@ func TestSscanf(t *testing.T) {
 	}
 	var n1, n2 int32
 	buf := make([]byte, 32)
-	ptr := c.PtrAs[c.Char](&buf[0])
+	ptr := c.SliceData[c.Char](buf)
 	n, err := fmt.Sscanf("5 1 gophers", "%d %d %s", &n1, &n2, ptr)
 	if err != nil {
 		t.Fatal("Sscanf failed")
@@ -230,7 +230,7 @@ func TestFscanf(t *testing.T) {
 	}
 	var n1, n2 int32
 	buf := make([]byte, 32)
-	ptr := c.PtrAs[c.Char](&buf[0])
+	ptr := c.SliceData[c.Char](buf)
 	r := strings.NewReader("5 1 gophers")
 	n, err := fmt.Fscanf(&r, "%d %d %s", &n1, &n2, ptr)
 	if err != nil {
