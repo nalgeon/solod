@@ -9,6 +9,11 @@ func sum3(a, b, c int) int {
 	return a + b + c
 }
 
+// Blank parameters.
+func pickThird(_ int, _ float32, c int) int {
+	return c
+}
+
 func main() {
 	s0 := sum3(1, 2, 3)
 	_ = s0
@@ -35,4 +40,7 @@ func main() {
 	var fn5 Sum3Fn = sub.Sum
 	s5 := fn5(10, 20, 30)
 	_ = s5
+
+	s6 := pickThird(1, 2, 3)
+	_ = s6
 }

@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"go/types"
 	"io"
+	"strconv"
 	"strings"
 )
 
@@ -56,11 +57,8 @@ func (g *Generator) emitFuncProto(w io.Writer, decl *ast.FuncDecl) *types.Signat
 		if _, ok := recv.Type.(*ast.Ident); ok {
 			// Value receiver: pass struct by value.
 			cStructType := g.symbolName(g.recvTypeObj(recv))
-			recvName := "self"
-			if len(recv.Names) > 0 {
-				recvName = recv.Names[0].Name
-			}
-			parts = append(parts, cStructType+" "+recvName)
+			name, _ := recvVarName(recv)
+			parts = append(parts, cStructType+" "+name)
 		} else {
 			parts = append(parts, "void* self")
 		}
@@ -70,6 +68,12 @@ func (g *Generator) emitFuncProto(w io.Writer, decl *ast.FuncDecl) *types.Signat
 			typ := g.types.TypeOf(field.Type)
 			ct := g.mapTypeDecl(decl, typ)
 			for _, n := range field.Names {
+				if n.Name == "_" {
+					// C has no blank parameter. Name it after
+					// its position and mark it unused.
+					parts = append(parts, ct.Decl(blankParamName(len(parts)))+" so_unused")
+					continue
+				}
 				parts = append(parts, ct.Decl(n.Name))
 			}
 		}
@@ -164,16 +168,21 @@ func (g *Generator) emitMacroFuncDecl(w io.Writer, decl *ast.FuncDecl) {
 		// Add receiver type params (no suffix - these are type names).
 		params = append(params, recvTypeParams(recv)...)
 		// Add receiver as parameter (suffixed).
-		recvName := "self"
-		if len(recv.Names) > 0 {
-			recvName = recv.Names[0].Name
+		recvName, named := recvVarName(recv)
+		if named {
+			macroParams[recvName] = true
 		}
-		macroParams[recvName] = true
 		params = append(params, recvName+"_")
 	}
 	if decl.Type.Params != nil {
 		for _, field := range decl.Type.Params.List {
 			for _, n := range field.Names {
+				if n.Name == "_" {
+					// The macro body never uses a blank parameter,
+					// so it only needs a unique name.
+					params = append(params, blankParamName(len(params))+"_")
+					continue
+				}
 				macroParams[n.Name] = true
 				params = append(params, n.Name+"_")
 			}
@@ -504,6 +513,16 @@ func (g *Generator) recvTypeObj(recv *ast.Field) types.Object {
 	return obj
 }
 
+// recvVarName returns the C name of the method receiver. It also reports
+// whether the method body can use the name. A method with no receiver name or
+// with a blank one gets the name "self", which the body never uses.
+func recvVarName(recv *ast.Field) (name string, named bool) {
+	if len(recv.Names) == 0 || recv.Names[0].Name == "_" {
+		return "self", false
+	}
+	return recv.Names[0].Name, true
+}
+
 // recvTypeParams extracts type parameter names from a generic receiver field.
 func recvTypeParams(recv *ast.Field) []string {
 	typ := recv.Type
@@ -585,6 +604,12 @@ func funcParams(params []string) string {
 		return "void"
 	}
 	return strings.Join(params, ", ")
+}
+
+// blankParamName returns the C name of the blank ("_") parameter at
+// position i. C needs a distinct name for every parameter.
+func blankParamName(i int) string {
+	return "_" + strconv.Itoa(i)
 }
 
 // endsWithReturn reports whether a statement list ends with a return statement.

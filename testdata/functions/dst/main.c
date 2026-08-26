@@ -6,11 +6,17 @@ typedef so_int (*sum3Fn)(so_int, so_int, so_int);
 
 // -- Forward declarations --
 static so_int sum3(so_int a, so_int b, so_int c);
+static so_int pickThird(so_int _0 so_unused, float _1 so_unused, so_int c);
 
 // -- Implementation --
 
 static so_int sum3(so_int a, so_int b, so_int c) {
     return a + b + c;
+}
+
+// Blank parameters.
+static so_int pickThird(so_int _0 so_unused, float _1 so_unused, so_int c) {
+    return c;
 }
 
 int main(void) {
@@ -34,5 +40,7 @@ int main(void) {
     main_Sum3Fn fn5 = sub_Sum;
     so_int s5 = fn5(10, 20, 30);
     (void)s5;
+    so_int s6 = pickThird(1, 2.0f, 3);
+    (void)s6;
     return 0;
 }

@@ -16,7 +16,7 @@ func (g *Generator) emitMethodDecl(w io.Writer, decl *ast.FuncDecl) {
 	// Init emission state.
 	recv := decl.Recv.List[0]
 	cStructType := g.symbolName(g.recvTypeObj(recv))
-	named := len(recv.Names) > 0
+	recvName, named := recvVarName(recv)
 	_, isValueRecv := recv.Type.(*ast.Ident)
 
 	g.state.enterFunc(sig)
@@ -40,7 +40,6 @@ func (g *Generator) emitMethodDecl(w io.Writer, decl *ast.FuncDecl) {
 	} else {
 		// Pointer receivers: cast void* self to the concrete type.
 		if named {
-			recvName := recv.Names[0].Name
 			fmt.Fprintf(w, "%s%s* %s = self;\n", g.indent(), cStructType, recvName)
 		} else {
 			fmt.Fprintf(w, "%s(void)self;\n", g.indent())
