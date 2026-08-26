@@ -20,6 +20,7 @@ So is for Go developers who want systems-level control without learning a new la
 [Learn](#learn-the-language) •
 [Build&test](#build-and-test) •
 [FAQ](#frequently-asked-questions) •
+[Interop](#interop) •
 [Compatibility](#compatibility) •
 [Roadmap](#roadmap) •
 [Contributing](#contributing)
@@ -201,6 +202,14 @@ All commands work with Go modules, not individual files (`so run .`, not `so run
 
 **[FAQ](doc/faq.md)**. I have heard these several times, so it's worth answering.
 
+## Interop
+
+C interop in So is easy to write and has zero runtime overhead. See the [interop](doc/interop.md) guide for details.
+
+So offers native bindings for popular C libraries like [libuv](https://github.com/solod-dev/libuv), [raylib](https://github.com/solod-dev/raylib), [sodium](https://github.com/solod-dev/sodium), and [sqlite](https://github.com/solod-dev/sqlite).
+
+To automatically generate bindings for any C library from its headers, use the [sobind](https://github.com/solod-dev/sobind) tool.
+
 ## Compatibility
 
 So generates C11 code that relies on several GCC/Clang extensions:
@@ -214,7 +223,7 @@ So generates C11 code that relies on several GCC/Clang extensions:
 
 Supported compilers: GCC, Clang, Emscripten, and `zig cc`. MSVC is not supported.
 
-Supported operating systems: Linux, macOS, and [Windows](doc/windows.md).
+Supported operating systems: Linux, BSDs, macOS, and [Windows](doc/windows.md).
 
 Supported platforms: amd64, arm64, riscv64, i386, and wasm32.
 
