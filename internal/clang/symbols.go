@@ -78,14 +78,7 @@ func (g *Generator) collect() {
 		}
 	}
 
-	// Collect externs from imported packages so that funcExtern/methodExtern
-	// can identify cross-package extern calls (e.g. stdio.Printf).
-	for _, imp := range g.pkg.Imports {
-		for _, file := range imp.Syntax {
-			g.collectFileExterns(imp.TypesInfo, file)
-		}
-	}
-
+	g.collectImportExterns()
 	g.collectFieldTags()
 	g.collectPromoted()
 	g.collectResultTypes()

@@ -6,12 +6,45 @@ import (
 	"go/types"
 	"strconv"
 	"strings"
+
+	"golang.org/x/tools/go/packages"
 )
 
 // externInfo holds metadata parsed from a so:extern directive.
 type externInfo struct {
 	name    string // C name override (empty = use default)
 	nodecay bool   // skip decay for call args
+}
+
+// collectImportExterns gathers extern symbols from all imported packages,
+// both direct and indirect.
+//
+// An indirect import can provide a type name to the generated C code:
+// for example, package A calls a function in B, and that function's signature
+// uses an extern type from C (like c.Int), but A doesn't import C. Without
+// the extern name for that type, the generator writes the package-qualified
+// name (c_Int), which isn't declared in any C header.
+//
+//	func Calc(n c.Int) // in package B
+//	const n = 21       // in package A
+//	Calc(n)            // n is implicitly cast to c.Int
+func (g *Generator) collectImportExterns() {
+	seen := make(map[string]bool)
+	var collect func(pkg *packages.Package)
+	collect = func(pkg *packages.Package) {
+		for path, imp := range pkg.Imports {
+			// Skip stdlib and already-seen packages.
+			if seen[path] || imp.Module == nil {
+				continue
+			}
+			seen[path] = true
+			for _, file := range imp.Syntax {
+				g.collectFileExterns(imp.TypesInfo, file)
+			}
+			collect(imp)
+		}
+	}
+	collect(g.pkg)
 }
 
 // collectFileExterns collects extern symbols from a single file's declarations.

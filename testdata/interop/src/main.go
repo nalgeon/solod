@@ -147,6 +147,14 @@ func main() {
 		s.Write("Hello, %s!", "world")
 	}
 	{
+		// An untyped constant argument takes the C type of the parameter.
+		// The type comes from a package the main package does not import.
+		const factor = 21
+		if sub.Scale(factor) != 42 {
+			panic("Scale failed")
+		}
+	}
+	{
 		// Multi-word type names.
 		var b byte = 'a'
 		var ch uchar = uchar(b)
