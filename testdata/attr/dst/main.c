@@ -29,7 +29,7 @@ static __attribute__((noinline)) void helper(void);
 
 // Unexported volatile variable.
 //
-static volatile so_int counter = 0;
+static so_unused volatile so_int counter = 0;
 
 // Exported volatile variable.
 //
@@ -37,7 +37,7 @@ volatile so_int main_Counter = 0;
 
 // Unexported thread-local variable.
 //
-static _Thread_local so_int perThread = 0;
+static so_unused _Thread_local so_int perThread = 0;
 
 // Exported thread-local variable.
 //
@@ -45,7 +45,7 @@ _Thread_local so_int main_PerThread = 0;
 
 // Combined volatile + thread-local.
 //
-static _Thread_local volatile so_int flags = 0;
+static so_unused _Thread_local volatile so_int flags = 0;
 
 // -- Implementation --
 

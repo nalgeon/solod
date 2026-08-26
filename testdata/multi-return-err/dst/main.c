@@ -49,7 +49,7 @@ static void testStructUnexported(void);
 static void testStructOtherPackage(void);
 
 // -- Variables and constants --
-static main_File file = {};
+static so_unused main_File file = {};
 
 // -- Implementation --
 

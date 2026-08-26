@@ -10,7 +10,7 @@ static so_int funcReturnVar(void);
 static so_R_int_err funcCalc(void);
 
 // -- Variables and constants --
-static so_int state = 0;
+static so_unused so_int state = 0;
 
 // -- Implementation --
 

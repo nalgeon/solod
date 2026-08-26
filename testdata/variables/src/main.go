@@ -8,6 +8,35 @@ type person struct {
 
 type number *int
 
+// Package-level variables.
+var (
+	pkgInt    int     = 42
+	pkgFloat  float64 = 3.14
+	pkgBool   bool    = true
+	pkgByte   byte    = 'x'
+	pkgRune   rune    = '本'
+	pkgString string  = "hello"
+	pkgSlice  []int   = []int{1, 2, 3}
+	pkgStruct person  = person{age: 42}
+	pkgPtr    *person = &pkgStruct
+	pkgAnyVal any     = 42
+	// pkgAnyPtr any     = pkgPtr
+	pkgNil any = nil
+)
+
+// Blank package-level variables.
+var _ = 11
+var _ int = 11
+var _ float64 = 22.2
+var _ string = "33"
+var _ []int = []int{1, 2, 3}
+var _ = person{age: 42}
+var _ person = person{age: 42}
+var _ *person = &pkgStruct
+var _ any = 42
+var _ any = pkgPtr
+var _ any = nil
+
 func main() {
 	{
 		// Definition with var and explicit type.

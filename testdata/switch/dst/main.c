@@ -6,7 +6,7 @@ static so_String name(void);
 static so_int twice(so_int v);
 
 // -- Variables and constants --
-static so_int calls = 0;
+static so_unused so_int calls = 0;
 
 // -- Implementation --
 

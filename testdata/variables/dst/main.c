@@ -9,6 +9,23 @@ typedef struct person {
 } person;
 typedef so_int* number;
 
+// -- Variables and constants --
+
+// Package-level variables.
+static so_unused so_int pkgInt = 42;
+static so_unused double pkgFloat = 3.14;
+static so_unused bool pkgBool = true;
+static so_unused so_byte pkgByte = 'x';
+static so_unused so_rune pkgRune = 0x672c;
+static so_unused so_String pkgString = so_str("hello");
+static so_unused so_Slice pkgSlice = (so_Slice){(so_int[3]){1, 2, 3}, 3, 3};
+static so_unused person pkgStruct = (person){.age = 42};
+static so_unused person* pkgPtr = &pkgStruct;
+static so_unused void* pkgAnyVal = &(so_int){42};
+static so_unused void* pkgNil = NULL;
+
+// Blank package-level variables.
+
 // -- Implementation --
 
 int main(void) {

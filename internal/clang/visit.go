@@ -382,7 +382,9 @@ func (g *Generator) emitVarSpec(w io.Writer, spec *ast.ValueSpec, dirs directive
 		if g.state.atTopLevel() {
 			// Package-level variable: build specifier with qualifiers.
 			if !ast.IsExported(name.Name) && !dirs.promote {
-				specifier = "static "
+				// Go allows unused package-level variables, so mark them
+				// so_unused to avoid unused-variable warnings from the C compiler.
+				specifier = "static so_unused "
 			}
 			if dirs.threadLocal {
 				specifier += "_Thread_local "

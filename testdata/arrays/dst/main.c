@@ -23,7 +23,7 @@ static box newBox(void);
 static so_int box_sum(box b, so_int a[3]);
 
 // -- Variables and constants --
-static arange aranges[16] = {[0] = (arange){0x10, 0x20}, [1] = (arange){0x30, 0x40}, [2] = (arange){0x50, 0x60}};
+static so_unused arange aranges[16] = {[0] = (arange){0x10, 0x20}, [1] = (arange){0x30, 0x40}, [2] = (arange){0x50, 0x60}};
 
 // -- Implementation --
 

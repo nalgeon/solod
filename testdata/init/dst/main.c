@@ -12,7 +12,7 @@ typedef struct value {
 static void value_init(void* self, so_int x);
 
 // -- Variables and constants --
-static so_int state = 0;
+static so_unused so_int state = 0;
 
 // -- Implementation --
 
