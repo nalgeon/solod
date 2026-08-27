@@ -40,8 +40,11 @@ This document lists the main changes in the So version in development.
   [so test](#so-test) ·
   [so translate-test](#so-translate-test) ·
   [Build flags](#build-flags) ·
-  [Test naming](#test-and-bench-package-naming) ·
+  [Test naming](#test-and-bench-package-naming)
+- Targets:
   [Windows](#windows)
+
+⚠️ indicates breaking changes.
 
 ## Language
 
@@ -125,7 +128,7 @@ type readWriter interface {
 }
 ```
 
-Declare a named field or list the methods.
+Declare a named field or list the methods instead.
 
 [d0e48e0](https://github.com/solod-dev/solod/commit/d0e48e0a5786e47420b9aea1477390db7f2c72fb)
 
@@ -312,7 +315,7 @@ type SDL_CommonEvent struct {
 
 ### Variadic nodecay
 
-Nodecay on a variadic passes So types. A plain extern variadic is a C variadic: every argument decays, and the callee reads C types. A nodecay extern variadic is not. Each argument goes to the C `...` on its own, at its So type, and every scalar widens:
+A plain extern variadic is a C variadic: every argument decays, and the callee reads C types. A nodecay extern variadic passes So types instead. Each argument goes to the C `...` on its own, at its So type, and every scalar widens:
 
 | So type                            | C type read by `va_arg` |
 | ---------------------------------- | ----------------------- |
@@ -364,6 +367,8 @@ so_ssize_t find_first(const void* items, size_t count, size_t size,
                       bool (*match)(const void*));
 ```
 
+[79daa3d](https://github.com/solod-dev/solod/commit/79daa3d1a18e5f85e0982ee81b9cf8aef3813b41)
+
 ### String and slice data
 
 `c.StringData` and `c.SliceData` return a pointer to the string or slice data, typed as `*T`:
@@ -375,6 +380,8 @@ q := c.StringData[c.UChar]("ab") // unsigned char*
 ```
 
 They replace `(*T)(unsafe.SliceData(b))` and `(*T)(unsafe.StringData(s))`.
+
+[79daa3d](https://github.com/solod-dev/solod/commit/79daa3d1a18e5f85e0982ee81b9cf8aef3813b41)
 
 ### Assume
 
@@ -396,13 +403,11 @@ The behavior is undefined if the condition is false. Use `c.Assume` only for con
 
 ### Assertions
 
-Assertions are no longer tied to `NDEBUG`. Assertions are on by default. The new `-assert` flag removes them:
+Assertions are on by default and no longer tied to `NDEBUG`. The new `-assert` flag removes them:
 
 ```sh
 so build -assert=off .
 ```
-
-`NDEBUG` removed these checks before. A C project that defined `NDEBUG` would turn the So safety checks off by accident.
 
 [f67d8ca](https://github.com/solod-dev/solod/commit/f67d8ca3660437d6f648dd905d7784a5fbb180fa)
 
@@ -410,7 +415,7 @@ so build -assert=off .
 
 ### crypto/crand
 
-The package now works in freestanding mode. It rejected a freestanding build with a compile-time error, because no freestanding environment has a CSPRNG. The build now succeeds, and the target supplies the entropy. Define the C function `so_crand_read` and point it at the hardware random number generator of the board or at a host import:
+The package now works in freestanding mode. Previously, it rejected a freestanding build with a compile-time error, because no freestanding environment has a CSPRNG. The build now succeeds, and the target supplies the entropy. Define the C function `so_crand_read` and point it at the hardware random number generator of the board or at a host import:
 
 ```c
 so_int so_crand_read(uint8_t* buf, so_int size) {
@@ -425,15 +430,15 @@ The hook has a weak default definition, so a program that never calls `crypto/cr
 
 ### encoding/json
 
-The package now works in freestanding mode. It used `math.IsNaN` and `math.IsInf` to reject a non-finite float. The `math` package requires a hosted environment, so that import alone made `encoding/json` hosted. The package now uses a private finite check and doesn't import `math`.
+The package now works in freestanding mode. Previously, it used `math.IsNaN` and `math.IsInf` to reject a non-finite float. The `math` package requires a hosted environment, so that import alone made `encoding/json` hosted. The package now uses a private finite check and doesn't import `math`.
 
 [211ccd7](https://github.com/solod-dev/solod/commit/211ccd73d8986da72262956f6a63d7ed564bb9b4)
 
 ### fmt
 
-The package now works in freestanding mode. The print family used to wrap C's `vsnprintf`, so it printed C's text with C's verbs, and the `<stdio.h>` include made the whole package hosted. It now runs a formatting engine ported from Go's `fmt` and writes the bytes Go writes. Hosted and freestanding builds produce the same output.
+The package now works in freestanding mode. Previously, the print family used to wrap C's `vsnprintf`, so it printed C's text with C's verbs, and the `<stdio.h>` include made the whole package hosted. It now runs a formatting engine ported from Go's `fmt` and writes the bytes Go writes. Hosted and freestanding builds produce the same output.
 
-The verbs are Go's, with two differences. So has no reflection, so the verbs that need type information are absent: `%v`, `%T`, `%w`, `%q`, and `%U`. And `%u` is added for an unsigned integer, because a print call carries no type information either, so nothing else can tell a signed value from an unsigned one. `%t` for a bool and `%O` for octal with a `0o` prefix are new as well.
+The verbs are Go's, with two differences. Solod has no reflection, so the verbs that need type information are absent: `%v`, `%T`, `%w`, `%q`, and `%U`. And `%u` is added for an unsigned integer, because a print call carries no type information either, so nothing else can tell a signed value from an unsigned one. `%t` for a bool and `%O` for octal with a `0o` prefix are new as well.
 
 `Print`, `Println`, and `Printf` write to the the standard output of the host, or to the `so_write_out` hook in a freestanding environment. The scan family (`Scanf`, `Sscanf`, `Fscanf`) reads through the stdio of the host, so it stays hosted and a freestanding call panics.
 
@@ -453,7 +458,7 @@ s := fmt.Sprintf(buf, "%d apples", n)
 
 ### math
 
-The package now works in freestanding mode. It rejected a freestanding build with a compile-time error, because a freestanding environment has no libm. The build now succeeds, and only the part that needs libm panics. `Abs`, `Copysign`, `Dim`, `Inf`, `IsInf`, `IsNaN`, `Max`, `Min`, `NaN`, `Pow10`, `RoundToEven`, `Signbit`, the `Float64bits` family and every constant work.
+The package now works in freestanding mode. Previously, it rejected a freestanding build with a compile-time error, because a freestanding environment has no libm. The build now succeeds, and only the part that needs libm panics. `Abs`, `Copysign`, `Dim`, `Inf`, `IsInf`, `IsNaN`, `Max`, `Min`, `NaN`, `Pow10`, `RoundToEven`, `Signbit`, the `Float64bits` family and every constant work.
 
 `Abs`, `Copysign` and `Signbit` used to call libm. All three read the bits of the float now, the way Go does.
 
@@ -475,7 +480,7 @@ sample := rand.NormFloat64()*desiredStdDev + desiredMean
 
 ### net/netip
 
-The package now works in freestanding mode. It included `<net/if.h>` for `if_nametoindex`, and that header made the whole package hosted. The include now sits behind a hosted guard, and a freestanding build gets a stub that returns 0. A zone given as an interface name resolves to no zone, the same result a hosted `if_nametoindex` gives for a name that matches no interface. A numeric zone works everywhere.
+The package now works in freestanding mode. Previously, it included `<net/if.h>` for `if_nametoindex`, and that header made the whole package hosted. The include now sits behind a hosted guard, and a freestanding build gets a stub that returns 0. A zone given as an interface name resolves to no zone, the same result a hosted `if_nametoindex` gives for a name that matches no interface. A numeric zone works everywhere.
 
 [758b40d](https://github.com/solod-dev/solod/commit/758b40de473dac084668c3282d87eab3491d51ce)
 
@@ -505,13 +510,13 @@ if !runtime.Hosted {
 
 [b69ffb5](https://github.com/solod-dev/solod/commit/b69ffb5eb99cc7d7d9483dd236275e2cbafdf672)
 
-`Seed` now reads the target entropy in freestanding mode. `Seed` used a deterministic generator with a fixed initial state, so `math/rand` and the hash of `maps` repeated on every run. `Seed` now reads the same `so_crand_read` hook as `crypto/crand`, so one definition covers both. A target with no hook keeps the deterministic generator: `math/rand` and `maps` promise nothing about unpredictability and must work on a board with no entropy source.
+`Seed` now reads the target entropy in freestanding mode. Previously, `Seed` used a deterministic generator with a fixed initial state, so `math/rand` and the hash of `maps` repeated on every run. `Seed` now reads the same `so_crand_read` hook as `crypto/crand`, so one definition covers both. A target with no hook keeps the deterministic generator: `math/rand` and `maps` promise nothing about unpredictability and must work on a board with no entropy source.
 
 [55c6936](https://github.com/solod-dev/solod/commit/55c69361731adaafad125f8305c9e9970d88eb7a)
 
 ### testing
 
-The package now works in freestanding mode. It imported `os` for the standard output and for `os.Exit`, and that import made it hosted. The test report goes to the standard output (in a hosted environment) or to the `so_write_out` hook (in a freestanding environment). The runner also resets the heap (a static buffer in a freestanding environment) after every test.
+The package now works in freestanding mode. Previously, it imported `os` for the standard output and for `os.Exit`, and that import made it hosted. Now the test report goes to the standard output (in a hosted environment) or to the `so_write_out` hook (in a freestanding environment). The runner also resets the heap (a static buffer in a freestanding environment) after every test.
 
 `RunSuites`, `RunTests` and `RunBenchmarks` take an [Options](https://pkg.go.dev/solod.dev/so/testing#Options) value in place of the runner arguments. `so test` and `so bench` read `-run` from the command line themselves and write the value into the generated runner.
 
@@ -521,7 +526,7 @@ The package now works in freestanding mode. It imported `os` for the standard ou
 
 ### time
 
-The package now reads the clock in freestanding mode. `Now`, `Since`, `Until`, and `Sleep` used to panic. The target now supplies the clock through three hooks, the same way `crypto/crand` supplies entropy:
+The package now reads the clock in freestanding mode. Previously, `Now`, `Since`, `Until`, and `Sleep` used to panic. The target now supplies the clock through three hooks, the same way `crypto/crand` supplies entropy:
 
 ```c
 so_R_i64_i32 so_time_wall(void) {
@@ -576,7 +581,7 @@ so/mem
 so test -pkg-file=freestanding.txt ./so/...
 ```
 
-The file holds one package per line, as a path relative to the module root. Blank lines and the text after a `#` are ignored. The list is a filter over the packages the pattern selects, so a listed package that the pattern does not select is an error.
+The file lists one package per line, as a path relative to the module root. Blank lines and the text after a `#` are ignored. The list is a filter over the packages the pattern selects, so a listed package that the pattern does not select is an error.
 
 [c69d8c0](https://github.com/solod-dev/solod/commit/c69d8c0f34e4a44221104e72a87c961850826da6)
 
@@ -614,17 +619,21 @@ The default optimization level is `-O2`. Use `CFLAGS` to change it.
 
 ⚠️ `-check=sanitize` replaces the `-sanitize` flag, and `-target` replaces the `-freestanding` flag.
 
+[c6328c3](https://github.com/solod-dev/solod/commit/6328c39ac79507c74d5fa21888e00116d28f5e11)
+
 ### Test and bench package naming
-
-A test or bench directory declared `package main` before. The generated runner must import the package now, so `package main` is rejected. Two test packages of one run must also have distinct names, because the So compiler prefixes an exported C name with the package name.
-
-A common convention is to name a test package after the package under test, with a `_test` or `_bench` suffix: `so/sync/test` declares `package sync_test`, and `so/sync/bench` declares `package sync_bench`.
-
-The runner is no longer written to disk. `so test` and `so bench` pass the generated runner to the Go loader as an in-memory overlay, so the committed `test/main.go` and `bench/main.go` files are gone. Adding, renaming or removing a `TestXxx` or `BenchmarkXxx` needs no other step.
 
 ⚠️ If you have test or benchmark subpackages, rename them from `main` to `{package}_test` or `{package}_bench`, and remove the `main.go` files.
 
+Previously, a test or bench directory declared `package main`. Now the generated runner is changed to support testing multiple packages, so `package main` is rejected.
+
+The new convention is to name a test package after the package under test, with a `_test` or `_bench` suffix: `so/sync/test` declares `package sync_test`, and `so/sync/bench` declares `package sync_bench`.
+
+The runner is no longer written to disk. `so test` and `so bench` pass the generated runner to the Go loader as an in-memory overlay, so the committed `test/main.go` and `bench/main.go` files are gone. Adding, renaming or removing a `TestXxx` or `BenchmarkXxx` no longer requires additional actions.
+
 [b10bac5](https://github.com/solod-dev/solod/commit/b10bac59bfe030cf159676f453a4ab78022a5b8c)
+
+## Targets
 
 ### Windows
 
@@ -638,3 +647,5 @@ export CFLAGS="--target=x86_64-windows-gnu"
 export LDFLAGS="-lbcrypt -liphlpapi"
 so build -o app.exe .
 ```
+
+[2ff8c23](https://github.com/solod-dev/solod/commit/2ff8c2377b4b5b60a99bcb6ad8b06e50f162b675)
