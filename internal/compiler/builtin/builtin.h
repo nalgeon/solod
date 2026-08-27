@@ -119,6 +119,108 @@ typedef int64_t so_int;
 typedef uint64_t so_uint;
 #endif
 
+// --- Panic and assert ---
+
+#if !defined(so_build_hosted)
+
+// so_write_out is the target's output hook for a freestanding environment.
+// The default definition in builtin.c drops the bytes and reports a full write.
+so_int so_write_out(const uint8_t* buf, so_int size);
+
+// so_write_str writes a null-terminated string through so_write_out.
+static inline void so_write_str(const char* s) {
+    so_write_out((const uint8_t*)s, (so_int)strlen(s));
+}
+
+// so_stringify expands x and makes a string literal of the result.
+#define so_stringify_(x) #x
+#define so_stringify(x) so_stringify_(x)
+
+#endif  // !so_build_hosted
+
+// panic aborts the program with the given message.
+//
+// SO_PANIC_MODE selects how a hosted build terminates after printing
+// the message. The `so` toolchain defaults to SO_PANIC_TRACE (and adds
+// the -rdynamic it needs); compiling this C by hand without -D falls
+// back to SO_PANIC_EXIT, which needs no extra flags.
+//   - SO_PANIC_EXIT:  exit(1). Clean, deterministic exit code.
+//   - SO_PANIC_ABORT: abort(). Raises SIGABRT for a core dump or debugger.
+//   - SO_PANIC_TRACE: print a backtrace, then exit(1).
+// A freestanding build ignores the mode and always traps.
+#define SO_PANIC_EXIT 0
+#define SO_PANIC_ABORT 1
+#define SO_PANIC_TRACE 2
+#if !defined(SO_PANIC_MODE)
+#define SO_PANIC_MODE SO_PANIC_EXIT
+#endif
+
+#if defined(so_build_hosted)
+
+#if SO_PANIC_MODE == SO_PANIC_TRACE
+// print_trace writes a symbolized backtrace of the current call stack
+// to stderr. Enabled only in trace panic mode.
+void so_print_trace(void);
+#define so_panic_tail()   \
+    do {                  \
+        so_print_trace(); \
+        exit(1);          \
+    } while (0)
+#elif SO_PANIC_MODE == SO_PANIC_ABORT
+#define so_panic_tail() abort()
+#else
+#define so_panic_tail() exit(1)
+#endif
+
+#define so_panic(msg)                                     \
+    do {                                                  \
+        fprintf(stderr, "panic: %s\n  %s:%d (func %s)\n", \
+                msg, __FILE__, __LINE__, __func__);       \
+        so_panic_tail();                                  \
+    } while (0)
+
+#else
+
+#define so_panic(msg)                                                       \
+    do {                                                                    \
+        so_write_str("panic: ");                                            \
+        so_write_str(msg);                                                  \
+        so_write_str("\n  " __FILE__ ":" so_stringify(__LINE__) " (func "); \
+        so_write_str(__func__);                                             \
+        so_write_str(")\n");                                                \
+        __builtin_trap();                                                   \
+    } while (0)
+
+#endif  // so_build_hosted
+
+// assert panics with the given message if the condition is false.
+// SO_NO_ASSERT removes the check entirely, so cond must be free of side
+// effects. NDEBUG has no effect here.
+#if defined(SO_NO_ASSERT)
+#define so_assert(cond, msg) ((void)0)
+#else
+#define so_assert(cond, msg) \
+    do {                     \
+        if (!(cond)) {       \
+            so_panic(msg);   \
+        }                    \
+    } while (0)
+#endif
+
+// assume tells the C compiler that cond is always true. It generates no code
+// in any build, and SO_NO_ASSERT has no effect on it. The behavior is
+// undefined if cond is false.
+//
+// Use assume only for conditions that are provably true, such as when
+// a pointer is known to be non-null but the compiler cannot see it.
+// Use assert for all other conditions.
+#define so_assume(cond)       \
+    do {                      \
+        if (!(cond)) {        \
+            so_unreachable(); \
+        }                     \
+    } while (0)
+
 // --- Alloca safety ---
 
 // MaxAllocaSize is the maximum size that can be
@@ -537,106 +639,6 @@ static inline so_String so_error_error(void* self) {
     _err_str;                                          \
 })
 
-#if !defined(so_build_hosted)
-
-// so_write_out is the target's output hook for a freestanding environment.
-// The default definition in builtin.c drops the bytes and reports a full write.
-so_int so_write_out(const uint8_t* buf, so_int size);
-
-// so_write_str writes a null-terminated string through so_write_out.
-static inline void so_write_str(const char* s) {
-    so_write_out((const uint8_t*)s, (so_int)strlen(s));
-}
-
-// so_stringify expands x and makes a string literal of the result.
-#define so_stringify_(x) #x
-#define so_stringify(x) so_stringify_(x)
-
-#endif  // !so_build_hosted
-
-// panic aborts the program with the given message.
-//
-// SO_PANIC_MODE selects how a hosted build terminates after printing
-// the message. The `so` toolchain defaults to SO_PANIC_TRACE (and adds
-// the -rdynamic it needs); compiling this C by hand without -D falls
-// back to SO_PANIC_EXIT, which needs no extra flags.
-//   - SO_PANIC_EXIT:  exit(1). Clean, deterministic exit code.
-//   - SO_PANIC_ABORT: abort(). Raises SIGABRT for a core dump or debugger.
-//   - SO_PANIC_TRACE: print a backtrace, then exit(1).
-// A freestanding build ignores the mode and always traps.
-#define SO_PANIC_EXIT 0
-#define SO_PANIC_ABORT 1
-#define SO_PANIC_TRACE 2
-#if !defined(SO_PANIC_MODE)
-#define SO_PANIC_MODE SO_PANIC_EXIT
-#endif
-
-#if defined(so_build_hosted)
-
-#if SO_PANIC_MODE == SO_PANIC_TRACE
-// print_trace writes a symbolized backtrace of the current call stack
-// to stderr. Enabled only in trace panic mode.
-void so_print_trace(void);
-#define so_panic_tail()   \
-    do {                  \
-        so_print_trace(); \
-        exit(1);          \
-    } while (0)
-#elif SO_PANIC_MODE == SO_PANIC_ABORT
-#define so_panic_tail() abort()
-#else
-#define so_panic_tail() exit(1)
-#endif
-
-#define so_panic(msg)                                     \
-    do {                                                  \
-        fprintf(stderr, "panic: %s\n  %s:%d (func %s)\n", \
-                msg, __FILE__, __LINE__, __func__);       \
-        so_panic_tail();                                  \
-    } while (0)
-
-#else
-
-#define so_panic(msg)                                                       \
-    do {                                                                    \
-        so_write_str("panic: ");                                            \
-        so_write_str(msg);                                                  \
-        so_write_str("\n  " __FILE__ ":" so_stringify(__LINE__) " (func "); \
-        so_write_str(__func__);                                             \
-        so_write_str(")\n");                                                \
-        __builtin_trap();                                                   \
-    } while (0)
-
-#endif  // so_build_hosted
-
-// assert panics with the given message if the condition is false.
-// SO_NO_ASSERT removes the check entirely, so cond must be free of side
-// effects. NDEBUG has no effect here.
-#if defined(SO_NO_ASSERT)
-#define so_assert(cond, msg) ((void)0)
-#else
-#define so_assert(cond, msg) \
-    do {                     \
-        if (!(cond)) {       \
-            so_panic(msg);   \
-        }                    \
-    } while (0)
-#endif
-
-// assume tells the C compiler that cond is always true. It generates no code
-// in any build, and SO_NO_ASSERT has no effect on it. The behavior is
-// undefined if cond is false.
-//
-// Use assume only for conditions that are provably true, such as when
-// a pointer is known to be non-null but the compiler cannot see it.
-// Use assert for all other conditions.
-#define so_assume(cond)       \
-    do {                      \
-        if (!(cond)) {        \
-            so_unreachable(); \
-        }                     \
-    } while (0)
-
 // --- Result types ---
 
 // clang-format off
@@ -733,22 +735,6 @@ static inline void* unsafe_SliceData(so_Slice s) {
     }
     return s.ptr;
 }
-
-// --- OS intrinsics ---
-
-// Command-line arguments, populated by main().
-extern so_Slice os_Args;
-
-#if defined(so_build_hosted)
-// so_args_init populates os_Args from C argc/argv.
-// buf must be a so_String array of at least argc elements (VLA on main's stack).
-static inline void so_args_init(int argc, char* argv[], so_String* buf) {
-    for (int i = 0; i < argc; i++) {
-        buf[i] = (so_String){argv[i], (so_int)strlen(argv[i])};
-    }
-    os_Args = (so_Slice){buf, (so_int)argc, (so_int)argc};
-}
-#endif
 
 // --- Map type ---
 
@@ -883,3 +869,19 @@ static inline so_int so_map_cap(so_int n) {
 })
 
 #define so_map_seed(m) ((uint64_t)(uintptr_t)(m))
+
+// --- OS intrinsics ---
+
+// Command-line arguments, populated by main().
+extern so_Slice os_Args;
+
+#if defined(so_build_hosted)
+// so_args_init populates os_Args from C argc/argv.
+// buf must be a so_String array of at least argc elements (VLA on main's stack).
+static inline void so_args_init(int argc, char* argv[], so_String* buf) {
+    for (int i = 0; i < argc; i++) {
+        buf[i] = (so_String){argv[i], (so_int)strlen(argv[i])};
+    }
+    os_Args = (so_Slice){buf, (so_int)argc, (so_int)argc};
+}
+#endif
