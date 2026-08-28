@@ -644,13 +644,28 @@ int main(void) {
         so_int i = 0;
         so_int v = 0;
         so_int sum = 0;
-        for (i = 0; i < so_len(s); i++) {
-            v = so_at(so_int, s, i);
+        for (so_int _ii = 0; _ii < so_len(s); _ii++) {
+            i = _ii;
+            v = so_at(so_int, s, _ii);
             sum += i + v;
         }
         // (0+10) + (1+20) + (2+30) = 63
         if (sum != 63) {
             so_panic("want range assign sum==63");
+        }
+        // The loop assigns to i and v, so both
+        // keep the values of the last iteration.
+        if (i != 2 || v != 30) {
+            so_panic("want i == 2 && v == 30");
+        }
+        // An empty slice leaves i and v alone.
+        so_Slice empty = {};
+        for (so_int _ii = 0; _ii < so_len(empty); _ii++) {
+            i = _ii;
+            v = so_at(so_int, empty, _ii);
+        }
+        if (i != 2 || v != 30) {
+            so_panic("want i == 2 && v == 30");
         }
     }
     {

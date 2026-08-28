@@ -25,6 +25,14 @@ func main() {
 		println("range", k)
 	}
 
+	// The loop assigns to k2, so it keeps the value of the last iteration.
+	var k2 int
+	for k2 = range 3 {
+	}
+	if k2 != 2 {
+		panic("want k2 == 2")
+	}
+
 	for range 3 {
 	}
 

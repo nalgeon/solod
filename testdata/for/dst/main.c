@@ -22,6 +22,14 @@ int main(void) {
     for (so_int k = 0; k < 3; k++) {
         so_println("%s %" PRIdINT, "range", k);
     }
+    // The loop assigns to k2, so it keeps the value of the last iteration.
+    so_int k2 = 0;
+    for (so_int _k2i = 0; _k2i < 3; _k2i++) {
+        k2 = _k2i;
+    }
+    if (k2 != 2) {
+        so_panic("want k2 == 2");
+    }
     for (so_int _i = 0; _i < 3; _i++) {
     }
     for (;;) {

@@ -267,6 +267,17 @@ int main(void) {
         if (sum != 6) {
             so_panic("want sum == 6");
         }
+        // The loop assigns to i and num, so both
+        // keep the values of the last iteration.
+        so_int i = 0;
+        so_int num = 0;
+        for (so_int _ii = 0; _ii < 3; _ii++) {
+            i = _ii;
+            num = a[_ii];
+        }
+        if (i != 2 || num != 3) {
+            so_panic("want i == 2 && num == 3");
+        }
         sum = 0;
         for (so_int i = 0; i < 3; i++) {
             so_int num = a[i];

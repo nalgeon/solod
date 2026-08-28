@@ -659,6 +659,18 @@ func main() {
 		if sum != 63 {
 			panic("want range assign sum==63")
 		}
+		// The loop assigns to i and v, so both
+		// keep the values of the last iteration.
+		if i != 2 || v != 30 {
+			panic("want i == 2 && v == 30")
+		}
+		// An empty slice leaves i and v alone.
+		var empty []int
+		for i, v = range empty {
+		}
+		if i != 2 || v != 30 {
+			panic("want i == 2 && v == 30")
+		}
 	}
 	{
 		// For-range over string slice.

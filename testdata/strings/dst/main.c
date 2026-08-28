@@ -64,6 +64,31 @@ int main(void) {
         }
     }
     {
+        // Loop over string runes with a declared key. The loop assigns to the
+        // key, so the key keeps the index of the last rune.
+        so_String s = so_str("go世");
+        so_int i = 0;
+        for (so_int _ii = 0, _iw = 0; _ii < so_len(s); _ii += _iw) {
+            i = _ii;
+            _iw = 0;
+            so_utf8_decode(s, _ii, &_iw);
+            (void)i;
+        }
+        if (i != 2) {
+            so_panic("want i == 2");
+        }
+        so_rune r = 0;
+        for (so_int _ii = 0, _iw = 0; _ii < so_len(s); _ii += _iw) {
+            i = _ii;
+            _iw = 0;
+            r = so_utf8_decode(s, _ii, &_iw);
+            (void)r;
+        }
+        if (i != 2 || r != 0x4e16) {
+            so_panic("want i == 2 && r == 世");
+        }
+    }
+    {
         // Continue in range-over-string loop.
         so_String s = so_str("hello");
         so_int n = 0;

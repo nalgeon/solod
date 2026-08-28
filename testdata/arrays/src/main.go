@@ -262,6 +262,15 @@ func main() {
 		if sum != 6 {
 			panic("want sum == 6")
 		}
+		// The loop assigns to i and num, so both
+		// keep the values of the last iteration.
+		var i int
+		var num int
+		for i, num = range a {
+		}
+		if i != 2 || num != 3 {
+			panic("want i == 2 && num == 3")
+		}
 		sum = 0
 		for i, num := range a {
 			_ = i

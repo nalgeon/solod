@@ -54,6 +54,25 @@ func main() {
 		}
 	}
 	{
+		// Loop over string runes with a declared key. The loop assigns to the
+		// key, so the key keeps the index of the last rune.
+		s := "go世"
+		var i int
+		for i = range s {
+			_ = i
+		}
+		if i != 2 {
+			panic("want i == 2")
+		}
+		var r rune
+		for i, r = range s {
+			_ = r
+		}
+		if i != 2 || r != '世' {
+			panic("want i == 2 && r == 世")
+		}
+	}
+	{
 		// Continue in range-over-string loop.
 		s := "hello"
 		n := 0

@@ -21,10 +21,11 @@ func (g *Generator) emitIntRange(w io.Writer, stmt *ast.RangeStmt) {
 	}
 
 	key := stmt.Key.(*ast.Ident)
-	keyDecl := g.rangeKeyDecl(stmt, key)
-	fmt.Fprintf(w, "%sfor (%s%s = 0; %s < ", g.indent(), keyDecl, key.Name, key.Name)
+	k := g.rangeKeyVar(stmt, key)
+	fmt.Fprintf(w, "%sfor (%s%s = 0; %s < ", g.indent(), k.decl, k.name, k.name)
 	g.emitExpr(w, stmt.X)
-	fmt.Fprintf(w, "; %s++) {\n", key.Name)
+	fmt.Fprintf(w, "; %s++) {\n", k.name)
+	g.emitRangeKeyCopy(w, k)
 	g.emitBlock(w, stmt.Body)
 	fmt.Fprintf(w, "%s}\n", g.indent())
 }
@@ -54,10 +55,11 @@ func (g *Generator) emitArrayRange(w io.Writer, stmt *ast.RangeStmt) {
 
 	key := stmt.Key.(*ast.Ident)
 	elemType := g.mapTypeName(stmt, arrType.Elem())
-	keyDecl := g.rangeKeyDecl(stmt, key)
+	k := g.rangeKeyVar(stmt, key)
 
 	fmt.Fprintf(w, "%sfor (%s%s = 0; %s < %d; %s++) {\n",
-		g.indent(), keyDecl, key.Name, key.Name, arrType.Len(), key.Name)
+		g.indent(), k.decl, k.name, k.name, arrType.Len(), k.name)
+	g.emitRangeKeyCopy(w, k)
 
 	// Emit value variable if present (e.g. `for i, v := range nums`).
 	if stmt.Value != nil {
@@ -71,10 +73,10 @@ func (g *Generator) emitArrayRange(w io.Writer, stmt *ast.RangeStmt) {
 			if ptrDeref {
 				fmt.Fprint(w, "(*")
 				g.emitExpr(w, stmt.X)
-				fmt.Fprintf(w, ")[%s];\n", key.Name)
+				fmt.Fprintf(w, ")[%s];\n", k.name)
 			} else {
 				g.emitExpr(w, stmt.X)
-				fmt.Fprintf(w, "[%s];\n", key.Name)
+				fmt.Fprintf(w, "[%s];\n", k.name)
 			}
 			g.state.depth--
 		}
@@ -102,11 +104,12 @@ func (g *Generator) emitSliceRange(w io.Writer, stmt *ast.RangeStmt) {
 	key := stmt.Key.(*ast.Ident)
 	sliceType := g.types.TypeOf(stmt.X).Underlying().(*types.Slice)
 	elemType := g.mapTypeName(stmt, sliceType.Elem())
-	keyDecl := g.rangeKeyDecl(stmt, key)
+	k := g.rangeKeyVar(stmt, key)
 
-	fmt.Fprintf(w, "%sfor (%s%s = 0; %s < so_len(", g.indent(), keyDecl, key.Name, key.Name)
+	fmt.Fprintf(w, "%sfor (%s%s = 0; %s < so_len(", g.indent(), k.decl, k.name, k.name)
 	g.emitExpr(w, stmt.X)
-	fmt.Fprintf(w, "); %s++) {\n", key.Name)
+	fmt.Fprintf(w, "); %s++) {\n", k.name)
+	g.emitRangeKeyCopy(w, k)
 
 	// Emit value variable if present (e.g. `for i, v := range nums`).
 	if stmt.Value != nil {
@@ -118,7 +121,7 @@ func (g *Generator) emitSliceRange(w io.Writer, stmt *ast.RangeStmt) {
 			}
 			fmt.Fprintf(w, "%s%s%s = so_at(%s, ", g.indent(), valDecl, valIdent.Name, elemType)
 			g.emitExpr(w, stmt.X)
-			fmt.Fprintf(w, ", %s);\n", key.Name)
+			fmt.Fprintf(w, ", %s);\n", k.name)
 			g.state.depth--
 		}
 	}
@@ -146,12 +149,13 @@ func (g *Generator) emitStringRange(w io.Writer, stmt *ast.RangeStmt) {
 	}
 
 	key := stmt.Key.(*ast.Ident)
-	keyDecl := g.rangeKeyDecl(stmt, key)
+	k := g.rangeKeyVar(stmt, key)
 	widthVar := "_" + key.Name + "w"
 
-	fmt.Fprintf(w, "%sfor (%s%s = 0, %s = 0; %s < so_len(", g.indent(), keyDecl, key.Name, widthVar, key.Name)
+	fmt.Fprintf(w, "%sfor (%s%s = 0, %s = 0; %s < so_len(", g.indent(), k.decl, k.name, widthVar, k.name)
 	g.emitExpr(w, stmt.X)
-	fmt.Fprintf(w, "); %s += %s) {\n", key.Name, widthVar)
+	fmt.Fprintf(w, "); %s += %s) {\n", k.name, widthVar)
+	g.emitRangeKeyCopy(w, k)
 
 	// Decode rune and width once per iteration.
 	g.state.depth++
@@ -170,7 +174,7 @@ func (g *Generator) emitStringRange(w io.Writer, stmt *ast.RangeStmt) {
 		fmt.Fprintf(w, "%sso_utf8_decode(", g.indent())
 	}
 	g.emitExpr(w, stmt.X)
-	fmt.Fprintf(w, ", %s, &%s);\n", key.Name, widthVar)
+	fmt.Fprintf(w, ", %s, &%s);\n", k.name, widthVar)
 	g.state.depth--
 
 	g.emitBlock(w, stmt.Body)
@@ -178,16 +182,38 @@ func (g *Generator) emitStringRange(w io.Writer, stmt *ast.RangeStmt) {
 	fmt.Fprintf(w, "%s}\n", g.indent())
 }
 
-// rangeKeyDecl returns the type prefix for a range loop key variable.
-// Blank identifiers always get "so_int " (generated C loop variable).
-// Assign (=) returns "" since the variable is already declared.
-// Define (:=) returns the mapped type followed by a space.
-func (g *Generator) rangeKeyDecl(stmt *ast.RangeStmt, key *ast.Ident) string {
+// rangeKey describes the C loop variable of a range statement.
+type rangeKey struct {
+	decl string // type prefix for the init clause, with a trailing space
+	name string // name of the C loop variable
+	copy string // Go key variable to copy into, empty when the loop needs no copy
+}
+
+// rangeKeyVar returns the C loop variable for a range statement.
+//
+// A define form ("for i := range x") declares the key in the init clause, so
+// the loop counts on the key. An assign form ("for i = range x") must leave
+// the key at the index of the last iteration, and a C loop variable stops one
+// past it. So the loop counts on a variable of its own and copies it to the
+// key at the top of the body.
+func (g *Generator) rangeKeyVar(stmt *ast.RangeStmt, key *ast.Ident) rangeKey {
 	if key.Name == "_" {
-		return "so_int "
+		return rangeKey{decl: "so_int ", name: "_"}
 	}
 	if stmt.Tok == token.ASSIGN {
-		return ""
+		// The name follows the key, like the width variable of a string range,
+		// so it cannot collide with the local names of the builtin macros.
+		return rangeKey{decl: "so_int ", name: "_" + key.Name + "i", copy: key.Name}
 	}
-	return g.mapTypeName(stmt, g.types.Defs[key].Type()) + " "
+	return rangeKey{decl: g.mapTypeName(stmt, g.types.Defs[key].Type()) + " ", name: key.Name}
+}
+
+// emitRangeKeyCopy writes the key assignment at the top of a range loop body.
+func (g *Generator) emitRangeKeyCopy(w io.Writer, k rangeKey) {
+	if k.copy == "" {
+		return
+	}
+	g.state.depth++
+	fmt.Fprintf(w, "%s%s = %s;\n", g.indent(), k.copy, k.name)
+	g.state.depth--
 }
