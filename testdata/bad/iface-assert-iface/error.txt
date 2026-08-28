@@ -1,0 +1,3 @@
+main.go:14:11: type assertion from an interface to an interface is not supported
+	other := s.(Sized)
+	         ^here

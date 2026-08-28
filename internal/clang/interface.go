@@ -114,6 +114,11 @@ func (g *Generator) emitTypeAssertExpr(w io.Writer, n *ast.TypeAssertExpr) {
 
 	// Non-empty interface type assertion.
 	targetType := g.types.TypeOf(n.Type)
+	// A non-empty interface holds no runtime type information, so the
+	// generator cannot emit a check against a second interface.
+	if _, ok := targetType.Underlying().(*types.Interface); ok {
+		g.fail(n, "type assertion from an interface to an interface is not supported")
+	}
 	isPtr := false
 	if ptr, ok := targetType.(*types.Pointer); ok {
 		targetType = ptr.Elem()
