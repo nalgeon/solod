@@ -4,6 +4,8 @@ type point struct {
 	x, y int
 }
 
+type buf [4]int
+
 func main() {
 	{
 		// new with type
@@ -31,6 +33,45 @@ func main() {
 		p2 := new(pval)
 		if p2 == nil || p2.x != 3 || p2.y != 4 {
 			panic("expected p2.x == 3 && p2.y == 4")
+		}
+	}
+	{
+		// new with an array type
+		a := new([3]int)
+		if len(a) != 3 || a[0] != 0 || a[2] != 0 {
+			panic("expected a == [0 0 0]")
+		}
+		a[2] = 42
+		if a[2] != 42 {
+			panic("expected a[2] == 42")
+		}
+		b := new(buf)
+		if len(b) != 4 || b[3] != 0 {
+			panic("expected b == [0 0 0 0]")
+		}
+		m := new([2][3]int)
+		if len(m) != 2 || len(m[0]) != 3 || m[1][2] != 0 {
+			panic("expected m == [[0 0 0] [0 0 0]]")
+		}
+	}
+	{
+		// new with an array value
+		a := new([3]int{1, 2, 3})
+		if a[0] != 1 || a[2] != 3 {
+			panic("expected a == [1 2 3]")
+		}
+		b := new(buf{1, 2, 3, 4})
+		if b[3] != 4 {
+			panic("expected b[3] == 4")
+		}
+		aval := [3]int{5, 6, 7}
+		c := new(aval)
+		if c[1] != 6 {
+			panic("expected c[1] == 6")
+		}
+		c[1] = 8
+		if aval[1] != 8 {
+			panic("expected aval[1] == 8")
 		}
 	}
 }

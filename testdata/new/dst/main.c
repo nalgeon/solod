@@ -8,6 +8,7 @@ typedef struct point {
     so_int x;
     so_int y;
 } point;
+typedef so_int buf[4];
 
 // -- Implementation --
 
@@ -38,6 +39,45 @@ int main(void) {
         point* p2 = &pval;
         if (p2 == NULL || p2->x != 3 || p2->y != 4) {
             so_panic("expected p2.x == 3 && p2.y == 4");
+        }
+    }
+    {
+        // new with an array type
+        so_int (*a)[3] = &(so_int[3]){};
+        if (3 != 3 || (*a)[0] != 0 || (*a)[2] != 0) {
+            so_panic("expected a == [0 0 0]");
+        }
+        (*a)[2] = 42;
+        if ((*a)[2] != 42) {
+            so_panic("expected a[2] == 42");
+        }
+        buf* b = &(buf){};
+        if (4 != 4 || (*b)[3] != 0) {
+            so_panic("expected b == [0 0 0 0]");
+        }
+        so_int (*m)[2][3] = &(so_int[2][3]){};
+        if (2 != 2 || 3 != 3 || (*m)[1][2] != 0) {
+            so_panic("expected m == [[0 0 0] [0 0 0]]");
+        }
+    }
+    {
+        // new with an array value
+        so_int (*a)[3] = &(so_int[3]){1, 2, 3};
+        if ((*a)[0] != 1 || (*a)[2] != 3) {
+            so_panic("expected a == [1 2 3]");
+        }
+        buf* b = &(so_int[4]){1, 2, 3, 4};
+        if ((*b)[3] != 4) {
+            so_panic("expected b[3] == 4");
+        }
+        so_int aval[3] = {5, 6, 7};
+        so_int (*c)[3] = &aval;
+        if ((*c)[1] != 6) {
+            so_panic("expected c[1] == 6");
+        }
+        (*c)[1] = 8;
+        if (aval[1] != 8) {
+            so_panic("expected aval[1] == 8");
         }
     }
     return 0;

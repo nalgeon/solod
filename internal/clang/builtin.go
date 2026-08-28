@@ -214,14 +214,22 @@ func (g *Generator) emitMinMaxCall(w io.Writer, call *ast.CallExpr, name string)
 func (g *Generator) emitNewCall(w io.Writer, call *ast.CallExpr) {
 	tv := g.types.Types[call.Args[0]]
 	if tv.IsType() {
-		// new(T) - zero-initialized compound literal.
+		// new(T) - zero-initialized compound literal. An array type keeps its
+		// dimensions, so the address is a pointer to the array and not to the
+		// first element.
 		cType := g.mapTypeName(call, tv.Type)
-		fmt.Fprintf(w, "&(%s){}", cType)
+		fmt.Fprintf(w, "&(%s%s){}", cType, arrayDims(tv.Type))
 		return
 	}
 	if _, ok := call.Args[0].(*ast.CompositeLit); ok {
 		// new(T{...}) - addressed composite literal.
 		fmt.Fprint(w, "&")
+		if arr, ok := g.types.TypeOf(call.Args[0]).Underlying().(*types.Array); ok {
+			// An array literal carries no type token of its own,
+			// so the generator adds one.
+			g.emitArrayArg(w, call, call.Args[0], arr)
+			return
+		}
 		g.emitExpr(w, call.Args[0])
 		return
 	}
@@ -231,8 +239,10 @@ func (g *Generator) emitNewCall(w io.Writer, call *ast.CallExpr) {
 	}
 	// new(expr) - take address of the expression.
 	elemType := g.types.TypeOf(call).(*types.Pointer).Elem()
-	if _, ok := elemType.Underlying().(*types.Struct); ok {
-		// Struct: take address directly.
+	switch elemType.Underlying().(type) {
+	case *types.Struct, *types.Array:
+		// C cannot copy a struct or an array in a compound literal,
+		// so the generator takes the address of the expression.
 		fmt.Fprint(w, "&")
 		g.emitExpr(w, call.Args[0])
 		return
