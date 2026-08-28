@@ -19,7 +19,7 @@ func (g *Generator) emitMethodDecl(w io.Writer, decl *ast.FuncDecl) {
 	recvName, named := recvVarName(recv)
 	_, isValueRecv := recv.Type.(*ast.Ident)
 
-	g.state.enterFunc(sig)
+	g.state.enterFunc(decl, sig)
 	defer g.state.leaveFunc()
 
 	// Emit comments and function prototype.

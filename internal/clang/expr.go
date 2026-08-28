@@ -805,11 +805,11 @@ func (g *Generator) needsIntDivGuard(x, y ast.Expr) bool {
 // isFuncParam reports whether ident refers to
 // a function parameter of the current function.
 func (g *Generator) isFuncParam(ident *ast.Ident) bool {
-	if g.state.funcSig == nil {
+	if g.state.fn.sig == nil {
 		return false
 	}
 	obj := g.types.ObjectOf(ident)
-	params := g.state.funcSig.Params()
+	params := g.state.fn.sig.Params()
 	for param := range params.Variables() {
 		if param == obj {
 			return true

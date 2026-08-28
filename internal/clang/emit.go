@@ -187,7 +187,7 @@ func (g *Generator) emitInitFunc(w io.Writer) {
 		return
 	}
 	decl := g.initFunc
-	g.state.enterFunc(g.funcSig(decl))
+	g.state.enterFunc(decl, g.funcSig(decl))
 	defer g.state.leaveFunc()
 
 	fmt.Fprintf(w, "\nstatic void __attribute__((constructor)) %s_init() {\n", g.pkg.Name)

@@ -193,7 +193,7 @@ func (g *Generator) emitMacroFuncDecl(w io.Writer, decl *ast.FuncDecl) {
 
 	// Capture body output.
 	var buf strings.Builder
-	g.state.enterMacro(sig, macroParams)
+	g.state.enterMacro(decl, sig, macroParams)
 	g.walkStmts(&buf, decl.Body.List)
 	g.state.leaveFunc()
 
@@ -238,7 +238,7 @@ func (g *Generator) emitFuncBody(w io.Writer, decl *ast.FuncDecl) {
 	// Init emission state.
 	sig := g.funcSig(decl)
 	g.checkNamedReturns(decl, sig)
-	g.state.enterFunc(sig)
+	g.state.enterFunc(decl, sig)
 	defer g.state.leaveFunc()
 
 	// Emit comments and function prototype.

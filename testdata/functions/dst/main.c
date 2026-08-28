@@ -8,6 +8,11 @@ typedef so_int (*sum3Fn)(so_int, so_int, so_int);
 static so_int sum3(so_int a, so_int b, so_int c);
 static so_int pickThird(so_int _0 so_unused, float _1 so_unused, so_int c);
 
+// -- Variables and constants --
+
+// stop guards an early return in main.
+static so_unused bool stop = false;
+
 // -- Implementation --
 
 static so_int sum3(so_int a, so_int b, so_int c) {
@@ -42,5 +47,10 @@ int main(void) {
     (void)s5;
     so_int s6 = pickThird(1, 2.0f, 3);
     (void)s6;
+    // A bare return in main translate to return 0 in C.
+    if (stop) {
+        return 0;
+    }
+    so_println("%s", "done");
     return 0;
 }

@@ -14,8 +14,8 @@ import (
 type State struct {
 	// Current indentation depth (0 = not indented at file level).
 	depth int
-	// Current function's signature (for multi-return).
-	funcSig *types.Signature
+	// Function whose body is being emitted.
+	fn funcScope
 	// Deferred generic calls to emit before returns, panics, and function end.
 	defers []string
 	// Counter for unique temp variable names.
@@ -27,17 +27,23 @@ type State struct {
 	macroParams map[string]bool
 }
 
+// funcScope describes the function whose body is being emitted.
+type funcScope struct {
+	decl *ast.FuncDecl
+	sig  *types.Signature
+}
+
 // enterFunc starts a function body scope. Scopes never nest: So has no
 // function literals, and generic functions are always top-level.
-func (s *State) enterFunc(sig *types.Signature) {
-	*s = State{funcSig: sig}
+func (s *State) enterFunc(decl *ast.FuncDecl, sig *types.Signature) {
+	*s = State{fn: funcScope{decl: decl, sig: sig}}
 }
 
 // enterMacro starts the macro body scope for a generic function. The body is
 // written to a buffer and then inserted into a #define, so it starts one level deep.
 // params holds the macro's non-type parameter names.
-func (s *State) enterMacro(sig *types.Signature, params map[string]bool) {
-	*s = State{funcSig: sig, depth: 1, inMacro: true, macroParams: params}
+func (s *State) enterMacro(decl *ast.FuncDecl, sig *types.Signature, params map[string]bool) {
+	*s = State{fn: funcScope{decl: decl, sig: sig}, depth: 1, inMacro: true, macroParams: params}
 }
 
 // leaveFunc ends the current function or macro body scope.
@@ -47,7 +53,7 @@ func (s *State) leaveFunc() {
 
 // atTopLevel reports whether emission is at package scope, outside any function body.
 func (s *State) atTopLevel() bool {
-	return s.funcSig == nil
+	return s.fn.sig == nil
 }
 
 // indent returns the indentation for the current scope.

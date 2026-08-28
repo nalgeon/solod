@@ -24,7 +24,7 @@ func (g *Generator) emitReturnStmt(w io.Writer, stmt *ast.ReturnStmt) {
 	// before the defers (matching Go, which evaluates the return value first).
 	if len(stmt.Results) > 0 && len(g.state.defers) > 0 && g.returnIsNotConst(stmt) {
 		tmp := g.newTemp(stmt, tempResult)
-		retType := g.returnType(stmt, g.state.funcSig)
+		retType := g.returnType(stmt, g.state.fn.sig)
 		fmt.Fprintf(w, "%s%s %s = ", g.indent(), retType, tmp)
 		g.emitReturnExpr(w, stmt)
 		fmt.Fprint(w, ";\n")
@@ -36,6 +36,11 @@ func (g *Generator) emitReturnStmt(w io.Writer, stmt *ast.ReturnStmt) {
 	g.emitDeferredCalls(w)
 
 	if len(stmt.Results) == 0 {
+		if isMainFunc(g.state.fn.decl) {
+			// C declares main as int, so a bare return needs the exit status.
+			fmt.Fprintf(w, "%sreturn 0;\n", g.indent())
+			return
+		}
 		fmt.Fprintf(w, "%sreturn;\n", g.indent())
 		return
 	}
@@ -57,21 +62,21 @@ func (g *Generator) emitReturnExpr(w io.Writer, stmt *ast.ReturnStmt) {
 			g.emitExpr(w, stmt.Results[0])
 			return
 		}
-		retType := g.state.funcSig.Results().At(0).Type()
+		retType := g.state.fn.sig.Results().At(0).Type()
 		g.emitExprAsType(w, stmt, stmt.Results[0], retType)
 		return
 	}
 
 	// Multi-return: emit compound literal with per-signature result fields.
 	// Each value converts to the result type of its position.
-	multi := g.makeMultiReturn(stmt, g.state.funcSig)
+	multi := g.makeMultiReturn(stmt, g.state.fn.sig)
 	fmt.Fprintf(w, "(%s){", multi.typeName())
 	for i, res := range stmt.Results {
 		if i > 0 {
 			fmt.Fprint(w, ", ")
 		}
 		fmt.Fprintf(w, ".%s = ", multi.field(i))
-		g.emitExprAsType(w, stmt, res, g.state.funcSig.Results().At(i).Type())
+		g.emitExprAsType(w, stmt, res, g.state.fn.sig.Results().At(i).Type())
 	}
 	fmt.Fprint(w, "}")
 }
