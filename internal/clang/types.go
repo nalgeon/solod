@@ -191,8 +191,13 @@ func (g *Generator) mapTypeName(node ast.Node, typ types.Type) string {
 		return t.Obj().Name()
 	}
 
+	// Non-basic types that reach this point are not supported.
+	basic, ok := typ.Underlying().(*types.Basic)
+	if !ok {
+		g.fail(node, "unsupported type: %s", g.typeString(typ))
+	}
+
 	// Basic types (e.g. int, bool, string).
-	basic := typ.Underlying().(*types.Basic)
 	switch basic.Kind() {
 	case types.Bool, types.UntypedBool:
 		return "bool"
@@ -297,8 +302,13 @@ func (g *Generator) zeroValue(node ast.Node, typ types.Type) string {
 		g.fail(node, "unsupported non-empty anonymous interface")
 	}
 
+	// Non-basic types that reach this point are not supported.
+	basic, ok := typ.Underlying().(*types.Basic)
+	if !ok {
+		g.fail(node, "unsupported type: %s", g.typeString(typ))
+	}
+
 	// Basic types (e.g. int, bool, string).
-	basic := typ.Underlying().(*types.Basic)
 	switch basic.Kind() {
 	case types.Bool:
 		return "false"

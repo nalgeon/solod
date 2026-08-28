@@ -1,0 +1,3 @@
+main.go:3:13: unsupported type: chan int
+func send(c chan int, x int) {
+            ^here

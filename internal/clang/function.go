@@ -66,7 +66,7 @@ func (g *Generator) emitFuncProto(w io.Writer, decl *ast.FuncDecl) *types.Signat
 	if decl.Type.Params != nil {
 		for _, field := range decl.Type.Params.List {
 			typ := g.types.TypeOf(field.Type)
-			ct := g.mapTypeDecl(decl, typ)
+			ct := g.mapTypeDecl(field.Type, typ)
 			for _, n := range field.Names {
 				if n.Name == "_" {
 					// C has no blank parameter. Name it after
