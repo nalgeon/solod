@@ -23,6 +23,7 @@ typedef struct tagged {
 
 // -- Forward declarations --
 static main_Person newPerson(so_String name);
+static so_String personName(main_Person p);
 
 // -- Implementation --
 
@@ -45,6 +46,10 @@ so_int main_ID_GetVal(main_ID aid) {
 so_int main_ID_GetPtr(void* self) {
     main_ID* aid = self;
     return (so_int)(*aid);
+}
+
+static so_String personName(main_Person p) {
+    return p.name;
 }
 
 int main(void) {
@@ -157,6 +162,20 @@ int main(void) {
         main_ID id = aid;
         if (main_ID_GetVal(id) != 123) {
             so_panic("id.GetVal() != 123");
+        }
+    }
+    {
+        // Alias for a pointer type: the method call unaliases the receiver.
+        main_Person* hp = &(main_Person){.name = so_str("Zoe"), .age = 60};
+        if (main_Person_Age(hp) != 60) {
+            so_panic("hp.Age() != 60");
+        }
+    }
+    {
+        // Alias for a function type.
+        so_String (*namer)(main_Person) = personName;
+        if (so_string_ne(namer((main_Person){.name = so_str("Ivy")}), so_str("Ivy"))) {
+            so_panic("namer(Ivy) != Ivy");
         }
     }
     return 0;

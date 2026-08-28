@@ -91,8 +91,10 @@ func (g *Generator) emitFuncProto(w io.Writer, decl *ast.FuncDecl) *types.Signat
 
 // emitFuncTypeSpec emits a C function pointer typedef.
 func (g *Generator) emitFuncTypeSpec(w io.Writer, spec *ast.TypeSpec) {
-	named := types.Unalias(g.types.Defs[spec.Name].Type()).(*types.Named)
-	sig := named.Underlying().(*types.Signature)
+	// A type alias to a function type has no named type, so the signature
+	// comes from the underlying type in both cases.
+	typ := types.Unalias(g.types.Defs[spec.Name].Type())
+	sig := typ.Underlying().(*types.Signature)
 
 	retType := g.returnType(spec, sig)
 

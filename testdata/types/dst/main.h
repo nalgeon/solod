@@ -41,6 +41,12 @@ typedef struct main_Person {
 typedef main_Person main_Human;
 typedef main_Person main_Employee;
 
+// Alias for a pointer type.
+typedef main_Person* main_HumanPtr;
+
+// Alias for a function type.
+typedef so_String (*main_Namer)(main_Person);
+
 // Inner struct.
 typedef struct main_Benchmark {
     so_String name;

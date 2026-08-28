@@ -58,7 +58,9 @@ func (g *Generator) emitMethodDecl(w io.Writer, decl *ast.FuncDecl) {
 // emitMethodCall emits a method call.
 func (g *Generator) emitMethodCall(w io.Writer, sel *ast.SelectorExpr, call *ast.CallExpr) {
 	selection := g.types.Selections[sel]
-	recv := selection.Recv()
+	// The receiver type can be an alias to a pointer, as in "type P = *T",
+	// so it is unaliased before the pointer check.
+	recv := types.Unalias(selection.Recv())
 	sig := selection.Type().(*types.Signature)
 
 	// Get the struct type name.

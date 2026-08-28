@@ -36,6 +36,12 @@ type point struct {
 type Human = Person
 type Employee Person
 
+// Alias for a pointer type.
+type HumanPtr = *Person
+
+// Alias for a function type.
+type Namer = func(Person) string
+
 // Methods on aliases.
 func (h *Human) Age() int {
 	return h.age
@@ -45,6 +51,10 @@ func (aid AliasID) GetVal() int {
 }
 func (aid *AliasID) GetPtr() int {
 	return int(*aid)
+}
+
+func personName(p Person) string {
+	return p.name
 }
 
 // Inner struct.
@@ -185,6 +195,20 @@ func main() {
 		var id ID = aid
 		if id.GetVal() != 123 {
 			panic("id.GetVal() != 123")
+		}
+	}
+	{
+		// Alias for a pointer type: the method call unaliases the receiver.
+		var hp HumanPtr = &Person{name: "Zoe", age: 60}
+		if hp.Age() != 60 {
+			panic("hp.Age() != 60")
+		}
+	}
+	{
+		// Alias for a function type.
+		var namer Namer = personName
+		if namer(Person{name: "Ivy"}) != "Ivy" {
+			panic("namer(Ivy) != Ivy")
 		}
 	}
 }
