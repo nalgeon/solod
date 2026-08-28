@@ -123,6 +123,12 @@ typedef uint64_t so_uint;
 
 #if !defined(so_build_hosted)
 
+static inline size_t strlen(const char* s) {
+    const char* p = s;
+    while (*p) p++;
+    return p - s;
+}
+
 // so_write_out is the target's output hook for a freestanding environment.
 // The default definition in builtin.c drops the bytes and reports a full write.
 so_int so_write_out(const uint8_t* buf, so_int size);
@@ -372,14 +378,6 @@ so_int so_utf8_encode(so_rune r, char* buf);
 // Stores the byte width in *w.
 // Returns the decoded rune, or 0xFFFD for invalid UTF-8.
 so_rune so_utf8_decode(so_String s, so_int i, so_int* w);
-
-#if !defined(so_build_hosted)
-static inline size_t strlen(const char* s) {
-    const char* p = s;
-    while (*p) p++;
-    return p - s;
-}
-#endif
 
 // --- Arrays ---
 
