@@ -424,8 +424,7 @@ func (g *Generator) emitGenericCall(w io.Writer, n *ast.CallExpr, fun ast.Expr, 
 
 // emitSliceCast emits a string-to-slice conversion ([]byte(s) or []rune(s)).
 func (g *Generator) emitSliceCast(w io.Writer, call *ast.CallExpr, sl *types.Slice) {
-	elem := sl.Elem().(*types.Basic)
-	switch elem.Kind() {
+	switch elemKind(sl) {
 	case types.Byte:
 		fmt.Fprint(w, "so_string_bytes(")
 		g.emitMacroArg(w, call.Args[0])
@@ -434,13 +433,14 @@ func (g *Generator) emitSliceCast(w io.Writer, call *ast.CallExpr, sl *types.Sli
 		fmt.Fprint(w, "so_string_runes(")
 		g.emitMacroArg(w, call.Args[0])
 		fmt.Fprint(w, ")")
+	default:
+		g.fail(call, "unsupported string-to-slice conversion: %s", g.typeString(sl))
 	}
 }
 
 // emitStringCast emits a slice-to-string conversion (string(bs) or string(rs)).
 func (g *Generator) emitStringCast(w io.Writer, call *ast.CallExpr, sl *types.Slice) {
-	elem := sl.Elem().(*types.Basic)
-	switch elem.Kind() {
+	switch elemKind(sl) {
 	case types.Byte:
 		fmt.Fprint(w, "so_bytes_string(")
 		g.emitMacroArg(w, call.Args[0])
@@ -450,7 +450,7 @@ func (g *Generator) emitStringCast(w io.Writer, call *ast.CallExpr, sl *types.Sl
 		g.emitMacroArg(w, call.Args[0])
 		fmt.Fprint(w, ")")
 	default:
-		g.fail(call, "unsupported slice-to-string conversion: %s", g.typeString(elem))
+		g.fail(call, "unsupported slice-to-string conversion: %s", g.typeString(sl))
 	}
 }
 
@@ -869,4 +869,15 @@ func containsIota(expr ast.Expr) bool {
 		return !found
 	})
 	return found
+}
+
+// elemKind returns the basic kind of the slice element type. The element type
+// can be a named type, as in "type Byte byte". A kind of types.Invalid marks
+// an element type without a basic type, a struct for example.
+func elemKind(sl *types.Slice) types.BasicKind {
+	elem, ok := sl.Elem().Underlying().(*types.Basic)
+	if !ok {
+		return types.Invalid
+	}
+	return elem.Kind()
 }

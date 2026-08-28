@@ -124,5 +124,23 @@ int main(void) {
             so_panic("want string(r) == 世");
         }
     }
+    {
+        // String conversion to slices of named byte and rune types.
+        so_String s1 = so_str("1世3");
+        so_Slice bs = so_string_bytes(s1);
+        if (so_at(main_Byte, bs, 0) != '1') {
+            so_panic("unexpected byte");
+        }
+        so_Slice rs = so_string_runes(s1);
+        if (so_at(main_Rune, rs, 1) != 0x4e16) {
+            so_panic("unexpected rune");
+        }
+        if (so_string_ne(so_bytes_string(bs), s1)) {
+            so_panic("want string(bs) == s1");
+        }
+        if (so_string_ne(so_runes_string(rs), s1)) {
+            so_panic("want string(rs) == s1");
+        }
+    }
     return 0;
 }

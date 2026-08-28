@@ -1,5 +1,9 @@
 package main
 
+// Named byte and rune types.
+type Byte byte
+type Rune rune
+
 func main() {
 	{
 		// Empty string.
@@ -106,6 +110,24 @@ func main() {
 		var r rune = '世'
 		if string(r) != "世" {
 			panic("want string(r) == 世")
+		}
+	}
+	{
+		// String conversion to slices of named byte and rune types.
+		s1 := "1世3"
+		bs := []Byte(s1)
+		if bs[0] != '1' {
+			panic("unexpected byte")
+		}
+		rs := []Rune(s1)
+		if rs[1] != '世' {
+			panic("unexpected rune")
+		}
+		if string(bs) != s1 {
+			panic("want string(bs) == s1")
+		}
+		if string(rs) != s1 {
+			panic("want string(rs) == s1")
 		}
 	}
 }
