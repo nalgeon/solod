@@ -1,0 +1,3 @@
+main.go:3:12: cannot use a map literal in a package-level initializer
+var ages = map[string]int{"alice": 30}
+           ^here

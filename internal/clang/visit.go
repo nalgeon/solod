@@ -399,6 +399,9 @@ func (g *Generator) emitVarSpec(w io.Writer, spec *ast.ValueSpec, dirs directive
 		cName := g.declSymbolName(g.types.Defs[name])
 		if len(spec.Values) > i {
 			// Has explicit initializer.
+			if g.state.atTopLevel() {
+				g.checkStaticInit(spec.Values[i])
+			}
 			fmt.Fprintf(w, "%s%s%s = ", g.indent(), specifier, ct.Decl(cName))
 			g.emitExprAsType(w, spec, spec.Values[i], typ)
 			fmt.Fprint(w, ";\n")

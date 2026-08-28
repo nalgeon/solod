@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"go/types"
 	"io"
 )
 
@@ -106,6 +107,120 @@ func (g *Generator) emitForwardFuncDecls(w io.Writer) {
 		g.emitFuncProto(w, decl)
 		fmt.Fprintln(w, ";")
 	}
+}
+
+// checkStaticInit fails when C cannot calculate the initializer of a
+// package-level variable (C requires a constant expression at file scope).
+func (g *Generator) checkStaticInit(expr ast.Expr) {
+	if g.types.Types[expr].Value != nil {
+		// A constant expression.
+		return
+	}
+
+	switch e := expr.(type) {
+	case *ast.ParenExpr:
+		g.checkStaticInit(e.X)
+
+	case *ast.Ident:
+		// C reads a variable only at runtime.
+		if _, ok := g.types.Uses[e].(*types.Var); ok {
+			g.fail(e, "cannot read variable %s in a package-level initializer; use init()", e.Name)
+		}
+
+	case *ast.SelectorExpr:
+		// A variable from another package.
+		if ident, ok := e.X.(*ast.Ident); ok {
+			if _, isPkg := g.types.Uses[ident].(*types.PkgName); isPkg {
+				g.checkStaticInit(e.Sel)
+				return
+			}
+		}
+		// A struct field.
+		g.checkStaticInit(e.X)
+
+	case *ast.UnaryExpr:
+		// C calculates the address of a package-level variable
+		// and its fields at compile time.
+		if e.Op == token.AND && isNameChain(e.X) {
+			return
+		}
+		g.checkStaticInit(e.X)
+
+	case *ast.BinaryExpr:
+		g.checkStaticInit(e.X)
+		g.checkStaticInit(e.Y)
+
+	case *ast.CompositeLit:
+		g.checkStaticLit(e)
+
+	case *ast.CallExpr:
+		g.checkStaticCall(e)
+
+	case *ast.StarExpr:
+		g.checkStaticInit(e.X)
+
+	case *ast.IndexExpr:
+		g.checkStaticInit(e.X)
+		g.checkStaticInit(e.Index)
+	}
+}
+
+// isNameChain reports whether an expression is a name, or a field selected
+// from a name. Both "p" and "p.x.y" are name chains.
+func isNameChain(expr ast.Expr) bool {
+	switch e := expr.(type) {
+	case *ast.Ident:
+		return true
+	case *ast.SelectorExpr:
+		return isNameChain(e.X)
+	}
+	return false
+}
+
+// checkStaticLit checks the elements of a composite literal in the
+// initializer of a package-level variable.
+func (g *Generator) checkStaticLit(lit *ast.CompositeLit) {
+	// A map literal expands to a statement expression,
+	// which C does not allow at file scope.
+	if _, ok := g.types.TypeOf(lit).Underlying().(*types.Map); ok {
+		g.fail(lit, "cannot use a map literal in a package-level initializer")
+	}
+	for _, elt := range lit.Elts {
+		// For a struct field, check the value.
+		if kv, ok := elt.(*ast.KeyValueExpr); ok {
+			g.checkStaticInit(kv.Value)
+			continue
+		}
+		g.checkStaticInit(elt)
+	}
+}
+
+// checkStaticCall checks a call in the initializer of a package-level
+// variable. A conversion is a call node too.
+func (g *Generator) checkStaticCall(call *ast.CallExpr) {
+	// Function call.
+	if !g.types.Types[call.Fun].IsType() {
+		// An extern function can be a C macro that expands to a constant,
+		// so leave the check to the C compiler. Fail for any other function.
+		if _, ok := g.funcExtern(call); !ok {
+			g.fail(call, "cannot call a function in a package-level initializer; use init()")
+		}
+		for _, arg := range call.Args {
+			g.checkStaticInit(arg)
+		}
+		return
+	}
+
+	// A conversion between a string and a slice expands to a statement
+	// expression, which C does not allow at file scope.
+	target := g.types.TypeOf(call).Underlying()
+	arg := g.types.TypeOf(call.Args[0]).Underlying()
+	_, toSlice := target.(*types.Slice)
+	_, fromSlice := arg.(*types.Slice)
+	if (toSlice && isStringType(arg)) || (fromSlice && isStringType(target)) {
+		g.fail(call, "cannot convert string<->slice in a package-level initializer")
+	}
+	g.checkStaticInit(call.Args[0])
 }
 
 // isBlockTypeSpec returns true for type specs that emit multi-line blocks

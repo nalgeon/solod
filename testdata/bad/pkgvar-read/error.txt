@@ -1,0 +1,3 @@
+main.go:5:12: cannot read variable limit in a package-level initializer; use init()
+var half = limit / 2
+           ^here
