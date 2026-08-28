@@ -1,0 +1,3 @@
+main.go:5:21: multiple variables in a for clause are not supported
+	for i := 0; i < j; i, j = i+1, j-1 {
+	                   ^here

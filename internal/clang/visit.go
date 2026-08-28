@@ -181,6 +181,11 @@ func (g *Generator) emitForStmt(w io.Writer, stmt *ast.ForStmt) {
 func (g *Generator) emitForClause(w io.Writer, stmt ast.Stmt) {
 	switch s := stmt.(type) {
 	case *ast.AssignStmt:
+		if len(s.Lhs) > 1 {
+			// C declares one type per for clause, and it has no way to
+			// evaluate several right-hand sides before the assignments.
+			g.fail(stmt, "multiple variables in a for clause are not supported")
+		}
 		if s.Tok == token.DEFINE {
 			ident := s.Lhs[0].(*ast.Ident)
 			cType := g.mapTypeName(s, g.types.Defs[ident].Type())
