@@ -1,3 +1,7 @@
+# This Makefile is for developing Solod itself, not for using it.
+# To build your own program, use the 'so' command instead
+# (see https://github.com/solod-dev/solod#installation).
+
 # Common compiler flags.
 CFLAGS_CORE = -O1 -g -std=gnu11 -fwrapv -Wall -Wextra -Werror -Wno-shadow -Wno-unused-label
 CFLAGS ?= $(CFLAGS_CORE) -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fstack-protector-all -fno-omit-frame-pointer
@@ -6,7 +10,7 @@ LDLIBS ?= -lm
 # Toolchain commands.
 CLANG = clang
 GCC_NATIVE = gcc-16
-GCC_DOCKER = docker run --rm -v "$(shell pwd)":/src -w /src gcc:16.2.0
+GCC_DOCKER = docker run --rm -v "$(shell pwd)":/src -w /src gcc:15.2.0
 RISCV64 = docker run --rm --platform linux/riscv64 -v "$(shell pwd)":/src -w /src alpine:edge
 I386 = docker run --rm --platform linux/i386 -v "$(shell pwd)":/src -w /src alpine:edge
 ZIG = zig cc
@@ -92,6 +96,40 @@ else ifeq ($(UNAME_S),Linux)
         MIMALLOC_PRELOAD := LD_PRELOAD=$(MIMALLOC_LIB)
     endif
 endif
+
+.DEFAULT_GOAL = help
+
+.PHONY: help
+help:
+	@echo "Makefile for developing Solod itself, not for using it."
+	@echo "To build your own program, use the 'so' command instead"
+	@echo "(see https://github.com/solod-dev/solod#installation)."
+	@echo ""
+	@echo "Tests:"
+	@echo "  test                  Go test suite (stdlib unit tests + golden translate tests)"
+	@echo "  test-lang             every language case in testdata/*"
+	@echo "  test-std              every stdlib functional test as one program"
+	@echo "  test-std-bare         freestanding stdlib tests as one wasm32 program"
+	@echo "  test-std-windows      freestanding stdlib tests on Windows"
+	@echo ""
+	@echo "Single case:"
+	@echo "  run-case name=NAME    transpile, compile and run testdata/NAME"
+	@echo "  run-test name=PKG     transpile, compile and run the tests of PKG (e.g. so/sync)"
+	@echo "  bench name=PKG        run the Go and So benchmarks in PKG/bench"
+	@echo "  inspect path=PATH     print the Go AST of the file at PATH"
+	@echo ""
+	@echo "Golden files:"
+	@echo "  update-dst name=NAME  overwrite the expected C of testdata/NAME"
+	@echo "  update-err name=NAME  overwrite the expected error of testdata/bad/NAME"
+	@echo ""
+	@echo "Variables:"
+	@echo "  mode=MODE             toolchain and target. The default is the host CC with sanitizers."
+	@echo "                        fast (host, no sanitizers), clang, gcc, analyze (GCC analyzer),"
+	@echo "                        bare (wasm32-freestanding), wasm (wasm32-wasi),"
+	@echo "                        windows, riscv64, i386"
+	@echo "  arch=ARCH             target architecture of mode=windows (x86_64 or aarch64)"
+	@echo "  heap=BYTES            heap size of a freestanding build (default: 262144)"
+	@echo "  jobs=N                number of test-lang cases to run in parallel"
 
 inspect:
 	go run ./cmd/inspect -- $(path)
