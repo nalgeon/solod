@@ -264,6 +264,9 @@ func (g *Generator) emitConstSpec(w io.Writer, spec *ast.ValueSpec) {
 
 		// Check if this is an iota-based constant (implicit value or explicit iota usage).
 		isIota := i >= len(spec.Values) || containsIota(spec.Values[i])
+		if !isIota {
+			g.checkConstShadow(spec, i)
+		}
 
 		// Determine constant specifier and name.
 		specifier, constName := "", name.Name
@@ -286,6 +289,22 @@ func (g *Generator) emitConstSpec(w io.Writer, spec *ast.ValueSpec) {
 			g.emitExpr(w, spec.Values[i])
 		}
 		fmt.Fprint(w, ";\n")
+	}
+}
+
+// checkConstShadow rejects a local constant with a value that reads its own name.
+func (g *Generator) checkConstShadow(spec *ast.ValueSpec, i int) {
+	if g.state.atTopLevel() {
+		return
+	}
+	valueNames := collectIdents(spec.Values[i])
+	for _, name := range spec.Names {
+		if name.Name == "_" {
+			continue
+		}
+		if valueNames[name.Name] {
+			g.fail(spec, "self-shadowing constant %q is not supported", name.Name)
+		}
 	}
 }
 
