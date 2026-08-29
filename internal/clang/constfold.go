@@ -5,6 +5,7 @@ import (
 	"go/constant"
 	"go/token"
 	"go/types"
+	"slices"
 )
 
 // constFolder decides how the generator emits a constant integer expression.
@@ -53,7 +54,8 @@ func (f constFolder) fitsCLiteral(n ast.Expr) bool {
 //
 // The result is true for any of the following:
 //   - the value does not fit the emitted C type;
-//   - the operation mixes an untyped value above int64 with a negative one;
+//   - the operation mixes an operand that C evaluates
+//     in uint64 with a negative one;
 //   - the shift count reaches the width of the type the shift evaluates in.
 //     C does not define such a shift.
 //   - the left operand of a shift is negative. C does not define such a shift.
@@ -101,16 +103,17 @@ func (f constFolder) fitsCType(n ast.Expr) bool {
 	return num >= -lim && num < lim
 }
 
-// mixesSignedness reports whether an operation combines an untyped value above
-// int64 with a negative one. C evaluates such an operation in uint64 and turns
-// the negative side into a large positive one. A sum or a product wraps back to
-// the value Go computed. But a comparison against a signed operand does not
-// compile, and the C compiler decides the result of a conversion to a signed type.
+// mixesSignedness reports whether an operation combines an operand that C
+// evaluates in uint64 with a negative one.
 func (f constFolder) mixesSignedness(n ast.Expr) bool {
 	var operands []ast.Expr
 	switch expr := n.(type) {
 	case *ast.BinaryExpr:
 		operands = []ast.Expr{expr.X, expr.Y}
+		if isShift(expr.Op) {
+			// C evaluates a shift in the type of the left operand.
+			operands = []ast.Expr{expr.X}
+		}
 	case *ast.UnaryExpr:
 		// The minus in -(1 << 63). The operand is unsigned,
 		// and the result is negative.
@@ -120,11 +123,33 @@ func (f constFolder) mixesSignedness(n ast.Expr) bool {
 	}
 	big, negative := false, isNegative(f.info.Types[n].Value)
 	for _, op := range operands {
-		tv := f.info.Types[op]
-		big = big || emitsAsUint64(tv.Type, tv.Value)
-		negative = negative || isNegative(tv.Value)
+		big = big || f.emitsUint64(op)
+		negative = negative || isNegative(f.info.Types[op].Value)
 	}
 	return big && negative
+}
+
+// emitsUint64 reports whether C evaluates an expression as uint64. Any operand
+// under the node can set the type, because C keeps the unsigned type as it moves
+// up through the operators.
+func (f constFolder) emitsUint64(n ast.Expr) bool {
+	tv := f.info.Types[n]
+	if emitsAsUint64(tv.Type, tv.Value) {
+		return true
+	}
+	switch expr := n.(type) {
+	case *ast.CallExpr:
+		// A conversion sets the C type of its result and stops the walk.
+		if f.info.Types[expr.Fun].IsType() {
+			return false
+		}
+	case *ast.BinaryExpr:
+		// A shift takes the type of its left operand.
+		if isShift(expr.Op) {
+			return f.emitsUint64(expr.X)
+		}
+	}
+	return slices.ContainsFunc(exprChildren(n), f.emitsUint64)
 }
 
 // shiftExceedsWidth reports whether a constant shift count reaches

@@ -120,6 +120,20 @@ int main(void) {
         if (apart != 9223372036854775809u) {
             so_panic("1<<63 + (-1 + 2)");
         }
+        // The value above int64 is two levels down, and the small intermediate
+        // value hides it. C still evaluates the subtraction in uint64.
+        int16_t down = -1;
+        if (down != -1) {
+            so_panic("MaxUint64&0xffff - 1<<16");
+        }
+        int16_t halved = -1;
+        if (halved != -1) {
+            so_panic("(MaxUint64&0xfffe - 1<<16) / 2");
+        }
+        bool below = -1 < 0;
+        if (!below) {
+            so_panic("MaxUint64&0xffff-1<<16 < 0");
+        }
         // A shift count of 64 is undefined in C, even with a value in range.
         uint64_t none = 0;
         if (none != 0) {

@@ -167,6 +167,20 @@ func main() {
 		if apart != 9223372036854775809 {
 			panic("1<<63 + (-1 + 2)")
 		}
+		// The value above int64 is two levels down, and the small intermediate
+		// value hides it. C still evaluates the subtraction in uint64.
+		var down int16 = MaxUint64&0xffff - 1<<16
+		if down != -1 {
+			panic("MaxUint64&0xffff - 1<<16")
+		}
+		var halved int16 = (MaxUint64&0xfffe - 1<<16) / 2
+		if halved != -1 {
+			panic("(MaxUint64&0xfffe - 1<<16) / 2")
+		}
+		var below bool = MaxUint64&0xffff-1<<16 < 0
+		if !below {
+			panic("MaxUint64&0xffff-1<<16 < 0")
+		}
 		// A shift count of 64 is undefined in C, even with a value in range.
 		var none uint64 = 0 << 64
 		if none != 0 {
