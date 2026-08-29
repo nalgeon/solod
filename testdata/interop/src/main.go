@@ -12,6 +12,10 @@ import (
 //so:extern INT64_MAX
 const maxInt64 = 1<<63 - 1
 
+// MaxHalf references an extern constant, which comes from a C header
+// and needs no declaration of its own.
+const MaxHalf = maxInt64 / 2
+
 //so:extern write_func_t
 type WriteFunc func(a *Account, format string, args ...any)
 
@@ -61,7 +65,7 @@ func acc_name(acc *Account) string {
 type uchar uint8
 
 // An extern type uchar comes from C header, so an exported function
-// can name it even when it is unexported.
+// can reference it even when it is unexported.
 func FirstChar(buf *uchar) uchar {
 	return *buf
 }

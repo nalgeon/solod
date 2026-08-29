@@ -3,7 +3,7 @@
 // -- Implementation --
 
 // An extern type uchar comes from C header, so an exported function
-// can name it even when it is unexported.
+// can reference it even when it is unexported.
 unsigned char main_FirstChar(unsigned char* buf) {
     return *buf;
 }

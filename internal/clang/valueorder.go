@@ -114,6 +114,10 @@ func (g *Generator) valueRefs(val ast.Expr) []*ast.Ident {
 		if obj.Pkg() != g.pkg.Types || obj.Parent() != g.pkg.Types.Scope() {
 			return true
 		}
+		// An extern name comes from a C header, so it needs no declaration.
+		if g.hasExtern(obj) {
+			return true
+		}
 		refs = append(refs, ident)
 		return true
 	})
