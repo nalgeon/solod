@@ -1,6 +1,10 @@
 package main
 
-import "example/interop/src/sub"
+import (
+	"fmt"
+
+	"example/interop/src/sub"
+)
 
 //so:include <stdint.h>
 //so:include "person.ext.h"
@@ -44,6 +48,14 @@ func measure(kinds string, args ...any) int
 
 //so:extern nodecay
 func (acc *Account) Measure(kinds string, args ...any) int
+
+// An extern function body is never emitted,
+// so it can call the Go standard library.
+//
+//so:extern
+func acc_name(acc *Account) string {
+	return fmt.Sprintf("%s", acc.name)
+}
 
 //so:extern unsigned char
 type uchar uint8

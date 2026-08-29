@@ -63,6 +63,17 @@ func dec_balance(acc *Account, amount int64) int64 {
 }
 ```
 
+An extern body is never emitted, so it can call the Go standard library, unlike the regular So code.
+
+A function with no body is extern even without the directive, so these two declarations are the same:
+
+```go
+//so:extern
+func dec_balance(acc *Account, amount int64) int64
+
+func dec_balance(acc *Account, amount int64) int64
+```
+
 When calling extern functions, `string` and `[]T` arguments are automatically decayed to their C equivalents: string literals become raw C strings (`"hello"`), string values become `char*` (`.ptr`), and slices become raw pointers (`.ptr`). This means C macros don't need to extract `.ptr` themselves:
 
 ```go

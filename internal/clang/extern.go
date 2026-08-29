@@ -29,15 +29,14 @@ type externInfo struct {
 //	const n = 21       // in package A
 //	Calc(n)            // n is implicitly cast to c.Int
 func (g *Generator) collectImportExterns() {
-	seen := make(map[string]bool)
 	var collect func(pkg *packages.Package)
 	collect = func(pkg *packages.Package) {
 		for path, imp := range pkg.Imports {
-			// Skip stdlib and already-seen packages.
-			if seen[path] || imp.Module == nil {
+			// Skip the Go stdlib and the already-seen packages.
+			if g.modulePkgs[path] || imp.Module == nil {
 				continue
 			}
-			seen[path] = true
+			g.modulePkgs[path] = true
 			for _, file := range imp.Syntax {
 				g.collectFileExterns(imp.TypesInfo, file)
 			}

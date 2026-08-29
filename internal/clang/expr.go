@@ -526,6 +526,7 @@ func (g *Generator) emitSelectorExpr(w io.Writer, n *ast.SelectorExpr) {
 			}
 			// Imported symbols are prefixed with the
 			// package name (e.g. fmt.Println → fmt_Println).
+			g.checkPackage(n, g.types.Uses[n.Sel])
 			if cast, ok := g.constCast(n, g.types.Uses[n.Sel]); ok {
 				fmt.Fprintf(w, "(%s)", cast)
 			}

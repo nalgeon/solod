@@ -99,6 +99,7 @@ type Generator struct {
 	pkg         *packages.Package
 	types       *types.Info
 	state       State
+	modulePkgs  map[string]bool              // import paths of the packages inside a module
 	externs     map[types.Object]externInfo  // symbols provided by C headers
 	promoted    map[types.Object]bool        // unexported symbols forced into the header
 	fieldNames  map[*types.Var]string        // C name overrides from `c:"..."` field tags
@@ -119,6 +120,7 @@ func newGenerator(opts EmitOptions) *Generator {
 		opts:       opts,
 		pkg:        opts.Pkg,
 		types:      opts.Pkg.TypesInfo,
+		modulePkgs: make(map[string]bool),
 		externs:    make(map[types.Object]externInfo),
 		fieldNames: make(map[*types.Var]string),
 		funcDirs:   make(map[*ast.FuncDecl]directives),

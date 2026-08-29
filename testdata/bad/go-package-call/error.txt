@@ -1,0 +1,3 @@
+main.go:6:2: Go package "fmt" is not supported; use the So standard library
+	fmt.Println("hello")
+	^here

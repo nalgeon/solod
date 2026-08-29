@@ -1,0 +1,3 @@
+main.go:6:6: Go package "bytes" is not supported; use the So standard library
+	var b bytes.Buffer
+	    ^here

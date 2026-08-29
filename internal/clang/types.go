@@ -147,6 +147,7 @@ func (g *Generator) mapTypeName(node ast.Node, typ types.Type) string {
 			if info, ok := g.getExtern(obj); ok && info.name != "" {
 				return info.name
 			}
+			g.checkPackage(node, obj)
 			return obj.Pkg().Name() + "_" + obj.Name()
 		}
 		if obj.Parent() == g.pkg.Types.Scope() {
@@ -322,6 +323,19 @@ func (g *Generator) zeroValue(node ast.Node, typ types.Type) string {
 		g.fail(node, "unsupported type for zero value: %s", g.typeString(typ))
 		panic("unreachable")
 	}
+}
+
+// checkPackage rejects symbols from the Go standard library packages.
+// The unsafe package is an exception because it's implemented in builtin.h.
+func (g *Generator) checkPackage(node ast.Node, obj types.Object) {
+	pkg := obj.Pkg()
+	if pkg == nil || pkg == g.pkg.Types || pkg == types.Unsafe {
+		return
+	}
+	if g.modulePkgs[pkg.Path()] {
+		return
+	}
+	g.fail(node, "Go package %q is not supported; use the So standard library", pkg.Path())
 }
 
 // declSymbolName returns the C name for a declaration that could be
