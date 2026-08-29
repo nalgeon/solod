@@ -244,8 +244,9 @@ void so_print_trace(void);
 
 // --- Integer division ---
 
-// is_signed reports whether the type of x is signed.
-#define so_is_signed(x) ((so_typeof(x)) - 1 < 0)
+// is_signed reports whether the type of x is signed. The comparison uses
+// a typed 1 instead of 0 to fix type-limits warnings on older GCC versions.
+#define so_is_signed(x) ((so_typeof(x)) - 1 < (so_typeof(x))1)
 
 // negate returns the two's complement negation of a signed x. Can't use -x
 // because the negation of the minimum value overflows, and signed overflow
