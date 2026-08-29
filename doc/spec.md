@@ -292,6 +292,8 @@ var nils []int = nil
 var empty []int = []int{}
 ```
 
+In general, the slice is nil if and only if its capacity is 0.
+
 Slicing:
 
 ```go

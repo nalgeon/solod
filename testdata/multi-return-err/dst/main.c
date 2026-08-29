@@ -226,7 +226,7 @@ static void testNilValues(void) {
     so_R_slice_err _res1 = returnNilSlice();
     so_Slice nilSlice = _res1.val;
     so_Error err = _res1.err;
-    if (nilSlice.ptr != NULL || so_len(nilSlice) != 0 || err.self != NULL) {
+    if (nilSlice.cap != 0 || so_len(nilSlice) != 0 || err.self != NULL) {
         so_panic("Nil slice in multi-return failed");
     }
     so_R_ptr_err _res2 = returnNilPtr();

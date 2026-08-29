@@ -538,6 +538,20 @@ func main() {
 		}
 	}
 	{
+		// Nil slice: a capacity of 0 means nil.
+		nums := []int{1, 2, 3}
+		if nums[2:2:2] != nil {
+			panic("want empty full slice expression == nil")
+		}
+		var es string
+		if []byte(es) != nil {
+			panic("want []byte(\"\") == nil")
+		}
+		if nums[:0] == nil {
+			panic("want nums[:0] != nil")
+		}
+	}
+	{
 		// Nil slice: len and cap.
 		var s []int
 		if len(s) != 0 {

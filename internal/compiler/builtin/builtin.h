@@ -421,6 +421,7 @@ so_rune so_utf8_decode(so_String s, so_int i, so_int* w);
 // --- Slice type ---
 
 // Slice is a pointer to array of elements plus a length.
+// The slice is nil if and only if its capacity is 0.
 typedef struct {
     void* ptr;
     so_int len;
@@ -520,7 +521,6 @@ static inline so_int so_copy_impl(so_Slice dst, so_Slice src, size_t elem_size) 
 
 // clear sets all elements up to the length
 // of the slice to their zero value.
-// An empty slice (ptr == NULL) skips memset to avoid UB.
 #define so_clear(T, s) ({                                \
     so_Slice _s = (s);                                   \
     if (_s.len > 0) {                                    \

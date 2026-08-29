@@ -138,7 +138,7 @@ int main(void) {
     {
         // Slice literals.
         so_Slice nils = (so_Slice){};
-        if (nils.ptr != NULL) {
+        if (nils.cap != 0) {
             so_panic("want nils == nil");
         }
         if (so_len(nils) != 0) {
@@ -512,18 +512,32 @@ int main(void) {
     {
         // Nil slice: comparison. Nil works on either side.
         so_Slice s = {};
-        if (s.ptr != NULL) {
+        if (s.cap != 0) {
             so_panic("want nil slice");
         }
-        if (s.ptr != NULL) {
+        if (s.cap != 0) {
             so_panic("want nil slice");
         }
         s = (so_Slice){(so_int[1]){1}, 1, 1};
-        if (s.ptr == NULL) {
+        if (s.cap == 0) {
             so_panic("want non-nil slice");
         }
-        if (s.ptr == NULL) {
+        if (s.cap == 0) {
             so_panic("want non-nil slice");
+        }
+    }
+    {
+        // Nil slice: a capacity of 0 means nil.
+        so_Slice nums = (so_Slice){(so_int[3]){1, 2, 3}, 3, 3};
+        if (so_slice3(so_int, nums, 2, 2, 2).cap != 0) {
+            so_panic("want empty full slice expression == nil");
+        }
+        so_String es = so_str("");
+        if (so_string_bytes(es).cap != 0) {
+            so_panic("want []byte(\"\") == nil");
+        }
+        if (so_slice(so_int, nums, 0, 0).cap == 0) {
+            so_panic("want nums[:0] != nil");
         }
     }
     {
@@ -543,7 +557,7 @@ int main(void) {
     {
         // Nil slice: return from function.
         so_Slice s = nilSlice();
-        if (s.ptr != NULL) {
+        if (s.cap != 0) {
             so_panic("want nil from function");
         }
     }

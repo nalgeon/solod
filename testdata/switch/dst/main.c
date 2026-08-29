@@ -365,7 +365,7 @@ int main(void) {
         so_Slice s = {};
         {
             so_Slice _sw21 = s;
-            if (_sw21.ptr == NULL) {
+            if (_sw21.cap == 0) {
             } else {
                 so_panic("unexpected default");
             }

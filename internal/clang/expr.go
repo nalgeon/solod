@@ -245,10 +245,10 @@ func (g *Generator) emitEqual(w io.Writer, n *ast.BinaryExpr) {
 		return
 	}
 
-	// Slice nil comparison: emit s.ptr == NULL / != NULL.
+	// Slice nil comparison: emit s.cap == 0 / != 0.
 	if _, ok := leftType.Underlying().(*types.Slice); ok && rightIsNil {
 		g.emitExpr(w, left)
-		fmt.Fprintf(w, ".ptr %s NULL", op)
+		fmt.Fprintf(w, ".cap %s 0", op)
 		return
 	}
 
