@@ -171,3 +171,90 @@ func isStdlib(pkg *packages.Package) bool {
 func shouldTranspile(pkg *packages.Package) bool {
 	return pkg.Module != nil
 }
+
+// WriteMakefile generates a Makefile next to the translated C/H files.
+func WriteMakefile(libs []string, outDir string, binName string) error {
+	absDir, err := filepath.Abs(outDir)
+	if err != nil {
+		return err
+	}
+
+	if binName == "" {
+		binName = filepath.Base(absDir)
+	}
+	makefilePath := filepath.Join(absDir, "Makefile")
+
+	// Build the list of source files (.c files in the output directory and subdirs)
+	srcFiles, soFiles, err := findCSources(absDir)
+	if err != nil {
+		return err
+	}
+
+	var sb strings.Builder
+	sb.WriteString("CFLAGS = -O1 -g -std=gnu11 -Wall -Wextra -I.\n")
+	sb.WriteString("LDLIBS ?= -lm\n\n")
+	sb.WriteString("BIN = ")
+	sb.WriteString(binName)
+	sb.WriteString("\n")
+	sb.WriteString("SRCS = ")
+	sb.WriteString(strings.Join(srcFiles, " "))
+	sb.WriteString("\n")
+	sb.WriteString("OBJS = $(SRCS:.c=.o)\n\n")
+	sb.WriteString("all: $(BIN)\n\n")
+
+	// Build libso.a from all object files and builtin
+	oFiles := make([]string, len(soFiles))
+	for i, f := range soFiles {
+		oFiles[i] = f[:len(f)-2] + ".o"
+	}
+	sb.WriteString("libso.a: ")
+	sb.WriteString(strings.Join(oFiles, " "))
+	sb.WriteString("\n")
+	sb.WriteString("\tar rcs $@ $^\n")
+	sb.WriteString("\tranlib $@\n\n")
+
+	// Compile .c files to .o files
+	sb.WriteString("%.o: %.c\n")
+	sb.WriteString("\t$(CC) $(CFLAGS) -c -o $@ $<\n\n")
+
+	// Link the binary with libso.a
+	sb.WriteString("$(BIN): $(OBJS) libso.a\n")
+	sb.WriteString("\t$(CC) $(CFLAGS) -o $@ $(OBJS) -L. -lso $(LDLIBS)\n\n")
+
+	sb.WriteString("run: $(BIN)\n")
+	sb.WriteString("\t./$(BIN)\n\n")
+
+	sb.WriteString("clean:\n")
+	sb.WriteString("\trm -f $(BIN) $(OBJS)\n\n")
+
+	sb.WriteString(".PHONY: all run clean\n")
+
+	return os.WriteFile(makefilePath, []byte(sb.String()), 0o644)
+}
+
+// findCSources finds all .c files in the output directory.
+func findCSources(dir string) ([]string, []string, error) {
+	var files []string
+	var stdlib []string
+	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() && strings.HasSuffix(path, ".c") {
+			rel, err := filepath.Rel(dir, path)
+			if err != nil {
+				return err
+			}
+			if strings.HasPrefix(rel, "so") {
+				stdlib = append(stdlib, rel)
+			} else {
+				files = append(files, rel)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	return files, stdlib, nil
+}

@@ -230,3 +230,68 @@ func isDir(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
 }
+
+// Test that WriteMakefile generates a valid Makefile
+func TestWriteMakefile(t *testing.T) {
+	tempOut := t.TempDir()
+
+	// Test with so/bytes package
+	libs, err := Translate("../../so/bytes", tempOut, Options{})
+	be.Err(t, err, nil)
+
+	if err := WriteMakefile(libs, tempOut, "bytes"); err != nil {
+		t.Fatalf("WriteMakefile failed: %v", err)
+	}
+
+	// Read the generated Makefile
+	makefilePath := filepath.Join(tempOut, "Makefile")
+	makefileContent, err := os.ReadFile(makefilePath)
+	be.Err(t, err, nil)
+
+	// Verify Makefile content
+	makefileStr := string(makefileContent)
+	be.True(t, strings.Contains(makefileStr, "CFLAGS = -O1 -g -std=gnu11 -Wall -Wextra -I."))
+	be.True(t, strings.Contains(makefileStr, "LDLIBS ?= -lm"))
+	be.True(t, strings.Contains(makefileStr, "BIN = "))
+	be.True(t, strings.Contains(makefileStr, "SRCS = "))
+	be.True(t, strings.Contains(makefileStr, "OBJS = "))
+	be.True(t, strings.Contains(makefileStr, "all: "))
+	be.True(t, strings.Contains(makefileStr, "libso.a: "))
+	be.True(t, strings.Contains(makefileStr, "so/builtin/builtin.o"))
+	be.True(t, strings.Contains(makefileStr, "%.o: %.c"))
+	be.True(t, strings.Contains(makefileStr, "$(BIN): $(OBJS) libso.a"))
+
+	// Test with hello-world package for more comprehensive check
+	libs2, err := Translate("../../testdata/hello-world/src", t.TempDir(), Options{})
+	be.Err(t, err, nil)
+	if err := WriteMakefile(libs2, tempOut, "hello-world"); err != nil {
+		t.Fatalf("WriteMakefile failed for hello-world: %v", err)
+	}
+	makefileContent2, err := os.ReadFile(filepath.Join(tempOut, "Makefile"))
+	be.Err(t, err, nil)
+	be.True(t, strings.Contains(string(makefileContent2), "BIN = hello-world"))
+}
+
+// Test that findCSources finds .c files correctly
+func TestFindCSources(t *testing.T) {
+	tempOut := t.TempDir()
+
+	// Test with so/bytes package
+	_, err := Translate("../../so/bytes", tempOut, Options{})
+	be.Err(t, err, nil)
+
+	sources, builtin, err := findCSources(tempOut)
+	be.Err(t, err, nil)
+
+	// Verify .c files were found
+	be.True(t, len(sources) > 0)
+	be.True(t, strings.Contains("bytes.c", sources[0]))
+
+	be.True(t, len(builtin) > 0)
+	be.True(t, strings.Contains("so/builtin/builtin.c", builtin[0]))
+
+	// Verify sorted order
+	for i := 1; i < len(sources); i++ {
+		be.Equal(t, true, sources[i-1] <= sources[i])
+	}
+}

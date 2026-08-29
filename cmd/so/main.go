@@ -73,17 +73,19 @@ Run 'so <command> -h' for details.
 }
 
 const (
-	pkgFileUsage     = "select only the packages this file lists"
-	assertUsage      = "assertions: on (default) or off"
-	checkUsage       = "build checks: off (default), warn, sanitize, or analyze"
-	panicModeUsage   = "panic termination mode: trace (default), exit, or abort"
-	targetUsage      = "C compiler target (default: the host)"
-	trackSourceUsage = "track source locations for panics"
+	pkgFileUsage      = "select only the packages this file lists"
+	assertUsage       = "assertions: on (default) or off"
+	checkUsage        = "build checks: off (default), warn, sanitize, or analyze"
+	panicModeUsage    = "panic termination mode: trace (default), exit, or abort"
+	targetUsage       = "C compiler target (default: the host)"
+	trackSourceUsage  = "track source locations for panics"
+	makefileUsage     = "generate a Makefile next to the C and H files"
 )
 
 func translate(args []string) error {
 	flags := flag.NewFlagSet("translate", flag.ContinueOnError)
 	outDir := flags.String("o", "", "output directory (default: current directory)")
+	makefile := flags.Bool("makefile", false, makefileUsage)
 	trackSource := flags.Bool("track-source", false, trackSourceUsage)
 	if err := flags.Parse(args); err != nil {
 		return err
@@ -97,8 +99,16 @@ func translate(args []string) error {
 	opts := compiler.Options{
 		TrackSource: *trackSource,
 	}
-	_, err := compiler.Translate(pkg, outOrDot(*outDir), opts)
-	return err
+	libs, err := compiler.Translate(pkg, outOrDot(*outDir), opts)
+	if err != nil {
+		return err
+	}
+	if *makefile {
+		if err := compiler.WriteMakefile(libs, outOrDot(*outDir), ""); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func translateTest(args []string) error {
