@@ -20,6 +20,37 @@ func main() {
 	}
 
 	{
+		// Division by -1 overflows for the minimum value.
+		var i32 int32 = -2147483648
+		var neg int32 = -1
+		if i32/neg != -2147483648 || i32%neg != 0 {
+			panic("expected i32 == -2147483648 && rem == 0")
+		}
+		if i32/-1 != -2147483648 || i32%-1 != 0 {
+			panic("expected the same for a constant divisor")
+		}
+		var i64 int64 = -9223372036854775808
+		if i64/-1 != -9223372036854775808 || i64%-1 != 0 {
+			panic("expected i64 == -9223372036854775808 && rem == 0")
+		}
+		var i8 int8 = -128
+		if i8/-1 != -128 || i8%-1 != 0 {
+			panic("expected i8 == -128 && rem == 0")
+		}
+		// An unsigned divisor never reaches the guard, because -1
+		// converts to the maximum value of the type.
+		var u1, u2 uint32 = 7, 4294967295
+		if u1/u2 != 0 || u1%u2 != 7 {
+			panic("expected u1/u2 == 0 && u1%u2 == 7")
+		}
+		q := int32(-2147483648)
+		q /= -1
+		if q != -2147483648 {
+			panic("expected q == -2147483648")
+		}
+	}
+
+	{
 		// Floating-point arithmetics.
 		var x, y, z float64 = 1.1, 2.2, 3.3
 		f := x/y + (y-z)*x

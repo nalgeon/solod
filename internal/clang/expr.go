@@ -3,6 +3,7 @@ package clang
 import (
 	"fmt"
 	"go/ast"
+	"go/constant"
 	"go/token"
 	"go/types"
 	"io"
@@ -789,16 +790,19 @@ func (g *Generator) needsVoidParens(expr ast.Expr) bool {
 	return true
 }
 
-// needsIntDivGuard reports whether a division or modulo of x by y needs a
-// runtime zero-divisor guard. Floating-point division is well-defined (IEEE
-// infinities/NaN), and a constant divisor is known nonzero because Go rejects
-// a constant zero divisor at compile time.
+// needsIntDivGuard reports whether a division or modulo of x by y needs the
+// so_div or so_mod guard. C leaves two divisors undefined: 0 and -1 (which
+// overflows for the minimum value). Floating-point division is well-defined
+// (IEEE infinities/NaN), so only integers need the guard.
 func (g *Generator) needsIntDivGuard(x, y ast.Expr) bool {
 	if !isIntegerType(g.types.TypeOf(x)) {
 		return false
 	}
 	if tv, ok := g.types.Types[y]; ok && tv.Value != nil {
-		return false
+		// Go's type checker rejects a constant 0 divisor,
+		// but a constant -1 still needs the guard.
+		n, ok := constant.Int64Val(constant.ToInt(tv.Value))
+		return ok && n == -1
 	}
 	return true
 }

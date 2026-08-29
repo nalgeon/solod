@@ -244,20 +244,33 @@ void so_print_trace(void);
 
 // --- Integer division ---
 
-// div and mod evaluate a/b and a%b, panicking on a zero divisor. Integer
-// division by zero is undefined in C: x86 traps it, but arm64 silently yields
-// 0, so the compiler emits an explicit guard instead of relying on a signal.
-// so_typeof keeps the divisor's exact type (signedness and width).
-#define so_div(a, b) ({                               \
-    so_typeof(b) _div_b = (b);                        \
-    so_assert(_div_b != 0, "integer divide by zero"); \
-    (a) / _div_b;                                     \
+// is_signed reports whether the type of x is signed.
+#define so_is_signed(x) ((so_typeof(x)) - 1 < 0)
+
+// negate returns the two's complement negation of a signed x. Can't use -x
+// because the negation of the minimum value overflows, and signed overflow
+// is undefined.
+#define so_negate(x) ((so_typeof(x))(0 - (uintmax_t)(x)))
+
+// div and mod evaluate a/b and a%b, with a guard for the two divisors that
+// C leaves undefined: (1) zero divisor panics, (2) a divisor of -1 overflows
+// for the minimum value.
+#define so_div(a, b) ({                                       \
+    so_typeof(a) _div_a = (a);                                \
+    so_typeof(b) _div_b = (b);                                \
+    so_assert(_div_b != 0, "integer divide by zero");         \
+    so_is_signed(_div_b) && _div_b == (so_typeof(_div_b)) - 1 \
+        ? so_negate(_div_a)                                   \
+        : _div_a / _div_b;                                    \
 })
 
-#define so_mod(a, b) ({                               \
-    so_typeof(b) _div_b = (b);                        \
-    so_assert(_div_b != 0, "integer divide by zero"); \
-    (a) % _div_b;                                     \
+#define so_mod(a, b) ({                                       \
+    so_typeof(a) _div_a = (a);                                \
+    so_typeof(b) _div_b = (b);                                \
+    so_assert(_div_b != 0, "integer divide by zero");         \
+    so_is_signed(_div_b) && _div_b == (so_typeof(_div_b)) - 1 \
+        ? (so_typeof(_div_a))0                                \
+        : _div_a % _div_b;                                    \
 })
 
 // --- Comparison ---

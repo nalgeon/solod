@@ -25,6 +25,36 @@ int main(void) {
         (void)d;
     }
     {
+        // Division by -1 overflows for the minimum value.
+        int32_t i32 = -2147483648;
+        int32_t neg = -1;
+        if (so_div(i32, neg) != -2147483648 || so_mod(i32, neg) != 0) {
+            so_panic("expected i32 == -2147483648 && rem == 0");
+        }
+        if (so_div(i32, -1) != -2147483648 || so_mod(i32, -1) != 0) {
+            so_panic("expected the same for a constant divisor");
+        }
+        int64_t i64 = INT64_MIN;
+        if (so_div(i64, -1) != INT64_MIN || so_mod(i64, -1) != 0) {
+            so_panic("expected i64 == -9223372036854775808 && rem == 0");
+        }
+        int8_t i8 = -128;
+        if ((int8_t)(so_div(i8, -1)) != -128 || so_mod(i8, -1) != 0) {
+            so_panic("expected i8 == -128 && rem == 0");
+        }
+        // An unsigned divisor never reaches the guard, because -1
+        // converts to the maximum value of the type.
+        uint32_t u1 = 7, u2 = 4294967295;
+        if (so_div(u1, u2) != 0 || so_mod(u1, u2) != 7) {
+            so_panic("expected u1/u2 == 0 && u1%u2 == 7");
+        }
+        int32_t q = (int32_t)(-2147483648);
+        q = so_div(q, -1);
+        if (q != -2147483648) {
+            so_panic("expected q == -2147483648");
+        }
+    }
+    {
         // Floating-point arithmetics.
         double x = 1.1, y = 2.2, z = 3.3;
         double f = x / y + (y - z) * x;
