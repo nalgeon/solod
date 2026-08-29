@@ -9,6 +9,9 @@ typedef struct person {
 } person;
 typedef so_int* number;
 
+// -- Forward declarations --
+static so_int readCounter(void);
+
 // -- Variables and constants --
 
 // Package-level variables.
@@ -26,7 +29,15 @@ static so_unused void* pkgNil = NULL;
 
 // Blank package-level variables.
 
+// A package-level variable is visible to a function, so
+// a call can read an assignment the same statement makes.
+static so_unused so_int counter = 0;
+
 // -- Implementation --
+
+static so_int readCounter(void) {
+    return counter;
+}
 
 int main(void) {
     {
@@ -215,6 +226,8 @@ int main(void) {
         so_int v1 = 11;
         so_int v2 = 22;
         so_int v3 = 51;
+        (void)52;
+        (void)61;
         so_int v4 = 62;
         (void)71;
         (void)72;
@@ -237,7 +250,7 @@ int main(void) {
         (void)x;
     }
     {
-        // Multiple assignment without overlap (no a,b = b,a).
+        // Multiple assignment.
         so_int a = 11, b = 22;
         a = 33;
         b = 44;
@@ -259,6 +272,34 @@ int main(void) {
         n2 = (number)(&p.age);
         (void)n1;
         (void)n2;
+    }
+    {
+        // Evaluates the whole right side before it assigns anything,
+        // so a swap works and a call sees the values from before.
+        so_int a = 11, b = 22;
+        so_int _asg1 = b;
+        so_int _asg2 = a;
+        a = _asg1;
+        b = _asg2;
+        if (a != 22 || b != 11) {
+            so_panic("swap failed");
+        }
+        so_Slice s = (so_Slice){(so_int[2]){10, 20}, 2, 2};
+        so_int i = 0, j = 1;
+        so_int _asg3 = so_at(so_int, s, j);
+        so_int _asg4 = so_at(so_int, s, i);
+        so_at(so_int, s, i) = _asg3;
+        so_at(so_int, s, j) = _asg4;
+        if (so_at(so_int, s, 0) != 20 || so_at(so_int, s, 1) != 10) {
+            so_panic("slice swap failed");
+        }
+        counter = 7;
+        so_int _asg5 = readCounter();
+        counter = 8;
+        b = _asg5;
+        if (counter != 8 || b != 7) {
+            so_panic("assignment order failed");
+        }
     }
     {
         // Variable shadowing.

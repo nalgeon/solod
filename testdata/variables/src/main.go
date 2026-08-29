@@ -37,6 +37,12 @@ var _ any = 42
 var _ any = pkgPtr
 var _ any = nil
 
+// A package-level variable is visible to a function, so
+// a call can read an assignment the same statement makes.
+var counter int
+
+func readCounter() int { return counter }
+
 func main() {
 	{
 		// Definition with var and explicit type.
@@ -235,7 +241,7 @@ func main() {
 		_ = x
 	}
 	{
-		// Multiple assignment without overlap (no a,b = b,a).
+		// Multiple assignment.
 		a, b := 11, 22
 		a, b = 33, 44
 		x, y := 55, 66
@@ -252,6 +258,26 @@ func main() {
 		n1, n2 = number(&p.age), number(&p.age)
 		_ = n1
 		_ = n2
+	}
+	{
+		// Evaluates the whole right side before it assigns anything,
+		// so a swap works and a call sees the values from before.
+		a, b := 11, 22
+		a, b = b, a
+		if a != 22 || b != 11 {
+			panic("swap failed")
+		}
+		s := []int{10, 20}
+		i, j := 0, 1
+		s[i], s[j] = s[j], s[i]
+		if s[0] != 20 || s[1] != 10 {
+			panic("slice swap failed")
+		}
+		counter = 7
+		counter, b = 8, readCounter()
+		if counter != 8 || b != 7 {
+			panic("assignment order failed")
+		}
 	}
 	{
 		// Variable shadowing.

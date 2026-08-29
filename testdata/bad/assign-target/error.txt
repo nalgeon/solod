@@ -1,0 +1,3 @@
+main.go:6:2: multiple assignment reads and assigns "i" in the same statement
+	i, arr[i] = 0, 5
+	^here

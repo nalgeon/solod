@@ -598,6 +598,23 @@ Exported functions (capitalized) become public C symbols prefixed with the packa
 
 Exported functions must only use exported types in their signatures (parameters and return types).
 
+### Call order
+
+Go evaluates the calls in an expression from left to right. So does not define the order because it passes each expression to the C compiler, and C does not specify the order of operands and arguments. As a result, two different C compilers might choose different orders for the same generated code:
+
+```go
+sum(next(), next())  // either call can run first
+arr[next()] = next()
+```
+
+Write one call per statement when the order is important:
+
+```go
+x := next()
+y := next()
+sum(x, y)
+```
+
 ## Multiple return values
 
 So supports two-value multiple returns in two patterns: `(T, error)` and `(T1, T2)`.

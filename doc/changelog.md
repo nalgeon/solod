@@ -9,6 +9,7 @@ This document lists the main changes in the So version in development.
   [Interface comparison](#interface-comparison) ·
   [Type embedding](#type-embedding) ·
   [Switch statement](#switch-statement) ·
+  [Multiple assignment](#multiple-assignment) ·
   [Empty structs](#empty-structs) ·
   [String literals](#string-and-character-literals) ·
   [Integer constants](#integer-constants) ·
@@ -152,6 +153,34 @@ A switch on a struct or an array is not supported.
 Switch case bodies reject `break` and `fallthrough`. A case body used to keep both statements as written. The emitted C gave incorrect behavior or did not compile. Both statements are errors now.
 
 [fd8659b](https://github.com/solod-dev/solod/commit/fd8659b66bbb2e24f2b70062c5b08b84abffe551)
+
+### Multiple assignment
+
+Multiple assignment now follows Go. The whole right side is evaluated before any variable on the left changes, so swapping works:
+
+```go
+a, b = b, a              // was rejected, now swaps
+s[i], s[j] = s[j], s[i]
+```
+
+A call on the right side sees the values from before the statement:
+
+```go
+counter = 7
+counter, n = 8, readCounter()  // was n == 8, now n == 7
+```
+
+A blank identifier no longer drops its value in a short variable declaration:
+
+```go
+_, y := next(), 2  // next() was never called, now it runs
+```
+
+So still rejects statements that read a variable in the same statement where it is assigned, because C evaluates the index at the time of assignment:
+
+```go
+i, arr[i] = 0, 5   // not supported
+```
 
 ### Empty structs
 

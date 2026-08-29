@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"go/types"
 	"io"
+	"slices"
 )
 
 // emitAssignStmt emits an assignment statement.
@@ -104,21 +105,19 @@ func (g *Generator) emitDefine(w io.Writer, stmt *ast.AssignStmt) {
 			g.fail(stmt, "self-shadowing variable %q is not supported", ident.Name)
 		}
 	}
-	// Detect LHS/RHS variable overlap in multi-assignments.
-	// Eg. `a, b = x, y` is fine, but `a, b = b, a` is not.
-	if len(stmt.Lhs) > 1 && len(stmt.Rhs) > 1 {
-		lhsNames := collectIdents(stmt.Lhs...)
-		for name := range rhsNames {
-			if lhsNames[name] {
-				g.fail(stmt, "multiple assignment with LHS/RHS variable overlap is not supported")
-			}
-		}
-	}
 	// Regular define: group consecutive variables by type.
+	rhs := stmt.Rhs
+	if g.needsRhsTemps(stmt) {
+		rhs = g.hoistRhs(w, stmt)
+	}
 	i := 0
 	for i < len(stmt.Lhs) {
 		ident := stmt.Lhs[i].(*ast.Ident)
 		if ident.Name == "_" {
+			// Blank identifier - the value is still evaluated.
+			if rhs[i] != nil {
+				g.emitDiscard(w, rhs[i])
+			}
 			i++
 			continue
 		}
@@ -128,7 +127,7 @@ func (g *Generator) emitDefine(w io.Writer, stmt *ast.AssignStmt) {
 			// Redeclared variable - emit plain assignment.
 			typ := g.types.Uses[ident].Type()
 			fmt.Fprintf(w, "%s%s = ", g.indent(), ident.Name)
-			g.emitExprAsType(w, stmt, stmt.Rhs[i], typ)
+			g.emitExprAsType(w, stmt, rhs[i], typ)
 			fmt.Fprint(w, ";\n")
 			i++
 			continue
@@ -139,16 +138,16 @@ func (g *Generator) emitDefine(w io.Writer, stmt *ast.AssignStmt) {
 
 		if ct.IsArray() {
 			// Arrays can't be grouped with other variables.
-			if _, isLit := stmt.Rhs[i].(*ast.CompositeLit); isLit {
+			if _, isLit := rhs[i].(*ast.CompositeLit); isLit {
 				// Composite literal: so_int d[3] = {1, 2, 3};
 				fmt.Fprintf(w, "%s%s = ", g.indent(), ct.Decl(ident.Name))
-				g.emitExpr(w, stmt.Rhs[i])
+				g.emitExpr(w, rhs[i])
 				fmt.Fprint(w, ";\n")
 			} else {
 				// Variable: declaration + memcpy.
 				fmt.Fprintf(w, "%s%s;\n", g.indent(), ct.Decl(ident.Name))
 				fmt.Fprintf(w, "%smemcpy(%s, ", g.indent(), ident.Name)
-				g.emitExpr(w, stmt.Rhs[i])
+				g.emitExpr(w, rhs[i])
 				fmt.Fprintf(w, ", sizeof(%s));\n", ident.Name)
 			}
 			i++
@@ -158,7 +157,7 @@ func (g *Generator) emitDefine(w io.Writer, stmt *ast.AssignStmt) {
 		// Emit a variable declaration for this variable
 		// (grouped with subsequent variables of the same type).
 		fmt.Fprintf(w, "%s%s = ", g.indent(), ct.Decl(ident.Name))
-		g.emitExpr(w, stmt.Rhs[i])
+		g.emitExpr(w, rhs[i])
 		i++
 
 		// Pointer types, anonymous structs and type parameters can't be grouped:
@@ -187,7 +186,7 @@ func (g *Generator) emitDefine(w io.Writer, stmt *ast.AssignStmt) {
 				break
 			}
 			fmt.Fprintf(w, ", %s = ", nextIdent.Name)
-			g.emitExpr(w, stmt.Rhs[i])
+			g.emitExpr(w, rhs[i])
 			i++
 		}
 		fmt.Fprint(w, ";\n")
@@ -196,6 +195,8 @@ func (g *Generator) emitDefine(w io.Writer, stmt *ast.AssignStmt) {
 
 // emitAssign emits a regular assignment (=).
 func (g *Generator) emitAssign(w io.Writer, stmt *ast.AssignStmt) {
+	g.checkAssignTargets(stmt)
+
 	// Detect: _, ok = s.(Rect)
 	if len(stmt.Lhs) == 2 && len(stmt.Rhs) == 1 {
 		if ta, ok := stmt.Rhs[0].(*ast.TypeAssertExpr); ok {
@@ -219,28 +220,24 @@ func (g *Generator) emitAssign(w io.Writer, stmt *ast.AssignStmt) {
 			return
 		}
 	}
-	// Detect LHS/RHS variable overlap in multi-assignments.
-	if len(stmt.Lhs) > 1 && len(stmt.Rhs) > 1 {
-		lhsNames := collectIdents(stmt.Lhs...)
-		rhsNames := collectIdents(stmt.Rhs...)
-		for name := range rhsNames {
-			if lhsNames[name] {
-				g.fail(stmt, "multiple assignment with LHS/RHS variable overlap is not supported")
-			}
-		}
-	}
 	// Regular assignment.
+	rhs := stmt.Rhs
+	if g.needsRhsTemps(stmt) {
+		rhs = g.hoistRhs(w, stmt)
+	}
 	for i, lhs := range stmt.Lhs {
 		// Blank identifier - emit a void expression.
 		if ident, ok := lhs.(*ast.Ident); ok && ident.Name == "_" {
-			g.emitDiscard(w, stmt.Rhs[i])
+			if rhs[i] != nil {
+				g.emitDiscard(w, rhs[i])
+			}
 			continue
 		}
 
 		// Map index assignment uses so_map_set.
 		if idx, ok := lhs.(*ast.IndexExpr); ok {
 			if _, isMap := g.types.TypeOf(idx.X).Underlying().(*types.Map); isMap {
-				g.emitMapIndexAssign(w, stmt, idx, stmt.Rhs[i])
+				g.emitMapIndexAssign(w, stmt, idx, rhs[i])
 				continue
 			}
 		}
@@ -251,12 +248,12 @@ func (g *Generator) emitAssign(w io.Writer, stmt *ast.AssignStmt) {
 			fmt.Fprintf(w, "%smemcpy(", g.indent())
 			g.emitExpr(w, lhs)
 			fmt.Fprint(w, ", ")
-			if _, isLit := stmt.Rhs[i].(*ast.CompositeLit); isLit {
+			if _, isLit := rhs[i].(*ast.CompositeLit); isLit {
 				// Compound literal: (int[3]){1, 2, 3}
 				elemType := g.mapTypeName(stmt, arr.Elem())
 				fmt.Fprintf(w, "(%s%s)", elemType, arrayDims(arr))
 			}
-			g.emitExpr(w, stmt.Rhs[i])
+			g.emitExpr(w, rhs[i])
 			fmt.Fprint(w, ", sizeof(")
 			g.emitExpr(w, lhs)
 			fmt.Fprint(w, "));\n")
@@ -267,9 +264,205 @@ func (g *Generator) emitAssign(w io.Writer, stmt *ast.AssignStmt) {
 		fmt.Fprint(w, g.indent())
 		g.emitExpr(w, lhs)
 		fmt.Fprint(w, " = ")
-		g.emitExprAsType(w, stmt, stmt.Rhs[i], lhsType)
+		g.emitExprAsType(w, stmt, rhs[i], lhsType)
 		fmt.Fprint(w, ";\n")
 	}
+}
+
+// checkAssignTargets rejects a multiple assignment where a target on the left
+// reads a variable the same statement assigns.
+func (g *Generator) checkAssignTargets(stmt *ast.AssignStmt) {
+	if len(stmt.Lhs) < 2 {
+		return
+	}
+	assigned := g.assignedVars(stmt)
+	for _, lhs := range stmt.Lhs {
+		// A plain identifier has no operand to evaluate.
+		if _, ok := lhs.(*ast.Ident); ok {
+			continue
+		}
+		for name := range collectIdents(lhs) {
+			if assigned[name] {
+				g.fail(stmt, "multiple assignment reads and assigns %q in the same statement", name)
+			}
+		}
+	}
+}
+
+// needsRhsTemps reports whether a multiple assignment must evaluate its right
+// side into temporaries to match Go's semantics (evaluate the whole right side
+// before assigning any variable on the left).
+func (g *Generator) needsRhsTemps(stmt *ast.AssignStmt) bool {
+	if len(stmt.Lhs) < 2 || len(stmt.Rhs) < 2 {
+		return false
+	}
+	assigned := g.changedNames(stmt)
+	if len(assigned) == 0 {
+		return false
+	}
+	if slices.ContainsFunc(stmt.Rhs, g.callsFunc) {
+		return true
+	}
+	for name := range collectIdents(stmt.Rhs...) {
+		if assigned[name] {
+			return true
+		}
+	}
+	return false
+}
+
+// changedNames returns the names of the variables a multiple assignment
+// changes. It adds the root of every target that writes into memory: arr in
+// arr[i], p in *p and p.f.
+func (g *Generator) changedNames(stmt *ast.AssignStmt) map[string]bool {
+	names := g.assignedVars(stmt)
+	for _, lhs := range stmt.Lhs {
+		if _, ok := lhs.(*ast.Ident); ok {
+			continue
+		}
+		if ident := rootIdent(lhs); ident != nil {
+			names[ident.Name] = true
+		}
+	}
+	return names
+}
+
+// assignedVars returns the names of the variables a multiple assignment sets.
+func (g *Generator) assignedVars(stmt *ast.AssignStmt) map[string]bool {
+	names := map[string]bool{}
+	for _, lhs := range stmt.Lhs {
+		// Only a plain identifier target sets a variable. Any other target
+		// writes into memory, and the variable itself keeps its value.
+		ident, ok := lhs.(*ast.Ident)
+		if !ok || ident.Name == "_" {
+			continue
+		}
+		// Redeclaration does not introduce a new variable.
+		if stmt.Tok == token.DEFINE && g.types.Defs[ident] != nil {
+			continue
+		}
+		names[ident.Name] = true
+	}
+	return names
+}
+
+// rootIdent returns the identifier at the root of an assignment target:
+// arr in arr[i], p in *p and p.f. It returns nil for any other target.
+func rootIdent(expr ast.Expr) *ast.Ident {
+	for {
+		switch e := expr.(type) {
+		case *ast.Ident:
+			return e
+		case *ast.IndexExpr:
+			expr = e.X
+		case *ast.StarExpr:
+			expr = e.X
+		case *ast.SelectorExpr:
+			expr = e.X
+		case *ast.ParenExpr:
+			expr = e.X
+		default:
+			return nil
+		}
+	}
+}
+
+// callsFunc reports whether an expression calls a function with side effects.
+func (g *Generator) callsFunc(expr ast.Expr) bool {
+	found := false
+	ast.Inspect(expr, func(n ast.Node) bool {
+		if found {
+			return false
+		}
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		// A pure call still has operands, so the walk goes on.
+		if g.isPureCall(call) {
+			return true
+		}
+		found = true
+		return false
+	})
+	return found
+}
+
+// isPureCall reports whether a call has no side effects. A type conversion and
+// the len and cap builtins are pure. Every other call is not.
+func (g *Generator) isPureCall(call *ast.CallExpr) bool {
+	if tv, ok := g.types.Types[call.Fun]; ok && tv.IsType() {
+		return true
+	}
+	ident, ok := call.Fun.(*ast.Ident)
+	if !ok {
+		return false
+	}
+	b, ok := g.types.Uses[ident].(*types.Builtin)
+	return ok && (b.Name() == "len" || b.Name() == "cap")
+}
+
+// hoistRhs evaluates the right side of a multiple assignment into temporaries
+// and returns a reference for each value.
+//
+// A blank identifier gets no temporary and no reference. Its value is discarded
+// in place, which keeps the calls on the right in order.
+func (g *Generator) hoistRhs(w io.Writer, stmt *ast.AssignStmt) []ast.Expr {
+	refs := make([]ast.Expr, len(stmt.Rhs))
+	for i, rhs := range stmt.Rhs {
+		// A constant needs no temporary. No assignment can change it.
+		if tv, ok := g.types.Types[rhs]; ok && tv.Value != nil {
+			refs[i] = rhs
+			continue
+		}
+		typ := g.assignTargetType(stmt, i)
+		if typ == nil {
+			g.emitDiscard(w, rhs)
+			continue
+		}
+		ref := &ast.Ident{NamePos: rhs.Pos(), Name: g.newTemp(stmt, tempAssign)}
+		// The reference has no declaration to look up, so record its type directly.
+		g.types.Types[ref] = types.TypeAndValue{Type: typ}
+		refs[i] = ref
+
+		ct := g.mapTypeDecl(stmt, typ)
+		if !ct.IsArray() {
+			fmt.Fprintf(w, "%s%s = ", g.indent(), ct.Decl(ref.Name))
+			g.emitExprAsType(w, stmt, rhs, typ)
+			fmt.Fprint(w, ";\n")
+			continue
+		}
+		// C cannot assign an array, so a composite literal initializes the
+		// temporary and any other value is copied into it.
+		if _, isLit := rhs.(*ast.CompositeLit); isLit {
+			fmt.Fprintf(w, "%s%s = ", g.indent(), ct.Decl(ref.Name))
+			g.emitExpr(w, rhs)
+			fmt.Fprint(w, ";\n")
+			continue
+		}
+		fmt.Fprintf(w, "%s%s;\n", g.indent(), ct.Decl(ref.Name))
+		fmt.Fprintf(w, "%smemcpy(%s, ", g.indent(), ref.Name)
+		g.emitExpr(w, rhs)
+		fmt.Fprintf(w, ", sizeof(%s));\n", ref.Name)
+	}
+	return refs
+}
+
+// assignTargetType returns the type of the i-th target of an assignment.
+// It returns nil for a blank identifier, which has no type.
+func (g *Generator) assignTargetType(stmt *ast.AssignStmt, i int) types.Type {
+	lhs := stmt.Lhs[i]
+	ident, isIdent := lhs.(*ast.Ident)
+	if isIdent && ident.Name == "_" {
+		return nil
+	}
+	if stmt.Tok != token.DEFINE {
+		return g.types.TypeOf(lhs)
+	}
+	if def := g.types.Defs[ident]; def != nil {
+		return def.Type()
+	}
+	return g.types.Uses[ident].Type()
 }
 
 // collectIdents returns the set of identifier names in the given expressions.
