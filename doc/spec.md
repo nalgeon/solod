@@ -1193,6 +1193,25 @@ double a = geom_RectArea(5, 10);
 (void)geom_Pi;
 ```
 
+The prefix comes from the package name, not from the import alias:
+
+```go
+import g "example/geom"
+
+a := g.RectArea(5, 10) // emits geom_RectArea
+```
+
+Because the prefix is the package name, every package in a program must have a unique name. If two packages have the same name, they will be rejected, even if their import paths are different:
+
+```go
+import (
+    au "example/a/util" // won't compile: both packages are named util
+    bu "example/b/util"
+)
+```
+
+Blank imports work as in Go. Dot imports are not supported.
+
 Constants and variables are emitted in source order, so a constant or variable can't refer to one that's declared after it:
 
 ```go

@@ -57,6 +57,9 @@ func translate(src source, outDir string, opts Options) ([]string, error) {
 	// Walk import graph and collect transpilable packages in topological order
 	entry := pkgs[0]
 	ordered := topoSort(entry)
+	if err := checkPkgNames(ordered); err != nil {
+		return nil, err
+	}
 
 	// main initializes os.Args when some package of the program uses os.
 	initArgs := slices.ContainsFunc(ordered, isOSPackage)
@@ -141,6 +144,25 @@ func topoSort(entry *packages.Package) []*packages.Package {
 	}
 	walk(entry)
 	return ordered
+}
+
+// checkPkgNames rejects two packages with the same name.
+// The C name generated for a symbol includes the package name as a prefix,
+// so if two packages have the same name, their C names will conflict.
+func checkPkgNames(pkgs []*packages.Package) error {
+	paths := make(map[string][]string, len(pkgs))
+	for _, pkg := range pkgs {
+		paths[pkg.Name] = append(paths[pkg.Name], pkg.PkgPath)
+	}
+	for _, name := range slices.Sorted(maps.Keys(paths)) {
+		if len(paths[name]) < 2 {
+			continue
+		}
+		dup := slices.Sorted(slices.Values(paths[name]))
+		return fmt.Errorf("packages %s and %s are both named %s; names must be unique",
+			dup[0], dup[1], name)
+	}
+	return nil
 }
 
 // packageOutDir returns the output directory for a package.

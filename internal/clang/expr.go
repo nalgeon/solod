@@ -531,7 +531,8 @@ func (g *Generator) emitSelectorExpr(w io.Writer, n *ast.SelectorExpr) {
 			if cast, ok := g.constCast(n, g.types.Uses[n.Sel]); ok {
 				fmt.Fprintf(w, "(%s)", cast)
 			}
-			fmt.Fprintf(w, "%s_%s", pkgName.Name(), n.Sel.Name)
+			// The prefix is the original package name, not the import alias.
+			fmt.Fprintf(w, "%s_%s", pkgName.Imported().Name(), n.Sel.Name)
 			return
 		}
 	}

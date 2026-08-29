@@ -50,6 +50,8 @@ func (g *Generator) collect() {
 	}
 
 	for _, file := range g.pkg.Syntax {
+		g.checkImports(file)
+
 		// Merge file comments into the global comment map.
 		fileComments := ast.NewCommentMap(g.pkg.Fset, file, file.Comments)
 		maps.Copy(g.comments, fileComments)
@@ -87,6 +89,15 @@ func (g *Generator) collect() {
 	g.checkExportedDecls()
 	g.checkPromoted()
 	g.checkEmbeddedTypes()
+}
+
+// checkImports rejects a dot import.
+func (g *Generator) checkImports(file *ast.File) {
+	for _, spec := range file.Imports {
+		if spec.Name != nil && spec.Name.Name == "." {
+			g.fail(spec, "dot import is not supported")
+		}
+	}
 }
 
 // collectGenDecl processes a GenDecl for externs, embeds, and symbol collection.

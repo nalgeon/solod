@@ -1,0 +1,1 @@
+packages example/a/util and example/b/util are both named util; names must be unique
