@@ -26,7 +26,27 @@ so build -o app .
 
 `so build` writes the executable to the path given by `-o`, or to the package directory's basename if `-o` is omitted.
 
-The default optimization level is `-O2`. A level from `CFLAGS` (like in the example above) replaces it.
+### Optimization
+
+The default optimization level is `-O2`. A level from `CFLAGS` replaces it:
+
+```sh
+CFLAGS="-Oz" so build -o app .
+```
+
+### Integer overflow
+
+So passes `-fwrapv` to make a signed integer overflow wrap around, as Go does:
+
+```go
+var a int32 = 2147483647
+a++            // -2147483648, as in Go
+
+var c int32 = 100000
+println(c * c) // 1410065408, as in Go
+```
+
+`CFLAGS="-fno-wrapv"` turns this behavior off and makes integer overflow an undefined behavior. Turn it off only if your program never overflows a signed integer.
 
 ## Target
 

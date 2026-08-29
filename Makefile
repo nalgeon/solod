@@ -1,5 +1,5 @@
 # Common compiler flags.
-CFLAGS_CORE = -O1 -g -std=gnu11 -Wall -Wextra -Werror -Wno-shadow -Wno-unused-label
+CFLAGS_CORE = -O1 -g -std=gnu11 -fwrapv -Wall -Wextra -Werror -Wno-shadow -Wno-unused-label
 CFLAGS ?= $(CFLAGS_CORE) -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fstack-protector-all -fno-omit-frame-pointer
 LDLIBS ?= -lm
 

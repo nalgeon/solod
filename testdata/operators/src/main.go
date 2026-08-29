@@ -51,6 +51,36 @@ func main() {
 	}
 
 	{
+		// Signed overflow wraps around with the -fwrapv build flag.
+		var a int32 = 2147483647
+		a++
+		if a != -2147483648 {
+			panic("expected a == -2147483648")
+		}
+		var b int32 = -2147483648
+		if -b != -2147483648 {
+			panic("expected -b == -2147483648")
+		}
+		var c int32 = 100000
+		if c*c != 1410065408 {
+			panic("expected c*c == 1410065408")
+		}
+		var s int32 = 1
+		if s<<31 != -2147483648 {
+			panic("expected s<<31 == -2147483648")
+		}
+		var i64 int64 = 9223372036854775807
+		if i64+1 != -9223372036854775808 {
+			panic("expected i64+1 == -9223372036854775808")
+		}
+		// C promotes int8 to int, and the generator casts the result back.
+		var i8 int8 = 127
+		if i8+1 != -128 {
+			panic("expected i8+1 == -128")
+		}
+	}
+
+	{
 		// Floating-point arithmetics.
 		var x, y, z float64 = 1.1, 2.2, 3.3
 		f := x/y + (y-z)*x

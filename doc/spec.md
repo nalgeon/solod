@@ -58,6 +58,8 @@ const r5 = '\u12e4'
 
 In C, the default type for integers is `so_int`, for floats it's `double`, and for runes it's `int32_t`.
 
+Signed integer arithmetic wraps around on overflow, as in Go. See [building](building.md#integer-overflow) for details.
+
 Complex numbers are not supported.
 
 ## Constants

@@ -55,6 +55,35 @@ int main(void) {
         }
     }
     {
+        // Signed overflow wraps around with the -fwrapv build flag.
+        int32_t a = 2147483647;
+        a++;
+        if (a != -2147483648) {
+            so_panic("expected a == -2147483648");
+        }
+        int32_t b = -2147483648;
+        if (-b != -2147483648) {
+            so_panic("expected -b == -2147483648");
+        }
+        int32_t c = 100000;
+        if (c * c != 1410065408) {
+            so_panic("expected c*c == 1410065408");
+        }
+        int32_t s = 1;
+        if ((s << 31) != -2147483648) {
+            so_panic("expected s<<31 == -2147483648");
+        }
+        int64_t i64 = 9223372036854775807;
+        if (i64 + 1 != INT64_MIN) {
+            so_panic("expected i64+1 == -9223372036854775808");
+        }
+        // C promotes int8 to int, and the generator casts the result back.
+        int8_t i8 = 127;
+        if ((int8_t)(i8 + 1) != -128) {
+            so_panic("expected i8+1 == -128");
+        }
+    }
+    {
         // Floating-point arithmetics.
         double x = 1.1, y = 2.2, z = 3.3;
         double f = x / y + (y - z) * x;

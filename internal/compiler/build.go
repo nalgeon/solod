@@ -164,8 +164,8 @@ func compileC(includeDir string, cFiles []string, outFile string, copts compileO
 
 	args := append(slices.Clone(cc[1:]), "-I"+includeDir)
 	args = append(args, fmt.Sprintf(`-Dso_version="%s"`, Version()))
-	// -O2 comes before CFLAGS, so a level from CFLAGS replaces it.
-	args = append(args, "-O2")
+	args = append(args, "-O2")     // default optimization level
+	args = append(args, "-fwrapv") // wrap around on signed overflow
 	args = append(args, copts.defines...)
 	args = append(args, copts.flags...)
 	args = append(args, splitFlags(os.Getenv("CFLAGS"))...)
