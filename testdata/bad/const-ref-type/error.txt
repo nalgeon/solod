@@ -1,0 +1,3 @@
+main.go:7:28: exported constant Size uses unexported type point
+const Size = unsafe.Sizeof(point{})
+                           ^here

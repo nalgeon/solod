@@ -1,0 +1,3 @@
+main.go:9:9: exported function Get uses unexported function helper
+	return helper()
+	       ^here

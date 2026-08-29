@@ -1,3 +1,3 @@
-main.go:5:15: constant half is declared after Limit; move the declaration up
+main.go:5:15: exported constant Limit uses unexported constant half
 const Limit = half * 2
               ^here

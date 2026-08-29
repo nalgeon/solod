@@ -83,6 +83,7 @@ func (g *Generator) collect() {
 	g.collectImportExterns()
 	g.collectFieldTags()
 	g.collectPromoted()
+	g.collectImplObjs()
 	g.collectResultTypes()
 
 	g.checkExportedFuncs()

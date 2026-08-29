@@ -102,6 +102,7 @@ type Generator struct {
 	modulePkgs  map[string]bool              // import paths of the packages inside a module
 	externs     map[types.Object]externInfo  // symbols provided by C headers
 	promoted    map[types.Object]bool        // unexported symbols forced into the header
+	implObjs    map[types.Object]bool        // symbols only the .c file declares
 	fieldNames  map[*types.Var]string        // C name overrides from `c:"..."` field tags
 	includes    Includes                     // included headers from so:include
 	links       []string                     // link libraries from so:link

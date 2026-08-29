@@ -1,0 +1,3 @@
+main.go:7:9: exported function Get uses unexported constant secret
+	return secret
+	       ^here

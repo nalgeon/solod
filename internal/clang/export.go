@@ -32,6 +32,67 @@ func (g *Generator) collectPromoted() {
 	}
 }
 
+// collectImplObjs records the package-level objects
+// the .c file declares with static linkage.
+func (g *Generator) collectImplObjs() {
+	g.implObjs = make(map[types.Object]bool)
+	for _, sym := range g.symbols {
+		switch sym.kind {
+		case symbolType:
+			// A constraint interface is not emitted at all.
+			obj := g.types.Defs[sym.typeSpec.Name]
+			if sym.exported || sym.dirs.promote || isConstraintInterface(obj.Type()) {
+				continue
+			}
+			g.implObjs[obj] = true
+		case symbolFunc, symbolMethod:
+			// The header holds the body of an so:inline function,
+			// so an unexported one is available there too.
+			if sym.exported || sym.dirs.inline || sym.dirs.promote {
+				continue
+			}
+			g.implObjs[g.types.Defs[sym.funcDecl.Name]] = true
+		case symbolVar, symbolConst:
+			for _, spec := range sym.genDecl.Specs {
+				vs := spec.(*ast.ValueSpec)
+				for _, name := range vs.Names {
+					if ast.IsExported(name.Name) || sym.dirs.promote {
+						continue
+					}
+					g.implObjs[g.types.Defs[name]] = true
+				}
+			}
+		}
+	}
+}
+
+// implRef returns the first identifier of a header declaration
+// that references an object of the .c file, or nil.
+func (g *Generator) implRef(n ast.Node) *ast.Ident {
+	var found *ast.Ident
+	ast.Inspect(n, func(node ast.Node) bool {
+		if found != nil {
+			return false
+		}
+		if arr, ok := node.(*ast.ArrayType); ok {
+			// C gets an array length as a calculated value,
+			// so the length needs no declaration.
+			found = g.implRef(arr.Elt)
+			return false
+		}
+		ident, ok := node.(*ast.Ident)
+		if !ok {
+			return true
+		}
+		if !g.implObjs[g.types.Uses[ident]] {
+			return true
+		}
+		found = ident
+		return false
+	})
+	return found
+}
+
 // checkPromoted rejects so:promote on an exported declaration (redundant)
 // or combined with so:inline (which already emits the body in the header).
 func (g *Generator) checkPromoted() {
@@ -69,7 +130,7 @@ func (g *Generator) checkPromoted() {
 }
 
 // checkExportedFuncs rejects a header function or method declaration
-// that names an unexported type.
+// that references an unexported type.
 func (g *Generator) checkExportedFuncs() {
 	for _, sym := range g.symbols {
 		if sym.kind != symbolFunc && sym.kind != symbolMethod {
@@ -85,19 +146,34 @@ func (g *Generator) checkExportedFuncs() {
 			kind = "method"
 		}
 		// The receiver becomes a void* self parameter, so only the
-		// signature can name an unexported type.
+		// signature might reference an unexported type.
 		sig := g.funcSig(sym.funcDecl)
-		obj := g.unexportedRefSig(sig)
-		if obj == nil {
-			continue
+		if obj := g.unexportedRefSig(sig); obj != nil {
+			g.fail(sym.funcDecl.Name, "%s %s %s uses unexported type %s",
+				headerWord(sym.exported, sym.dirs), kind, sym.funcDecl.Name.Name, obj.Name())
 		}
-		g.fail(sym.funcDecl.Name, "%s %s %s uses unexported type %s",
-			headerWord(sym.exported, sym.dirs), kind, sym.funcDecl.Name.Name, obj.Name())
+		// The header holds the body of an so:inline function,
+		// so the body might reference an object outside the header.
+		if sym.dirs.inline {
+			g.checkImplRef(sym.funcDecl.Body, kind, sym.funcDecl.Name.Name, sym.exported, sym.dirs)
+		}
 	}
 }
 
+// checkImplRef rejects a header declaration that references
+// an object which only the .c file declares.
+func (g *Generator) checkImplRef(n ast.Node, kind, name string, exported bool, dirs directives) {
+	ref := g.implRef(n)
+	if ref == nil {
+		return
+	}
+	obj := g.types.Uses[ref]
+	g.fail(ref, "%s %s %s uses unexported %s %s",
+		headerWord(exported, dirs), kind, name, objWord(obj), obj.Name())
+}
+
 // checkExportedDecls rejects a header type, var or const declaration
-// that names an unexported type.
+// that references an unexported type.
 func (g *Generator) checkExportedDecls() {
 	for _, sym := range g.symbols {
 		if !sym.exported && !sym.dirs.promote {
@@ -105,12 +181,12 @@ func (g *Generator) checkExportedDecls() {
 		}
 		switch sym.kind {
 		case symbolType:
-			// A constraint interface is never emitted, so it can name any type.
+			// A constraint interface is never emitted, so it can reference any type.
 			if isConstraintInterface(g.types.Defs[sym.typeSpec.Name].Type()) {
 				continue
 			}
 			// Walk the declared type rather than the underlying type:
-			// the typedef for `type E P` names P itself.
+			// the typedef for `type E P` references P itself.
 			obj := g.unexportedRef(g.types.TypeOf(sym.typeSpec.Type))
 			if obj == nil {
 				continue
@@ -124,7 +200,7 @@ func (g *Generator) checkExportedDecls() {
 }
 
 // checkExportedValues rejects a header var or const declaration
-// that names an unexported type.
+// that references an unexported type.
 func (g *Generator) checkExportedValues(sym symbol) {
 	kind := "variable"
 	if sym.kind == symbolConst {
@@ -137,38 +213,31 @@ func (g *Generator) checkExportedValues(sym symbol) {
 		}
 		// A var or const group can mix exported and unexported names,
 		// so select the names the header holds (see [Generator.emitHeaderGenDecl]).
-		for _, name := range vs.Names {
+		for i, name := range vs.Names {
 			exported := ast.IsExported(name.Name)
 			def := g.types.Defs[name]
 			if def == nil || (!exported && !sym.dirs.promote) {
 				continue
 			}
-			obj := g.unexportedRef(def.Type())
-			if obj == nil {
+			if obj := g.unexportedRef(def.Type()); obj != nil {
+				g.fail(name, "%s %s %s uses unexported type %s",
+					headerWord(exported, sym.dirs), kind, name.Name, obj.Name())
+			}
+			// The header holds the value of a constant, and the .c file holds
+			// the value of a variable. An iota value becomes a number, so only
+			// a source expression can reference an object outside the header.
+			if sym.kind != symbolConst || isIotaValue(vs, i) {
 				continue
 			}
-			g.fail(name, "%s %s %s uses unexported type %s",
-				headerWord(exported, sym.dirs), kind, name.Name, obj.Name())
+			g.checkImplRef(vs.Values[i], kind, name.Name, exported, sym.dirs)
 		}
 	}
 }
 
-// headerWord names the reason a declaration goes in the header.
-func headerWord(exported bool, dirs directives) string {
-	switch {
-	case exported:
-		return "exported"
-	case dirs.inline:
-		return "inline"
-	default:
-		return "promoted"
-	}
-}
-
 // unexportedRef returns the first unexported type that the C declaration of typ
-// names, or nil. A slice, a map and a channel map to opaque builtins that do not
-// name their element type, so the walk stops there. A named type also stops the
-// walk: its own declaration carries the check.
+// references, or nil. A slice, a map and a channel map to opaque builtins that
+// do not reference their element type, so the walk stops there. A named type
+// also stops the walk: its own declaration carries the check.
 func (g *Generator) unexportedRef(typ types.Type) types.Object {
 	switch t := types.Unalias(typ).(type) {
 	case *types.Named:
@@ -198,7 +267,7 @@ func (g *Generator) unexportedRef(typ types.Type) types.Object {
 }
 
 // unexportedRefSig returns the first unexported type that the parameters
-// or the results of sig name, or nil.
+// or the results of sig reference, or nil.
 func (g *Generator) unexportedRefSig(sig *types.Signature) types.Object {
 	for p := range sig.Params().Variables() {
 		if obj := g.unexportedRef(p.Type()); obj != nil {
@@ -229,4 +298,33 @@ func (g *Generator) isUnexportedType(typ types.Type) bool {
 		return false
 	}
 	return !ast.IsExported(obj.Name()) && !g.promoted[obj]
+}
+
+// objWord names the kind of a declaration.
+func objWord(obj types.Object) string {
+	switch o := obj.(type) {
+	case *types.Const:
+		return "constant"
+	case *types.TypeName:
+		return "type"
+	case *types.Func:
+		if o.Signature().Recv() != nil {
+			return "method"
+		}
+		return "function"
+	default:
+		return "variable"
+	}
+}
+
+// headerWord names the reason a declaration goes in the header.
+func headerWord(exported bool, dirs directives) string {
+	switch {
+	case exported:
+		return "exported"
+	case dirs.inline:
+		return "inline"
+	default:
+		return "promoted"
+	}
 }
