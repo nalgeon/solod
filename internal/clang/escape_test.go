@@ -246,12 +246,72 @@ func (p *BoxStr) okMethodRecv() *BoxStr          { return p }
 		}
 		name := fd.Name.Name
 		wantEscape := len(name) >= 3 && name[:3] == "esc"
-		got := findReturnEscapes(info, fd)
+		got := newEscapeChecker(info, fd).escapes(fd)
 		if wantEscape && len(got) == 0 {
 			t.Errorf("%s: expected an escape, found none", name)
 		}
 		if !wantEscape && len(got) != 0 {
 			t.Errorf("%s: expected no escape, found %d", name, len(got))
+		}
+	}
+}
+
+func TestFindGlobalStores(t *testing.T) {
+	// Each function is named after whether it should be flagged.
+	const src = `package x
+
+type Box struct{ s string }
+
+var gStr string
+var gInt int
+var gPtr *int
+var gStrPtr *string
+var gBox Box
+var gStrs = []string{""}
+var gInts []int
+var gRunes []rune
+
+func mk() string { return "ok" }
+
+// --- should be flagged (stores frame-bound memory) ---
+
+func escConcat(a, b string)     { gStr = a + b }
+func escAddAssign(a string)     { gStr += a }
+func escChain(a, b string)      { t := a + b; gStr = t }
+func escMake()                  { gInts = make([]int, 3) }
+func escRunes(s string)         { gRunes = []rune(s) }
+func escAddr()                  { n := 1; gPtr = &n }
+func escField(a, b string)      { gBox.s = a + b }
+func escElem(a, b string)       { gStrs[0] = a + b }
+func escDeref(a, b string)      { *gStrPtr = a + b }
+func escLit()                   { gInts = []int{1, 2, 3} }
+
+// --- should not be flagged ---
+
+func okCall()                   { gStr = mk() }
+func okLitConcat()              { gStr = "x" + "y" }
+func okAddrGlobal()             { gPtr = &gInt }
+func okInt(n int)               { gInt = n }
+func okLocalConcat(a, b string) { s := a + b; _ = s }
+func okLocalAddAssign(a string) { s := "x"; s += a; _ = s }
+func okReadGlobal()             { s := gStr; _ = s }
+`
+
+	info, f := checkSnippet(t, src)
+
+	for _, d := range f.Decls {
+		fd, ok := d.(*ast.FuncDecl)
+		if !ok {
+			continue
+		}
+		name := fd.Name.Name
+		wantStore := len(name) >= 3 && name[:3] == "esc"
+		got := newEscapeChecker(info, fd).globalStores(fd.Body)
+		if wantStore && len(got) == 0 {
+			t.Errorf("%s: expected a global store, found none", name)
+		}
+		if !wantStore && len(got) != 0 {
+			t.Errorf("%s: expected no global store, found %d", name, len(got))
 		}
 	}
 }

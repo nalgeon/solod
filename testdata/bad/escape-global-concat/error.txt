@@ -1,0 +1,3 @@
+main.go:6:2: stack-allocated value escapes into a package-level variable
+	xy += s
+	^here

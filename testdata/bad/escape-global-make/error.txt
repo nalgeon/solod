@@ -1,0 +1,3 @@
+main.go:6:8: stack-allocated value escapes into a package-level variable
+	buf = make([]int, 3)
+	      ^here

@@ -15,12 +15,8 @@ import (
 // the address of a local, etc. Such a value is a "frame value": it is valid only
 // until the function returns. Returning one hands the caller a dangling pointer.
 //
-// This checker rejects any return of a frame value. It runs per function, in
-// three passes over the body:
-//
-//  1. collectPointsTo finds the locals that each local pointer may point to.
-//  2. markFrameVars finds the locals that hold a frame value.
-//  3. escapes scans every return and flags the results that are frame values.
+// This checker rejects a return of a frame value and a store of a frame value
+// into a package-level variable. It runs per function.
 //
 // # Scope
 //
@@ -43,8 +39,9 @@ import (
 //     its result is assumed not to be a frame value. The make, new and append
 //     builtins and the builtin conversions are the known exceptions, handled
 //     explicitly.
-//   - Anything but returns. Storing a frame value through a pointer parameter
-//     or into a global leaks it just as well, and is not checked.
+//   - Anything but returns and stores into a package-level variable. Storing a
+//     frame value through a pointer parameter leaks it just as well, and is not
+//     checked.
 //   - Pointer chains past one hop (see collectPointsTo).
 //
 // Marking is done per variable, not per field: storing to p.s marks all of p
@@ -56,17 +53,53 @@ import (
 // escapeMsg is the diagnostic reported for a return that escapes the frame.
 const escapeMsg = "stack-allocated value escapes function frame"
 
-// checkEscapes fails the build on the first return that escapes the frame.
-// Generic functions expand to macros inlined into the caller, so they never
-// reach here (see emitMacroFuncDecl).
-func (g *Generator) checkEscapes(decl *ast.FuncDecl) {
-	for _, node := range findReturnEscapes(g.types, decl) {
+// globalStoreMsg is the diagnostic reported for a store into a package-level variable.
+const globalStoreMsg = "stack-allocated value escapes into a package-level variable"
+
+// checkFrameValues fails the build on the first frame value that outlives its
+// frame. It checks each of the package's functions which have a body.
+func (g *Generator) checkFrameValues() {
+	for _, file := range g.pkg.Syntax {
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || g.hasExtern(g.types.Defs[fn.Name]) {
+				continue
+			}
+			g.checkFuncFrame(fn)
+		}
+	}
+}
+
+// checkFuncFrame runs both frame-value checks over one function.
+func (g *Generator) checkFuncFrame(fn *ast.FuncDecl) {
+	c := newEscapeChecker(g.types, fn)
+	if c == nil {
+		return
+	}
+	for _, node := range c.globalStores(fn.Body) {
+		g.fail(node, "%s", globalStoreMsg)
+	}
+	// A generic function expands to a macro in the frame of the caller
+	// (see emitMacroFuncDecl), so its result outlives the call.
+	if isGenericFunc(fn) {
+		return
+	}
+	for _, node := range c.escapes(fn) {
 		g.fail(node, "%s", escapeMsg)
 	}
 }
 
-// findReturnEscapes reports the return-value expressions in decl that escape the frame.
-func findReturnEscapes(info *types.Info, decl *ast.FuncDecl) []ast.Node {
+// escapeChecker holds the per-function analysis state.
+type escapeChecker struct {
+	info   *types.Info
+	locals map[types.Object]bool           // every object declared in the function
+	points map[types.Object][]types.Object // locals that a local pointer may point to
+	fvars  map[types.Object]bool           // locals that hold a frame value
+}
+
+// newEscapeChecker runs the analysis passes over a function body and returns the
+// result. It returns nil for a function with no body.
+func newEscapeChecker(info *types.Info, decl *ast.FuncDecl) *escapeChecker {
 	if decl.Body == nil {
 		return nil
 	}
@@ -79,15 +112,7 @@ func findReturnEscapes(info *types.Info, decl *ast.FuncDecl) []ast.Node {
 	c.collectLocals(decl)
 	c.collectPointsTo(decl.Body)
 	c.markFrameVars(decl.Body)
-	return c.escapes(decl)
-}
-
-// escapeChecker holds the per-function analysis state.
-type escapeChecker struct {
-	info   *types.Info
-	locals map[types.Object]bool           // every object declared in the function
-	points map[types.Object][]types.Object // locals that a local pointer may point to
-	fvars  map[types.Object]bool           // locals that hold a frame value
+	return c
 }
 
 // collectLocals records every object declared inside the function: receiver,
@@ -259,28 +284,47 @@ func (c *escapeChecker) mark(obj types.Object) bool {
 	return true
 }
 
-// rootLocal returns the local variable that an assignment target writes to:
-// p.s and p.x.y both root at p, s[i] roots at s, and *p roots at p. Marking
-// the whole variable instead of just the field isn't precise, but it's safer:
-// once an aggregate contains a frame pointer, returning a copy is unsafe.
+// rootLocal returns the local variable that an assignment target writes to.
+// Marking the whole variable instead of just the field isn't precise, but it's
+// safer: once an aggregate contains a frame pointer, returning a copy is unsafe.
 // It returns nil if the target doesn't root at a local variable.
 func (c *escapeChecker) rootLocal(expr ast.Expr) types.Object {
+	obj := c.rootObject(expr)
+	if obj == nil || !c.locals[obj] {
+		return nil
+	}
+	return obj
+}
+
+// rootGlobal returns the package-level variable that an assignment target writes
+// to. It returns nil if the target doesn't root at a package-level variable.
+func (c *escapeChecker) rootGlobal(expr ast.Expr) types.Object {
+	obj := c.rootObject(expr)
+	if obj == nil || !isPkgVar(obj) {
+		return nil
+	}
+	return obj
+}
+
+// rootObject returns the variable that an assignment target writes to:
+// p.s and p.x.y both root at p, s[i] roots at s, and *p roots at p. A qualified
+// name roots at the variable of the other package, not at the package name.
+func (c *escapeChecker) rootObject(expr ast.Expr) types.Object {
 	for {
 		switch x := expr.(type) {
 		case *ast.ParenExpr:
 			expr = x.X
 		case *ast.SelectorExpr:
+			if obj := c.info.Uses[x.Sel]; isPkgVar(obj) {
+				return obj
+			}
 			expr = x.X
 		case *ast.IndexExpr:
 			expr = x.X
 		case *ast.StarExpr:
 			expr = x.X
 		case *ast.Ident:
-			obj := c.info.ObjectOf(x)
-			if obj == nil || !c.locals[obj] {
-				return nil
-			}
-			return obj
+			return c.info.ObjectOf(x)
 		default:
 			return nil
 		}
@@ -535,6 +579,34 @@ func (c *escapeChecker) escapes(decl *ast.FuncDecl) []ast.Node {
 	return found
 }
 
+// globalStores returns the expressions that store a frame value into a
+// package-level variable.
+func (c *escapeChecker) globalStores(body *ast.BlockStmt) []ast.Node {
+	var found []ast.Node
+	c.walk(body, func(n ast.Node) {
+		if s, ok := n.(*ast.AssignStmt); ok && c.isGlobalAddAssign(s) {
+			found = append(found, s.Lhs[0])
+		}
+		assignPairs(n, func(lhs, rhs ast.Expr) {
+			if c.rootGlobal(lhs) != nil && c.isFrameValue(rhs) {
+				found = append(found, rhs)
+			}
+		})
+	})
+	return found
+}
+
+// isGlobalAddAssign reports whether a string += writes to a package-level variable.
+func (c *escapeChecker) isGlobalAddAssign(s *ast.AssignStmt) bool {
+	if s.Tok != token.ADD_ASSIGN || len(s.Lhs) != 1 {
+		return false
+	}
+	if !isStringExpr(c.info, s.Lhs[0]) {
+		return false
+	}
+	return c.rootGlobal(s.Lhs[0]) != nil
+}
+
 // walk visits every node under root but does not enter nested closures, which
 // have their own frame.
 func (c *escapeChecker) walk(root ast.Node, visit func(ast.Node)) {
@@ -612,6 +684,15 @@ func carriesPointers(t types.Type) bool {
 	// Pointers, slices, maps, channels, interfaces and functions
 	// all reference memory elsewhere.
 	return true
+}
+
+// isPkgVar reports whether obj is a variable declared at package level.
+func isPkgVar(obj types.Object) bool {
+	v, ok := obj.(*types.Var)
+	if !ok || v.Pkg() == nil {
+		return false
+	}
+	return v.Parent() == v.Pkg().Scope()
 }
 
 // isStringExpr reports whether expr has string type.

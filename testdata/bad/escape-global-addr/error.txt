@@ -1,0 +1,3 @@
+main.go:7:6: stack-allocated value escapes into a package-level variable
+	p = &n
+	    ^here
