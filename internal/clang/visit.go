@@ -263,7 +263,7 @@ func (g *Generator) emitConstSpec(w io.Writer, spec *ast.ValueSpec) {
 		cType := g.mapTypeName(spec, typ)
 
 		// Check if this is an iota-based constant (implicit value or explicit iota usage).
-		isIota := i >= len(spec.Values) || containsIota(spec.Values[i])
+		isIota := isIotaValue(spec, i)
 		if !isIota {
 			g.checkConstShadow(spec, i)
 		}

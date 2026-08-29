@@ -147,7 +147,7 @@ func (g *Generator) emitHeaderGenDecl(w io.Writer, decl *ast.GenDecl, dirs direc
 				// GCC/Clang to recognize the package-level constants from 3rd-party
 				// packages in definitions, which is not possible with externs:
 				// 	var PointZero = Point{X: sub.Zero, Y: sub.Zero}
-				isIota := i >= len(vs.Values) || containsIota(vs.Values[i])
+				isIota := isIotaValue(vs, i)
 				fmt.Fprintf(w, "static const %s = ", ct.Decl(cName))
 				if isIota {
 					g.emitConstVal(w, vs, name)

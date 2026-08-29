@@ -1,0 +1,3 @@
+main.go:3:13: constant half is declared after limit; move the declaration up
+var limit = half * 2
+            ^here

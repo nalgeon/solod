@@ -89,6 +89,7 @@ func (g *Generator) collect() {
 	g.checkExportedDecls()
 	g.checkPromoted()
 	g.checkEmbeddedTypes()
+	g.checkValueOrder()
 }
 
 // checkImports rejects a dot import.
