@@ -22,6 +22,7 @@ import (
 func CreateTemp(buf []byte, dir, pattern string) (File, error) {
 	tmpl := buildTempTemplate(buf[:0], dir, pattern)
 	tmplPtr := (*c.Char)(unsafe.SliceData(tmpl))
+	c.Assume(tmplPtr != nil) // for gcc analyzer
 	fd := mkstemp(tmplPtr)
 	if fd < 0 {
 		return File{}, mapError()
@@ -50,6 +51,7 @@ func CreateTemp(buf []byte, dir, pattern string) (File, error) {
 func MkdirTemp(buf []byte, dir, pattern string) (string, error) {
 	tmpl := buildTempTemplate(buf[:0], dir, pattern)
 	tmplPtr := (*c.Char)(unsafe.SliceData(tmpl))
+	c.Assume(tmplPtr != nil) // for gcc analyzer
 	result := mkdtemp(tmplPtr)
 	if result == nil {
 		return "", mapError()

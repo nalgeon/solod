@@ -26,7 +26,8 @@ static inline so_int bytealg_Compare(so_Slice a, so_Slice b) {
 }
 
 static inline so_int bytealg_IndexByte(so_Slice b, so_byte c) {
-    if (b.len == 0) return -1;
+    // A slice length is never negative. The <= is for gcc analyzer.
+    if (b.len <= 0) return -1;
     void* at = memchr(b.ptr, (int)c, (size_t)b.len);
     if (at == NULL) return -1;
     return (so_int)((char*)at - (char*)b.ptr);

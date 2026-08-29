@@ -325,6 +325,7 @@ typedef struct {
     so_String _s2 = (s2);                                              \
     so_int _total = _s1.len + _s2.len;                                 \
     char* _buf = so_alloca(_total);                                    \
+    so_assume(_buf != NULL || _total == 0);                            \
     if (_s1.len > 0) memcpy(_buf, _s1.ptr, (size_t)_s1.len);           \
     if (_s2.len > 0) memcpy(_buf + _s1.len, _s2.ptr, (size_t)_s2.len); \
     (so_String){_buf, _total};                                         \
