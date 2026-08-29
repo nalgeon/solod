@@ -26,6 +26,7 @@ func (g *Generator) emitAssignStmt(w io.Writer, stmt *ast.AssignStmt) {
 				g.fail(stmt, "compound assignment on map index is not supported")
 			}
 		}
+		g.checkAssignCall(stmt)
 		// String += uses so_string_add.
 		if stmt.Tok == token.ADD_ASSIGN && g.hasStringType(stmt.Lhs[0]) {
 			fmt.Fprint(w, g.indent())
@@ -267,6 +268,21 @@ func (g *Generator) emitAssign(w io.Writer, stmt *ast.AssignStmt) {
 		g.emitExprAsType(w, stmt, rhs[i], lhsType)
 		fmt.Fprint(w, ";\n")
 	}
+}
+
+// checkAssignCall rejects a call in the left side of a compound assignment.
+// A string += and a guarded /= or %= write the left side two times, so the
+// call would run two times and could return a different result if it has
+// side effects.
+func (g *Generator) checkAssignCall(stmt *ast.AssignStmt) {
+	ast.Inspect(stmt.Lhs[0], func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		g.fail(call, "call in the left side of a compound assignment is not supported")
+		return false
+	})
 }
 
 // checkAssignTargets rejects a multiple assignment where a target on the left

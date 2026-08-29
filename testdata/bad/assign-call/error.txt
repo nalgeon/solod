@@ -1,0 +1,3 @@
+main.go:10:4: call in the left side of a compound assignment is not supported
+	a[idx()] /= n
+	  ^here
