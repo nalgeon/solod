@@ -315,3 +315,62 @@ func okReadGlobal()             { s := gStr; _ = s }
 		}
 	}
 }
+
+func TestFindParamStores(t *testing.T) {
+	// Each function is named after whether it should be flagged.
+	const src = `package x
+
+type Box struct{ s string }
+
+func mk() string { return "ok" }
+
+// --- should be flagged (stores frame-bound memory in the caller) ---
+
+func escPtr(out *string, a, b string)         { *out = a + b }
+func escPtrField(out *Box, a, b string)       { out.s = a + b }
+func escPtrAddAssign(out *string, a string)   { *out += a }
+func escSlice(out []string, a, b string)      { out[0] = a + b }
+func escArray(out [2]string, a, b string)     { out[0] = a + b }
+func escMap(m map[string]string, a, b string) { m["k"] = a + b }
+func escMake(out *[]int, n int)               { *out = make([]int, n) }
+func escRunes(out *[]rune, s string)          { *out = []rune(s) }
+func escAddr(out **int)                       { n := 1; *out = &n }
+func escChain(out *string, a, b string)       { t := a + b; *out = t }
+
+func (b *Box) escMethod(a, c string) { b.s = a + c }
+
+// --- should not be flagged ---
+
+func okPtrInt(out *int, n int)            { *out = n * 2 }
+func okPtrCopy(out *string, s string)     { *out = s }
+func okPtrCall(out *string)               { *out = mk() }
+func okPtrLit(out *string)                { *out = "a" + "b" }
+func okByte(dst []byte, s string)         { dst[0] = s[0] }
+func okAppend(dst *[]int, v int)          { *dst = append(*dst, v) }
+func okValueParam(s string)               { s += "y"; _ = s }
+func okValueField(b Box, a, c string)     { b.s = a + c }
+func okLocalSlice(a, b string)            { buf := make([]string, 2); buf[0] = a + b }
+func okLocalArray(a, b string)            { var arr [2]string; arr[0] = a + b }
+func okLocalPtr(a, b string)              { var v Box; p := &v; p.s = a + b }
+
+func (b Box) okValueMethod(a, c string) { b.s = a + c }
+`
+
+	info, f := checkSnippet(t, src)
+
+	for _, d := range f.Decls {
+		fd, ok := d.(*ast.FuncDecl)
+		if !ok {
+			continue
+		}
+		name := fd.Name.Name
+		wantStore := len(name) >= 3 && name[:3] == "esc"
+		got := newEscapeChecker(info, fd).paramStores(fd.Body)
+		if wantStore && len(got) == 0 {
+			t.Errorf("%s: expected a param store, found none", name)
+		}
+		if !wantStore && len(got) != 0 {
+			t.Errorf("%s: expected no param store, found %d", name, len(got))
+		}
+	}
+}

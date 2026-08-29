@@ -1,0 +1,3 @@
+main.go:8:8: stack-allocated value escapes through a parameter
+	b.s = a + c
+	      ^here
