@@ -769,6 +769,12 @@ typedef struct {
     so_int cap;  // always power of 2
 } so_Map;
 
+// map_len returns the number of elements in a map.
+#define so_map_len(m) ({            \
+    const so_Map* _mlen = (m);      \
+    _mlen ? _mlen->len : (so_int)0; \
+})
+
 // key_hash hashes a map key to a 64-bit value (FNV-1a).
 // The seed is the map's own address (randomized by ASLR).
 static inline uint64_t so_key_hash_def(const void* ptr, so_int n, uint64_t seed) {

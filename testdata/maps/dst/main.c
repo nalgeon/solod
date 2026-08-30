@@ -32,10 +32,13 @@ static so_int main_MapHolder_get(main_MapHolder h, so_String key) {
 
 static so_int main_MapHolder_sum(main_MapHolder h) {
     so_int s = 0;
-    for (so_int _i = 0; _i < h.m->cap; _i++) {
-        if (!h.m->used[_i]) continue;
-        so_int v = ((so_int*)h.m->vals)[_i];
-        s += v;
+    {
+        so_Map* _m = h.m;
+        for (so_int _i = 0; _m != NULL && _i < _m->cap; _i++) {
+            if (!_m->used[_i]) continue;
+            so_int v = ((so_int*)_m->vals)[_i];
+            s += v;
+        }
     }
     return s;
 }
@@ -183,14 +186,14 @@ int main(void) {
     {
         // Empty literal
         so_Map* m = &(so_Map){};
-        if (m->len != 0) {
+        if (so_map_len(m) != 0) {
             so_panic("empty literal");
         }
     }
     {
         // Make and populate
         so_Map* m = so_make_map(so_String, so_int, 3);
-        if (m->len != 0) {
+        if (so_map_len(m) != 0) {
             so_panic("make initial len");
         }
         so_map_set(so_String, so_int, m, so_str("a"), 10);
@@ -199,7 +202,7 @@ int main(void) {
         if (so_map_get(so_String, so_int, m, so_str("a")) != 10 || so_map_get(so_String, so_int, m, so_str("b")) != 20 || so_map_get(so_String, so_int, m, so_str("c")) != 30) {
             so_panic("make values");
         }
-        if (m->len != 3) {
+        if (so_map_len(m) != 3) {
             so_panic("make final len");
         }
     }
@@ -248,7 +251,7 @@ int main(void) {
         if (so_map_get(so_String, so_int, m, so_str("a")) != 99) {
             so_panic("overwrite value");
         }
-        if (m->len != 1) {
+        if (so_map_len(m) != 1) {
             so_panic("overwrite len");
         }
     }
@@ -335,11 +338,14 @@ int main(void) {
         // Range: key + value
         so_Map* m = so_map_lit(so_int, so_int, 3, ((so_int[]){1, 2, 3}), ((so_int[]){10, 20, 30}));
         so_int sum = 0;
-        for (so_int _i = 0; _i < m->cap; _i++) {
-            if (!m->used[_i]) continue;
-            so_int k = ((so_int*)m->keys)[_i];
-            so_int v = ((so_int*)m->vals)[_i];
-            sum += k * v;
+        {
+            so_Map* _m = m;
+            for (so_int _i = 0; _m != NULL && _i < _m->cap; _i++) {
+                if (!_m->used[_i]) continue;
+                so_int k = ((so_int*)_m->keys)[_i];
+                so_int v = ((so_int*)_m->vals)[_i];
+                sum += k * v;
+            }
         }
         // 1*10 + 2*20 + 3*30 = 10 + 40 + 90 = 140
         if (sum != 140) {
@@ -350,10 +356,13 @@ int main(void) {
         // Range: key only
         so_Map* m = so_map_lit(so_int, so_int, 2, ((so_int[]){10, 20}), ((so_int[]){100, 200}));
         so_int sum = 0;
-        for (so_int _i = 0; _i < m->cap; _i++) {
-            if (!m->used[_i]) continue;
-            so_int k = ((so_int*)m->keys)[_i];
-            sum += k;
+        {
+            so_Map* _m = m;
+            for (so_int _i = 0; _m != NULL && _i < _m->cap; _i++) {
+                if (!_m->used[_i]) continue;
+                so_int k = ((so_int*)_m->keys)[_i];
+                sum += k;
+            }
         }
         if (sum != 30) {
             so_panic("range k only");
@@ -363,10 +372,13 @@ int main(void) {
         // Range: value only
         so_Map* m = so_map_lit(so_int, so_int, 2, ((so_int[]){10, 20}), ((so_int[]){100, 200}));
         so_int sum = 0;
-        for (so_int _i = 0; _i < m->cap; _i++) {
-            if (!m->used[_i]) continue;
-            so_int v = ((so_int*)m->vals)[_i];
-            sum += v;
+        {
+            so_Map* _m = m;
+            for (so_int _i = 0; _m != NULL && _i < _m->cap; _i++) {
+                if (!_m->used[_i]) continue;
+                so_int v = ((so_int*)_m->vals)[_i];
+                sum += v;
+            }
         }
         if (sum != 300) {
             so_panic("range v only");
@@ -378,11 +390,14 @@ int main(void) {
         so_int k = 0;
         so_int v = 0;
         so_int sum = 0;
-        for (so_int _i = 0; _i < m->cap; _i++) {
-            if (!m->used[_i]) continue;
-            k = ((so_int*)m->keys)[_i];
-            v = ((so_int*)m->vals)[_i];
-            sum += k + v;
+        {
+            so_Map* _m = m;
+            for (so_int _i = 0; _m != NULL && _i < _m->cap; _i++) {
+                if (!_m->used[_i]) continue;
+                k = ((so_int*)_m->keys)[_i];
+                v = ((so_int*)_m->vals)[_i];
+                sum += k + v;
+            }
         }
         // 1+10 + 2+20 = 33
         if (sum != 33) {
@@ -394,12 +409,15 @@ int main(void) {
         so_Map* m = so_map_lit(so_String, so_String, 2, ((so_String[]){so_str("hello"), so_str("foo")}), ((so_String[]){so_str("world"), so_str("bar")}));
         so_String keys = so_str("");
         so_String vals = so_str("");
-        for (so_int _i = 0; _i < m->cap; _i++) {
-            if (!m->used[_i]) continue;
-            so_String k = ((so_String*)m->keys)[_i];
-            so_String v = ((so_String*)m->vals)[_i];
-            keys = so_string_add(keys, k);
-            vals = so_string_add(vals, v);
+        {
+            so_Map* _m = m;
+            for (so_int _i = 0; _m != NULL && _i < _m->cap; _i++) {
+                if (!_m->used[_i]) continue;
+                so_String k = ((so_String*)_m->keys)[_i];
+                so_String v = ((so_String*)_m->vals)[_i];
+                keys = so_string_add(keys, k);
+                vals = so_string_add(vals, v);
+            }
         }
         if (so_string_ne(keys, so_str("hellofoo")) && so_string_ne(keys, so_str("foohello"))) {
             so_panic("range string keys");
@@ -412,10 +430,13 @@ int main(void) {
         // Range: over struct values
         so_Map* m = so_map_lit(so_String, main_Pair, 2, ((so_String[]){so_str("a"), so_str("b")}), ((main_Pair[]){(main_Pair){1, 2}, (main_Pair){3, 4}}));
         so_int sum = 0;
-        for (so_int _i = 0; _i < m->cap; _i++) {
-            if (!m->used[_i]) continue;
-            main_Pair v = ((main_Pair*)m->vals)[_i];
-            sum += v.x + v.y;
+        {
+            so_Map* _m = m;
+            for (so_int _i = 0; _m != NULL && _i < _m->cap; _i++) {
+                if (!_m->used[_i]) continue;
+                main_Pair v = ((main_Pair*)_m->vals)[_i];
+                sum += v.x + v.y;
+            }
         }
         if (sum != 10) {
             so_panic("range struct value");
@@ -424,29 +445,29 @@ int main(void) {
     {
         // len: literal
         so_Map* m = so_map_lit(so_String, so_int, 3, ((so_String[]){so_str("a"), so_str("b"), so_str("c")}), ((so_int[]){1, 2, 3}));
-        if (m->len != 3) {
+        if (so_map_len(m) != 3) {
             so_panic("len literal");
         }
     }
     {
         // len: empty
         so_Map* m = &(so_Map){};
-        if (m->len != 0) {
+        if (so_map_len(m) != 0) {
             so_panic("len empty");
         }
     }
     {
         // len: grows with set
         so_Map* m = so_make_map(so_String, so_int, 3);
-        if (m->len != 0) {
+        if (so_map_len(m) != 0) {
             so_panic("len make 0");
         }
         so_map_set(so_String, so_int, m, so_str("a"), 1);
-        if (m->len != 1) {
+        if (so_map_len(m) != 1) {
             so_panic("len make 1");
         }
         so_map_set(so_String, so_int, m, so_str("b"), 2);
-        if (m->len != 2) {
+        if (so_map_len(m) != 2) {
             so_panic("len make 2");
         }
     }
@@ -454,14 +475,14 @@ int main(void) {
         // len: overwrite does not change len
         so_Map* m = so_map_lit(so_String, so_int, 1, ((so_String[]){so_str("a")}), ((so_int[]){1}));
         so_map_set(so_String, so_int, m, so_str("a"), 99);
-        if (m->len != 1) {
+        if (so_map_len(m) != 1) {
             so_panic("len overwrite");
         }
     }
     {
         // len: in expression
         so_Map* m = so_map_lit(so_String, so_int, 2, ((so_String[]){so_str("a"), so_str("b")}), ((so_int[]){1, 2}));
-        so_int n = m->len + 1;
+        so_int n = so_map_len(m) + 1;
         if (n != 3) {
             so_panic("len expr");
         }
@@ -492,6 +513,47 @@ int main(void) {
         }
     }
     {
+        // Nil: len of a nil map is zero.
+        so_Map* m = NULL;
+        if (so_map_len(m) != 0) {
+            so_panic("len(nil map) != 0");
+        }
+        if (so_map_len(NULL) != 0) {
+            so_panic("len((map[string]int)(nil)) != 0");
+        }
+    }
+    {
+        // Nil: reading from a nil map returns the zero value.
+        so_Map* m = NULL;
+        if (so_map_get(so_String, so_int, m, so_str("a")) != 0) {
+            so_panic("nil map get");
+        }
+        so_int v = so_map_get(so_String, so_int, m, so_str("a"));
+        bool ok = so_map_has(so_String, m, so_str("a"));
+        if (v != 0 || ok) {
+            so_panic("nil map comma-ok");
+        }
+    }
+    {
+        // Nil: a range over a nil map is a no-op.
+        so_Map* m = NULL;
+        so_int n = 0;
+        {
+            so_Map* _m = m;
+            for (so_int _i = 0; _m != NULL && _i < _m->cap; _i++) {
+                if (!_m->used[_i]) continue;
+                so_String k = ((so_String*)_m->keys)[_i];
+                so_int v = ((so_int*)_m->vals)[_i];
+                (void)k;
+                (void)v;
+                n++;
+            }
+        }
+        if (n != 0) {
+            so_panic("range over nil map");
+        }
+    }
+    {
         // Pass map to function
         so_Map* m = so_map_lit(so_String, so_int, 2, ((so_String[]){so_str("a"), so_str("b")}), ((so_int[]){10, 20}));
         if (takeMap(m) != 30) {
@@ -509,7 +571,7 @@ int main(void) {
         if (so_map_get(so_String, so_int, m, so_str("b")) != 22) {
             so_panic("func modify b");
         }
-        if (m->len != 2) {
+        if (so_map_len(m) != 2) {
             so_panic("func modify len");
         }
     }
@@ -552,10 +614,13 @@ int main(void) {
         // Named map type: range
         main_StrMap m = so_map_lit(so_String, so_int, 2, ((so_String[]){so_str("a"), so_str("b")}), ((so_int[]){1, 2}));
         so_int sum = 0;
-        for (so_int _i = 0; _i < m->cap; _i++) {
-            if (!m->used[_i]) continue;
-            so_int v = ((so_int*)m->vals)[_i];
-            sum += v;
+        {
+            so_Map* _m = m;
+            for (so_int _i = 0; _m != NULL && _i < _m->cap; _i++) {
+                if (!_m->used[_i]) continue;
+                so_int v = ((so_int*)_m->vals)[_i];
+                sum += v;
+            }
         }
         if (sum != 3) {
             so_panic("named type range");
@@ -606,7 +671,7 @@ int main(void) {
                 so_panic("empty value miss");
             }
         }
-        if (set->len != 1) {
+        if (so_map_len(set) != 1) {
             so_panic("empty value len");
         }
     }

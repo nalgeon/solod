@@ -109,22 +109,28 @@ func (g *Generator) emitMapCommaOk(w io.Writer, stmt *ast.AssignStmt, idx *ast.I
 }
 
 // emitMapRange emits a for-range loop over a map.
-// Uses a hidden _i variable to iterate the internal arrays.
 func (g *Generator) emitMapRange(w io.Writer, stmt *ast.RangeStmt) {
 	mapType := g.types.TypeOf(stmt.X).Underlying().(*types.Map)
 	keyType := g.mapTypeName(stmt, mapType.Key())
 	valType := g.mapTypeName(stmt, mapType.Elem())
 
-	fmt.Fprintf(w, "%sfor (so_int _i = 0; _i < ", g.indent())
+	// An enclosing block scopes _m, so two range loops in one block do not collide.
+	fmt.Fprintf(w, "%s{\n", g.indent())
+	g.state.depth++
+
+	// A hidden _m variable holds the map, so the map expression is evaluated once.
+	fmt.Fprintf(w, "%sso_Map* _m = ", g.indent())
 	g.emitExpr(w, stmt.X)
-	fmt.Fprint(w, "->cap; _i++) {\n")
+	fmt.Fprint(w, ";\n")
+
+	// A hidden _i variable iterates the internal arrays.
+	// The guard on NULL _m keeps the loop body unused for a nil map.
+	fmt.Fprintf(w, "%sfor (so_int _i = 0; _m != NULL && _i < _m->cap; _i++) {\n", g.indent())
 
 	g.state.depth++
 
 	// Skip empty slots in hash table.
-	fmt.Fprintf(w, "%sif (!", g.indent())
-	g.emitExpr(w, stmt.X)
-	fmt.Fprint(w, "->used[_i]) continue;\n")
+	fmt.Fprintf(w, "%sif (!_m->used[_i]) continue;\n", g.indent())
 
 	// Emit key variable.
 	if stmt.Key != nil {
@@ -133,9 +139,7 @@ func (g *Generator) emitMapRange(w io.Writer, stmt *ast.RangeStmt) {
 			if stmt.Tok == token.ASSIGN {
 				keyDecl = ""
 			}
-			fmt.Fprintf(w, "%s%s%s = ((%s*)", g.indent(), keyDecl, keyIdent.Name, keyType)
-			g.emitExpr(w, stmt.X)
-			fmt.Fprint(w, "->keys)[_i];\n")
+			fmt.Fprintf(w, "%s%s%s = ((%s*)_m->keys)[_i];\n", g.indent(), keyDecl, keyIdent.Name, keyType)
 		}
 	}
 
@@ -146,15 +150,16 @@ func (g *Generator) emitMapRange(w io.Writer, stmt *ast.RangeStmt) {
 			if stmt.Tok == token.ASSIGN {
 				valDecl = ""
 			}
-			fmt.Fprintf(w, "%s%s%s = ((%s*)", g.indent(), valDecl, valIdent.Name, valType)
-			g.emitExpr(w, stmt.X)
-			fmt.Fprint(w, "->vals)[_i];\n")
+			fmt.Fprintf(w, "%s%s%s = ((%s*)_m->vals)[_i];\n", g.indent(), valDecl, valIdent.Name, valType)
 		}
 	}
 
 	g.state.depth--
 
 	g.emitBlock(w, stmt.Body)
+	fmt.Fprintf(w, "%s}\n", g.indent())
+
+	g.state.depth--
 	fmt.Fprintf(w, "%s}\n", g.indent())
 }
 

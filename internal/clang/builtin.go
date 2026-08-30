@@ -51,11 +51,12 @@ func (g *Generator) emitBuiltin(w io.Writer, call *ast.CallExpr, ident *ast.Iden
 		}
 	}
 
-	// len on maps emits m->len since maps are pointers.
+	// len on maps emits so_map_len macro.
 	if bi.Name() == "len" && len(call.Args) == 1 {
 		if _, ok := g.types.TypeOf(call.Args[0]).Underlying().(*types.Map); ok {
-			g.emitExpr(w, call.Args[0])
-			fmt.Fprint(w, "->len")
+			fmt.Fprint(w, "so_map_len(")
+			g.emitMacroArg(w, call.Args[0])
+			fmt.Fprint(w, ")")
 			return true
 		}
 	}

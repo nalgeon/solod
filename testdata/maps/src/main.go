@@ -466,6 +466,39 @@ func main() {
 		}
 	}
 	{
+		// Nil: len of a nil map is zero.
+		var m map[string]int
+		if len(m) != 0 {
+			panic("len(nil map) != 0")
+		}
+		if len((map[string]int)(nil)) != 0 {
+			panic("len((map[string]int)(nil)) != 0")
+		}
+	}
+	{
+		// Nil: reading from a nil map returns the zero value.
+		var m map[string]int
+		if m["a"] != 0 {
+			panic("nil map get")
+		}
+		v, ok := m["a"]
+		if v != 0 || ok {
+			panic("nil map comma-ok")
+		}
+	}
+	{
+		// Nil: a range over a nil map is a no-op.
+		var m map[string]int
+		n := 0
+		for k, v := range m {
+			_, _ = k, v
+			n++
+		}
+		if n != 0 {
+			panic("range over nil map")
+		}
+	}
+	{
 		// Pass map to function
 		m := map[string]int{"a": 10, "b": 20}
 		if takeMap(m) != 30 {

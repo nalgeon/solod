@@ -256,12 +256,12 @@ so_int so_map_nextpow2(so_int n) {
 
 // map_find looks up a key in the map.
 // If found, copies the value to out_val (when non-NULL) and sets *found = true.
-// If not found, sets *found = false and leaves out_val unchanged.
+// If not found or the map is nil, sets *found = false and leaves out_val unchanged.
 void so_map_find(const so_Map* m, const void* key, size_t key_size,
                  void* out_val, size_t val_size,
                  uint64_t hash, bool* found,
                  bool (*eq)(const void*, const void*, size_t)) {
-    if (m->cap == 0) {
+    if (m == NULL || m->cap == 0) {
         *found = false;
         return;
     }
@@ -286,11 +286,13 @@ void so_map_find(const so_Map* m, const void* key, size_t key_size,
 }
 
 // map_set_impl inserts or updates a key-value pair in the map.
-// Panics if the map is full and the key is not found.
+// Panics if the map is nil, or if the map is full and the key is not found.
 void so_map_set_impl(so_Map* m, const void* key, size_t key_size,
                      const void* val, size_t val_size,
                      uint64_t hash,
                      bool (*eq)(const void*, const void*, size_t)) {
+    if (m == NULL)
+        so_panic("assignment to entry in nil map");
     size_t mask = m->cap - 1;
     size_t step = (size_t)(hash >> 32) | 1;
     size_t idx = (size_t)hash & mask;
