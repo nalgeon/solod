@@ -149,6 +149,19 @@ func Assume(cond bool) {
 	}
 }
 
+// Bitcast reinterprets the bits of v as a value of type Dst.
+// Dst and Src must have the same size.
+//
+// Use it instead of a pointer conversion such as
+// *(*float64)(unsafe.Pointer(&b)), which breaks C's aliasing rules.
+//
+//	memcpy(&dst, &v, sizeof(Src))
+//
+//so:extern
+func Bitcast[Dst, Src any](v Src) Dst {
+	return *(*Dst)(unsafe.Pointer(&v))
+}
+
 // Bytes wraps a raw byte pointer and length into a []byte without copying.
 // If ptr is nil, returns nil.
 //

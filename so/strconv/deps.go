@@ -4,16 +4,16 @@
 
 package strconv
 
-import "unsafe"
+import "solod.dev/so/c"
 
 // Implementations to avoid importing other dependencies.
 
 // package math
 
-func float64frombits(b uint64) float64 { return *(*float64)(unsafe.Pointer(&b)) }
-func float32frombits(b uint32) float32 { return *(*float32)(unsafe.Pointer(&b)) }
-func float64bits(f float64) uint64     { return *(*uint64)(unsafe.Pointer(&f)) }
-func float32bits(f float32) uint32     { return *(*uint32)(unsafe.Pointer(&f)) }
+func float64frombits(b uint64) float64 { return c.Bitcast[float64](b) }
+func float32frombits(b uint32) float32 { return c.Bitcast[float32](b) }
+func float64bits(f float64) uint64     { return c.Bitcast[uint64](f) }
+func float32bits(f float32) uint32     { return c.Bitcast[uint32](f) }
 
 func floatInf(sign int) float64 {
 	var v uint64

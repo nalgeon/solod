@@ -22,12 +22,11 @@ This document lists the main changes in the So version in development.
   [Name overrides](#c-field-name-override) ·
   [Variadic nodecay](#variadic-nodecay) ·
   [Target-width types](#target-width-c-types) ·
-  [Const void](#const-void) ·
-  [String and slice data](#string-and-slice-data) ·
-  [Assume](#assume)
+  [Const void](#const-void)
 - Safety:
   [Assertions](#assertions)
 - Stdlib:
+  [c](#c) ·
   [crypto/crand](#cryptocrand) ·
   [encoding/json](#encodingjson) ·
   [fmt](#fmt) ·
@@ -432,21 +431,21 @@ so_ssize_t find_first(const void* items, size_t count, size_t size,
 
 [79daa3d](https://github.com/solod-dev/solod/commit/79daa3d1a18e5f85e0982ee81b9cf8aef3813b41)
 
-### String and slice data
+## Safety
 
-`c.StringData` and `c.SliceData` return a pointer to the string or slice data, typed as `*T`:
+### Assertions
 
-```go
-b := []byte{1, 2, 3}
-p := c.SliceData[c.UChar](b)     // unsigned char*
-q := c.StringData[c.UChar]("ab") // unsigned char*
+Assertions are on by default and no longer tied to `NDEBUG`. The new `-assert` flag removes them:
+
+```sh
+so build -assert=off .
 ```
 
-They replace `(*T)(unsafe.SliceData(b))` and `(*T)(unsafe.StringData(s))`.
+[f67d8ca](https://github.com/solod-dev/solod/commit/f67d8ca3660437d6f648dd905d7784a5fbb180fa)
 
-[79daa3d](https://github.com/solod-dev/solod/commit/79daa3d1a18e5f85e0982ee81b9cf8aef3813b41)
+## Standard library
 
-### Assume
+### c
 
 `c.Assume` states a fact for the C compiler. It generates no code in any build, and `-assert` does not affect it:
 
@@ -462,19 +461,26 @@ The behavior is undefined if the condition is false. Use `c.Assume` only for con
 
 [1488dbc](https://github.com/solod-dev/solod/commit/1488dbc2840a9a1cdee264ee6a76e5992d801568)
 
-## Safety
+`c.Bitcast` reads the bits of a value as another type of the same size:
 
-### Assertions
-
-Assertions are on by default and no longer tied to `NDEBUG`. The new `-assert` flag removes them:
-
-```sh
-so build -assert=off .
+```go
+bits := c.Bitcast[uint64](1.0)   // 0x3ff0000000000000
+f := c.Bitcast[float64](bits)    // 1.0
 ```
 
-[f67d8ca](https://github.com/solod-dev/solod/commit/f67d8ca3660437d6f648dd905d7784a5fbb180fa)
+Use it instead of a pointer conversion such as `*(*float64)(unsafe.Pointer(&b))`. C forbids a read through a pointer of another type, and a C compiler with `-fstrict-aliasing` can miscompile it. `c.Bitcast` copies the bytes instead.
 
-## Standard library
+`c.StringData` and `c.SliceData` return a pointer to the string or slice data, typed as `*T`:
+
+```go
+b := []byte{1, 2, 3}
+p := c.SliceData[c.UChar](b)     // unsigned char*
+q := c.StringData[c.UChar]("ab") // unsigned char*
+```
+
+They replace `(*T)(unsafe.SliceData(b))` and `(*T)(unsafe.StringData(s))`.
+
+[79daa3d](https://github.com/solod-dev/solod/commit/79daa3d1a18e5f85e0982ee81b9cf8aef3813b41)
 
 ### crypto/crand
 

@@ -23,6 +23,33 @@ func TestExtern(t *testing.T) {
 	}
 }
 
+func TestBitcast(t *testing.T) {
+	// A float and its IEEE 754 bits convert both ways.
+	if got := c.Bitcast[uint64](1.0); got != 0x3FF0000000000000 {
+		t.Errorf("Bitcast[uint64](1.0) = %x, want 3ff0000000000000", got)
+	}
+	if got := c.Bitcast[float64](uint64(0x3FF0000000000000)); got != 1.0 {
+		t.Errorf("Bitcast[float64](0x3ff0000000000000) = %v, want 1", got)
+	}
+	if got := c.Bitcast[uint32](float32(1.0)); got != 0x3F800000 {
+		t.Errorf("Bitcast[uint32](1.0) = %x, want 3f800000", got)
+	}
+	if got := c.Bitcast[float32](uint32(0x3F800000)); got != 1.0 {
+		t.Errorf("Bitcast[float32](0x3f800000) = %v, want 1", got)
+	}
+
+	// A round trip returns the original bits.
+	var bits uint64 = 0x7FF8000000000001
+	if got := c.Bitcast[uint64](c.Bitcast[float64](bits)); got != bits {
+		t.Errorf("round trip = %x, want %x", got, bits)
+	}
+
+	// A signed value keeps its bit pattern.
+	if got := c.Bitcast[uint32](int32(-1)); got != 0xFFFFFFFF {
+		t.Errorf("Bitcast[uint32](-1) = %x, want ffffffff", got)
+	}
+}
+
 func TestAssert(t *testing.T) {
 	_ = t
 	a, b := 11, 11

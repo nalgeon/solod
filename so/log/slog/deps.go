@@ -4,11 +4,11 @@
 
 package slog
 
-import "unsafe"
+import "solod.dev/so/c"
 
 // Implementations to avoid importing other dependencies.
 
 // package math
 
-func float64bits(f float64) uint64     { return *(*uint64)(unsafe.Pointer(&f)) }
-func float64frombits(b uint64) float64 { return *(*float64)(unsafe.Pointer(&b)) }
+func float64bits(f float64) uint64     { return c.Bitcast[uint64](f) }
+func float64frombits(b uint64) float64 { return c.Bitcast[float64](b) }

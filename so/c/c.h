@@ -15,6 +15,17 @@ typedef intptr_t so_ssize_t;
 
 #define c_Alloca(T, n) ((T*)so_alloca(sizeof(T) * (size_t)(n)))
 
+// A pointer conversion breaks C's aliasing rules,
+// so the value goes through memcpy.
+#define c_Bitcast(Dst, Src, v) ({               \
+    _Static_assert(sizeof(Src) == sizeof(Dst),  \
+                   "c.Bitcast: size mismatch"); \
+    Src _bcsrc = (v);                           \
+    Dst _bcdst;                                 \
+    memcpy(&_bcdst, &_bcsrc, sizeof(Src));      \
+    _bcdst;                                     \
+})
+
 static inline so_Slice c_Bytes(void* ptr, so_int n) {
     return ptr ? (so_Slice){ptr, n, n} : (so_Slice){};
 }
