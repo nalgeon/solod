@@ -16,6 +16,10 @@ typedef struct shape {
     so_int (*area)(void* self);
 } shape;
 
+static inline so_unused so_int shape_area(shape self) {
+    return self.area(self.self);
+}
+
 typedef struct rect {
     so_int width;
     so_int height;
@@ -193,7 +197,7 @@ int main(void) {
         shape sh = (shape){.self = &r, .area = rect_area};
         a = &sh;
         shape ashape = (*(shape*)a);
-        if (ashape.area(ashape.self) != rect_area(&r)) {
+        if (shape_area(ashape) != rect_area(&r)) {
             so_panic("want a.(shape) == shape(&r)");
         }
     }

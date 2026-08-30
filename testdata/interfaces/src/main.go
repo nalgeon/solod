@@ -5,6 +5,12 @@ type Shape interface {
 	Perim(n int) int
 }
 
+// Painter declares its methods with unnamed and blank parameters.
+type Painter interface {
+	Paint(int, string) int
+	Fill(_ int) int
+}
+
 type Canvas struct {
 	name  string
 	shape Shape
@@ -20,6 +26,14 @@ func (r *Rect) Area() int {
 
 func (r *Rect) Perim(n int) int {
 	return n * (2*r.width + 2*r.height)
+}
+
+func (r *Rect) Paint(n int, _ string) int {
+	return n * r.width
+}
+
+func (r *Rect) Fill(n int) int {
+	return n + r.height
 }
 
 func calcShape(s Shape) int {
@@ -51,6 +65,13 @@ func shapeCheckAssign(s Shape) bool {
 
 func nilShape() Shape {
 	return nil
+}
+
+var shapeCalls int
+
+func countShape(r *Rect) Shape {
+	shapeCalls++
+	return r
 }
 
 func main() {
@@ -154,6 +175,42 @@ func main() {
 		_ = n
 		if s.Area() != 50 {
 			panic("s.Area() != 50")
+		}
+	}
+	{
+		// Call interface method as function.
+		s := Shape(&r)
+		area := Shape.Area(s)
+		if area != 50 {
+			panic("Shape.Area(s) != 50")
+		}
+	}
+	{
+		// A method call evaluates the interface value once.
+		shapeCalls = 0
+		if countShape(&r).Area() != 50 {
+			panic("countShape(&r).Area() != 50")
+		}
+		if shapeCalls != 1 {
+			panic("shapeCalls != 1")
+		}
+	}
+	{
+		// Interface methods with unnamed and blank parameters.
+		var p Painter = &r
+		if p.Paint(2, "x") != 20 {
+			panic("p.Paint(2, \"x\") != 20")
+		}
+		if p.Fill(1) != 6 {
+			panic("p.Fill(1) != 6")
+		}
+	}
+	{
+		// Method call through a pointer to an interface.
+		s := Shape(&r)
+		p := &s
+		if (*p).Area() != 50 {
+			panic("(*p).Area() != 50")
 		}
 	}
 }

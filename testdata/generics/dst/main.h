@@ -21,6 +21,10 @@ typedef struct main_Stringer {
     so_String (*String)(void* self);
 } main_Stringer;
 
+static inline so_String main_Stringer_String(main_Stringer self) {
+    return self.String(self.self);
+}
+
 // -- Functions and methods --
 
 #define add(T, a_, b_) ({ \

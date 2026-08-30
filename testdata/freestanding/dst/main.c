@@ -132,7 +132,7 @@ int main(void) {
     {
         // encoding
         encoding_TextAppender app = (encoding_TextAppender){.self = &(hexWord){0x0a}, .AppendText = hexWord_AppendText};
-        so_R_slice_err _res4 = app.AppendText(app.self, so_make_slice(so_byte, 0, 2));
+        so_R_slice_err _res4 = encoding_TextAppender_AppendText(app, so_make_slice(so_byte, 0, 2));
         so_Slice out = _res4.val;
         so_Error err = _res4.err;
         check(err.self == NULL, so_str("encoding: append failed"));
@@ -164,7 +164,7 @@ int main(void) {
     {
         // errors
         so_Error err = main_ErrCheck;
-        check(so_string_eq(err.Error(err.self), so_str("check failed")), so_str("errors: wrong text"));
+        check(so_string_eq(so_Error_Error(err), so_str("check failed")), so_str("errors: wrong text"));
     }
     {
         // fmt. The print family works. Print, Println and Printf drop the

@@ -15,6 +15,10 @@ typedef struct rater {
     so_int (*rate)(void* self, so_int);
 } rater;
 
+static inline so_unused so_int rater_rate(rater self, so_int register_) {
+    return self.rate(self.self, register_);
+}
+
 // -- Forward declarations --
 static so_int scale(so_int long_, so_int register_);
 static so_int shadow(so_int long_);

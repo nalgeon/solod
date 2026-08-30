@@ -6,6 +6,7 @@ This document lists the main changes in the So version in development.
   [Type parameters](#type-parameters) ·
   [Constraint interfaces](#constraint-interfaces) ·
   [Interface methods](#interface-methods) ·
+  [Interface dispatch](#interface-dispatch) ·
   [Interface comparison](#interface-comparison) ·
   [Type embedding](#type-embedding) ·
   [Switch statement](#switch-statement) ·
@@ -91,6 +92,23 @@ var s Shape = r // rejected: method Rect.Area has a value receiver
 A pointer receiver (`func (r *Rect) Area() int`) works.
 
 [7e8e8b2](https://github.com/solod-dev/solod/commit/7e8e8b2125af949db9c78d2fab9cf9c1720cfe2a)
+
+### Interface dispatch
+
+Every interface method now emits a dispatch function, so a call on an interface value looks like a call on a concrete type:
+
+```c
+static inline so_int main_Shape_Area(main_Shape self) {
+    return self.Area(self.self);
+}
+
+// s.Area() emits as:
+main_Shape_Area(s);
+```
+
+The generator emits the interface value only once, so a call on a value from a function no longer evaluates it twice. A method expression on an interface (`Shape.Area(s)`) works too.
+
+An interface declaration inside a function is now rejected. Generic interfaces are also rejected.
 
 ### Interface comparison
 

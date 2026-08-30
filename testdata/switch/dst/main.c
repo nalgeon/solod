@@ -390,7 +390,7 @@ int main(void) {
             if (_sw23.self == NULL) {
                 so_panic("unexpected sh == nil");
             } else {
-                if (sh.Area(sh.self) != 4) {
+                if (main_Shape_Area(sh) != 4) {
                     so_panic("want sh.Area() == 4");
                 }
             }

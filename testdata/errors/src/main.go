@@ -75,6 +75,29 @@ func main() {
 		var nilErr error
 		println("err =", nilErr)
 	}
+	{
+		// Error comparison.
+		err1 := makeTea(42)
+		err2 := makeTea(42)
+		if err1 != err2 {
+			panic("want err1 == err2")
+		}
+		if err1 != ErrOutOfTea {
+			panic("want err1 == ErrOutOfTea")
+		}
+	}
+	{
+		// Error method call.
+		if ErrOutOfTea.Error() != "no more tea available" {
+			panic("unexpected .Error() result")
+		}
+	}
+	{
+		// Error method expression.
+		if error.Error(ErrOutOfTea) != "no more tea available" {
+			panic("unexpected error.Error() result")
+		}
+	}
 
 	// Not supported: errors can only be defined at package level.
 	// errNotSupported := errors.New("operation not supported")

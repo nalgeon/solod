@@ -1,0 +1,3 @@
+main.go:3:6: generic interfaces are not supported
+type box[T any] interface {
+     ^here

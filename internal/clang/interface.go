@@ -9,8 +9,17 @@ import (
 	"strings"
 )
 
-// emitInterfaceTypeSpec emits a typedef struct with void* self and function pointers.
+// emitInterfaceTypeSpec emits a typedef struct with void* self and function pointers,
+// followed by a dispatch function for every method.
 func (g *Generator) emitInterfaceTypeSpec(w io.Writer, spec *ast.TypeSpec) {
+	if spec.TypeParams != nil {
+		g.fail(spec, "generic interfaces are not supported")
+	}
+	if !g.state.atTopLevel() {
+		// The dispatch functions go next to the typedef, and C does not
+		// allow a function definition inside a function body.
+		g.fail(spec, "interface declaration inside a function is not supported")
+	}
 	typ := types.Unalias(g.types.Defs[spec.Name].Type()).(*types.Named)
 	iface := typ.Underlying().(*types.Interface)
 	cName := g.declSymbolName(g.types.Defs[spec.Name])
@@ -30,6 +39,89 @@ func (g *Generator) emitInterfaceTypeSpec(w io.Writer, spec *ast.TypeSpec) {
 		fmt.Fprintf(w, "    %s (*%s)(%s);\n", retType, m.Name(), params.String())
 	}
 	fmt.Fprintf(w, "} %s;\n", cName)
+	g.emitInterfaceMethods(w, spec, iface, cName)
+}
+
+// emitInterfaceMethods emits a dispatch function for every interface method.
+func (g *Generator) emitInterfaceMethods(w io.Writer, spec *ast.TypeSpec, iface *types.Interface, cName string) {
+	unused := ""
+	if !ast.IsExported(spec.Name.Name) {
+		// The typedef of an unexported interface goes to the .c file,
+		// where the C compiler warns about an uncalled static function.
+		unused = "so_unused "
+	}
+
+	astParams := interfaceMethodParams(spec)
+	for m := range iface.Methods() {
+		sig := m.Type().(*types.Signature)
+		retType := g.returnType(spec, sig)
+
+		params := []string{cName + " self"}
+		args := []string{"self.self"}
+		names := interfaceParamNames(astParams[m.Name()])
+		if len(names) != sig.Params().Len() {
+			// A mismatch means this method isn't declared in the interface,
+			// like with an embedded interface, which is rejected elsewhere.
+			g.fail(spec, "the declaration of method %s has %d parameters, but its type has %d",
+				m.Name(), len(names), sig.Params().Len())
+		}
+		for i, name := range names {
+			ct := g.mapTypeDecl(spec, sig.Params().At(i).Type())
+			params = append(params, ct.Decl(name))
+			args = append(args, name)
+		}
+
+		ret := "return "
+		if retType == "void" {
+			ret = ""
+		}
+		fmt.Fprintf(w, "\nstatic inline %s%s %s_%s(%s) {\n", unused, retType, cName, m.Name(), strings.Join(params, ", "))
+		fmt.Fprintf(w, "    %sself.%s(%s);\n", ret, m.Name(), strings.Join(args, ", "))
+		fmt.Fprint(w, "}\n")
+	}
+}
+
+// interfaceMethodParams returns the parameter list of every method
+// in an interface declaration, by method name.
+func interfaceMethodParams(spec *ast.TypeSpec) map[string]*ast.FieldList {
+	params := map[string]*ast.FieldList{}
+	itype, ok := spec.Type.(*ast.InterfaceType)
+	if !ok {
+		return params
+	}
+	for _, method := range itype.Methods.List {
+		ftype, ok := method.Type.(*ast.FuncType)
+		if !ok || len(method.Names) != 1 {
+			// Not a method. An embedded interface is rejected elsewhere.
+			continue
+		}
+		params[method.Names[0].Name] = ftype.Params
+	}
+	return params
+}
+
+// interfaceParamNames returns the C parameter names of an interface method.
+// The declaration can omit a parameter name or use the blank identifier;
+// such a parameter is named after its position (_0, _1, ...).
+func interfaceParamNames(params *ast.FieldList) []string {
+	if params == nil {
+		return nil
+	}
+	var names []string
+	for _, param := range params.List {
+		if len(param.Names) == 0 {
+			names = append(names, blankParamName(len(names)))
+			continue
+		}
+		for _, n := range param.Names {
+			if n.Name == "_" {
+				names = append(names, blankParamName(len(names)))
+				continue
+			}
+			names = append(names, n.Name)
+		}
+	}
+	return names
 }
 
 // emitInterfaceLit emits a compound literal that wraps a concrete value as an interface.

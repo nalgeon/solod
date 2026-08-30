@@ -76,9 +76,32 @@ int main(void) {
         // Printing errors.
         so_Error err = makeTea(42);
         so_println("%s %s", "err =", so_error_cstr(err));
-        so_println("%s %.*s", "err text =", err.Error(err.self).len, err.Error(err.self).ptr);
+        so_println("%s %.*s", "err text =", so_Error_Error(err).len, so_Error_Error(err).ptr);
         so_Error nilErr = {};
         so_println("%s %s", "err =", so_error_cstr(nilErr));
+    }
+    {
+        // Error comparison.
+        so_Error err1 = makeTea(42);
+        so_Error err2 = makeTea(42);
+        if (err1.self != err2.self) {
+            so_panic("want err1 == err2");
+        }
+        if (err1.self != main_ErrOutOfTea.self) {
+            so_panic("want err1 == ErrOutOfTea");
+        }
+    }
+    {
+        // Error method call.
+        if (so_string_ne(so_Error_Error(main_ErrOutOfTea), so_str("no more tea available"))) {
+            so_panic("unexpected .Error() result");
+        }
+    }
+    {
+        // Error method expression.
+        if (so_string_ne(so_Error_Error(main_ErrOutOfTea), so_str("no more tea available"))) {
+            so_panic("unexpected error.Error() result");
+        }
     }
     return 0;
 }

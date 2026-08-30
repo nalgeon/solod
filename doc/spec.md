@@ -933,10 +933,6 @@ r := s.(*Rect)        // direct assertion
 
 Empty interfaces (`interface{}` and `any`) are translated to `void*`.
 
-Converting between named interfaces is not supported: no type assertions like `iface.(AnotherIface)` and no type switches.
-
-Embedded interfaces are not supported; list the methods explicitly instead.
-
 Two interfaces are equal when they hold the same pointer, and an interface compares with `nil` as expected. Comparing an interface with a concrete type is not supported:
 
 ```go
@@ -945,6 +941,12 @@ if s == nil { }   // supported
 if s == other { } // supported, other is a Shape
 if s == &r { }    // not supported
 ```
+
+Converting between named interfaces is not supported: no type assertions like `iface.(AnotherIface)` and no type switches.
+
+Embedded interfaces are not supported; list the methods explicitly instead.
+
+Interface declarations inside a function are not supported. Generic interfaces are not supported.
 
 ## Any
 

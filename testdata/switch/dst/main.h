@@ -10,6 +10,10 @@ typedef struct main_Shape {
     so_int (*Area)(void* self);
 } main_Shape;
 
+static inline so_int main_Shape_Area(main_Shape self) {
+    return self.Area(self.self);
+}
+
 typedef struct main_Square {
     so_int side;
 } main_Square;

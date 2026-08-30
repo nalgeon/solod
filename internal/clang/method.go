@@ -71,18 +71,9 @@ func (g *Generator) emitMethodCall(w io.Writer, sel *ast.SelectorExpr, call *ast
 		named = types.Unalias(recv).(*types.Named)
 	}
 
-	// Interface method dispatch: s.Perim(2) → s.Perim(s.self, 2)
-	if isInterfaceType(named) {
-		g.emitExpr(w, sel.X)
-		fmt.Fprintf(w, ".%s(", sel.Sel.Name)
-		g.emitExpr(w, sel.X)
-		fmt.Fprint(w, ".self")
-		g.emitMethodCallArgs(w, sel, call, sig, "", "")
-		fmt.Fprint(w, ")")
-		return
-	}
-
-	// Regular method call: r.Area() → main_Rect_Area(&r)
+	// Method call: r.Area() → main_Rect_Area(&r).
+	// An interface method call looks the same because the generator emits
+	// a dispatch function for each interface method: s.Area() → main_Shape_Area(s).
 	cStructType := g.mapTypeName(sel, named)
 	cName := cStructType + "_" + sel.Sel.Name
 	fmt.Fprintf(w, "%s(", cName)

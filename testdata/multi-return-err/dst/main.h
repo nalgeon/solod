@@ -11,6 +11,10 @@ typedef struct main_Reader {
     so_R_int_err (*Read)(void* self, so_int);
 } main_Reader;
 
+static inline so_R_int_err main_Reader_Read(main_Reader self, so_int buf) {
+    return self.Read(self.self, buf);
+}
+
 typedef struct main_File {
     so_int size;
 } main_File;

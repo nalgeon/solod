@@ -636,6 +636,11 @@ static inline so_String so_error_error(void* self) {
     return (so_String){self, (so_int)strlen(self)};
 }
 
+// so_Error_Error calls the Error method of an error value.
+static inline so_String so_Error_Error(so_Error self) {
+    return so_error_error(self.self);
+}
+
 // so_error_cstr returns the error message as a C string.
 // An error with a non-null self always carries a method pointer.
 // The assume signals this to the compiler.
