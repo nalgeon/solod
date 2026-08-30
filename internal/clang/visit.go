@@ -360,6 +360,13 @@ func (g *Generator) emitVarSpec(w io.Writer, spec *ast.ValueSpec, dirs directive
 			typ := g.types.Defs[name].Type()
 			ct := g.mapTypeDecl(spec, typ)
 
+			// An array with an initializer needs a declaration of its own.
+			if ct.IsArray() && len(spec.Values) > i {
+				g.emitArrayVarDecl(w, ct, name.Name, spec.Values[i])
+				i++
+				continue
+			}
+
 			// Emit the leading declarator: "T name = init".
 			fmt.Fprintf(w, "%s%s = ", g.indent(), ct.Decl(name.Name))
 			emitInit(i, typ)
@@ -425,6 +432,13 @@ func (g *Generator) emitVarSpec(w io.Writer, spec *ast.ValueSpec, dirs directive
 			// Has explicit initializer.
 			if g.state.atTopLevel() {
 				g.checkStaticInit(spec.Values[i])
+			}
+			// A local array needs a memcpy unless the initializer is a literal.
+			// A package-level array always has a literal, because
+			// checkStaticInit rejects any other initializer.
+			if ct.IsArray() && !g.state.atTopLevel() {
+				g.emitArrayVarDecl(w, ct, cName, spec.Values[i])
+				continue
 			}
 			fmt.Fprintf(w, "%s%s%s = ", g.indent(), specifier, ct.Decl(cName))
 			g.emitExprAsType(w, spec, spec.Values[i], typ)

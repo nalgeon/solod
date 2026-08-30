@@ -139,18 +139,7 @@ func (g *Generator) emitDefine(w io.Writer, stmt *ast.AssignStmt) {
 
 		if ct.IsArray() {
 			// Arrays can't be grouped with other variables.
-			if _, isLit := rhs[i].(*ast.CompositeLit); isLit {
-				// Composite literal: so_int d[3] = {1, 2, 3};
-				fmt.Fprintf(w, "%s%s = ", g.indent(), ct.Decl(ident.Name))
-				g.emitExpr(w, rhs[i])
-				fmt.Fprint(w, ";\n")
-			} else {
-				// Variable: declaration + memcpy.
-				fmt.Fprintf(w, "%s%s;\n", g.indent(), ct.Decl(ident.Name))
-				fmt.Fprintf(w, "%smemcpy(%s, ", g.indent(), ident.Name)
-				g.emitExpr(w, rhs[i])
-				fmt.Fprintf(w, ", sizeof(%s));\n", ident.Name)
-			}
+			g.emitArrayVarDecl(w, ct, ident.Name, rhs[i])
 			i++
 			continue
 		}

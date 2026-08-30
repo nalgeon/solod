@@ -1,0 +1,3 @@
+main.go:5:7: cannot convert [3]int to [3]int; copy the elements instead
+	o := [3]int(c)
+	     ^here

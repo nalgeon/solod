@@ -199,6 +199,33 @@ func (g *Generator) emitSliceExpr(w io.Writer, n *ast.SliceExpr) {
 	}
 }
 
+// emitArrayVarDecl emits a local array declaration with an initializer.
+func (g *Generator) emitArrayVarDecl(w io.Writer, ct CType, name string, value ast.Expr) {
+	if _, ok := value.(*ast.CompositeLit); ok {
+		// An array literal emits as a C brace initializer.
+		fmt.Fprintf(w, "%s%s = ", g.indent(), ct.Decl(name))
+		g.emitExpr(w, value)
+		fmt.Fprint(w, ";\n")
+		return
+	}
+	// C has no array assignment, so any other value needs a separate
+	// declaration and a memcpy, e.g.:
+	// var a [3]int = b -> so_int a[3]; memcpy(a, b, sizeof(a));
+	fmt.Fprintf(w, "%s%s;\n", g.indent(), ct.Decl(name))
+	fmt.Fprintf(w, "%smemcpy(%s, ", g.indent(), name)
+	g.emitExpr(w, value)
+	fmt.Fprintf(w, ", sizeof(%s));\n", name)
+}
+
+// checkArrayConv rejects a conversion between array types.
+func (g *Generator) checkArrayConv(n *ast.CallExpr, target types.Type, arg ast.Expr) {
+	if _, ok := target.Underlying().(*types.Array); !ok {
+		return
+	}
+	g.fail(n, "cannot convert %s to %s; copy the elements instead",
+		g.typeString(g.types.TypeOf(arg)), g.typeString(target))
+}
+
 // checkArrayValue fails if expr initializes an array-typed target
 // with anything other than an array literal. C only allows a brace
 // initializer there, so an array value has no valid translation.

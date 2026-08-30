@@ -386,6 +386,7 @@ func (g *Generator) emitCallExpr(w io.Writer, n *ast.CallExpr) {
 		}
 		// Regular type conversion (e.g. int(3.14)).
 		g.checkStructConv(n, tv.Type, n.Args[0])
+		g.checkArrayConv(n, tv.Type, n.Args[0])
 		cType := g.mapTypeName(n, tv.Type)
 		fmt.Fprintf(w, "(%s)", cType)
 		g.emitParenExpr(w, n.Args[0])

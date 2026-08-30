@@ -309,5 +309,22 @@ func main() {
 			panic("want at([11, 22, 33], 1) == 22")
 		}
 	}
+	{
+		// Array copy in a var declaration.
+		src := [3]int{1, 2, 3}
+		var d1 [3]int = src
+		var d2, d3 [3]int = src, src
+		d1[0] = 99
+		d2[0] = 98
+		if src[0] != 1 || d1[0] != 99 || d2[0] != 98 || d3[0] != 1 {
+			panic("want an independent copy")
+		}
+		var b box
+		b.nums = src
+		var field [3]int = b.nums
+		if field[2] != 3 {
+			panic("want field == {1, 2, 3}")
+		}
+	}
 	_ = aranges
 }

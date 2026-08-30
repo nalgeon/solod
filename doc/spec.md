@@ -254,7 +254,7 @@ s := nums[1:4]  // s is a so_Slice
 
 Arrays decay to pointers when passed to functions (no value semantics on calls).
 
-Array assignment uses `memcpy`.
+Array assignment uses `memcpy`. Conversion between array types is not supported.
 
 An array-typed element of a composite literal must be an array literal:
 

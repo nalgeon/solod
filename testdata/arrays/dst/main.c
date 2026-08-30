@@ -318,6 +318,28 @@ int main(void) {
             so_panic("want at([11, 22, 33], 1) == 22");
         }
     }
+    {
+        // Array copy in a var declaration.
+        so_int src[3] = {1, 2, 3};
+        so_int d1[3];
+        memcpy(d1, src, sizeof(d1));
+        so_int d2[3];
+        memcpy(d2, src, sizeof(d2));
+        so_int d3[3];
+        memcpy(d3, src, sizeof(d3));
+        d1[0] = 99;
+        d2[0] = 98;
+        if (src[0] != 1 || d1[0] != 99 || d2[0] != 98 || d3[0] != 1) {
+            so_panic("want an independent copy");
+        }
+        box b = {};
+        memcpy(b.nums, src, sizeof(b.nums));
+        so_int field[3];
+        memcpy(field, b.nums, sizeof(field));
+        if (field[2] != 3) {
+            so_panic("want field == {1, 2, 3}");
+        }
+    }
     (void)aranges;
     return 0;
 }
