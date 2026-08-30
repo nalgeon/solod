@@ -166,6 +166,21 @@ func (g *Generator) checkEmbeddedFields(st *ast.StructType) {
 	}
 }
 
+// checkStructConv rejects a conversion between two incompatible struct types.
+// The types are compatible only if they have the same underlying type.
+func (g *Generator) checkStructConv(n *ast.CallExpr, target types.Type, arg ast.Expr) {
+	targetStruct := target.Underlying()
+	if _, ok := targetStruct.(*types.Struct); !ok {
+		return
+	}
+	argType := g.types.TypeOf(arg)
+	if targetStruct == argType.Underlying() {
+		return
+	}
+	g.fail(n, "cannot convert %s to %s; copy the fields instead",
+		g.typeString(argType), g.typeString(target))
+}
+
 // fieldNameOf resolves the C name for a field named by ident, whether ident is
 // a field access selector, a field declaration, or a composite literal key.
 // It falls back to the identifier text when ident does not denote a field, so

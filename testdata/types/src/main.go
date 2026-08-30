@@ -211,4 +211,16 @@ func main() {
 			panic("namer(Ivy) != Ivy")
 		}
 	}
+	{
+		// Conversion between structs with the same underlying type.
+		p := Person{name: "Nina", age: 25}
+		e := Employee(p)
+		if e.name != "Nina" || e.age != 25 {
+			panic("Employee(p) lost the fields")
+		}
+		back := Person(e)
+		if back.name != "Nina" || back.age != 25 {
+			panic("Person(e) lost the fields")
+		}
+	}
 }

@@ -178,5 +178,17 @@ int main(void) {
             so_panic("namer(Ivy) != Ivy");
         }
     }
+    {
+        // Conversion between structs with the same underlying type.
+        main_Person p = (main_Person){.name = so_str("Nina"), .age = 25};
+        main_Employee e = (main_Employee)(p);
+        if (so_string_ne(e.name, so_str("Nina")) || e.age != 25) {
+            so_panic("Employee(p) lost the fields");
+        }
+        main_Person back = (main_Person)(e);
+        if (so_string_ne(back.name, so_str("Nina")) || back.age != 25) {
+            so_panic("Person(e) lost the fields");
+        }
+    }
     return 0;
 }
