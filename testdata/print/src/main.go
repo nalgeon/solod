@@ -18,6 +18,8 @@ func main() {
 	var pString = &vString
 	println(*pString)
 
+	println(true, !vBool, vInt > 0)
+
 	print("a")
 	print()
 	print("b")

@@ -709,6 +709,11 @@ typedef struct { void* val; so_int val2; } so_R_ptr_int;
 
 // --- Printing ---
 
+// so_bool_cstr returns the bool value as a C string.
+static inline const char* so_bool_cstr(bool val) {
+    return val ? "true" : "false";
+}
+
 // print writes the formatted string to stdout.
 // Returns the number of bytes written.
 int so_print(const char* format, ...);

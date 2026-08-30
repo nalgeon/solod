@@ -291,7 +291,8 @@ func (g *Generator) emitPrintCall(w io.Writer, call *ast.CallExpr, name string) 
 	fmt.Fprintf(w, "so_%s(%s", name, format)
 	for _, arg := range call.Args {
 		fmt.Fprint(w, ", ")
-		if g.hasStringType(arg) {
+		switch {
+		case g.hasStringType(arg):
 			if lit, ok := arg.(*ast.BasicLit); ok && lit.Kind == token.STRING {
 				// String literal: emit as a simple C string.
 				fmt.Fprint(w, g.cStringLit(lit))
@@ -302,7 +303,12 @@ func (g *Generator) emitPrintCall(w io.Writer, call *ast.CallExpr, name string) 
 				g.emitPostfixOperand(w, arg)
 				fmt.Fprint(w, ".ptr")
 			}
-		} else {
+		case isBoolType(g.types.TypeOf(arg)):
+			// Bool expression: print the value as true or false.
+			fmt.Fprint(w, "so_bool_cstr(")
+			g.emitMacroArg(w, arg)
+			fmt.Fprint(w, ")")
+		default:
 			g.emitCArg(w, arg)
 		}
 	}
@@ -386,8 +392,8 @@ func (g *Generator) formatSpec(arg ast.Expr, typ types.Type) (spec, macro string
 		return "", ""
 	}
 	switch basic.Kind() {
-	case types.Bool:
-		return "%d", ""
+	case types.Bool, types.UntypedBool:
+		return "%s", ""
 	case types.Float32, types.Float64, types.UntypedFloat:
 		return "%f", ""
 	case types.Int:

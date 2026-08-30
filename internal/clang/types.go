@@ -376,6 +376,12 @@ func (g *Generator) constType(node ast.Node, obj types.Object) types.Type {
 	return types.Typ[types.Uint64]
 }
 
+// isBoolType reports whether t is a boolean type.
+func isBoolType(t types.Type) bool {
+	basic, ok := t.Underlying().(*types.Basic)
+	return ok && basic.Info()&types.IsBoolean != 0
+}
+
 // isErrorType checks if a type is the built-in error interface.
 func isErrorType(typ types.Type) bool {
 	if named, ok := types.Unalias(typ).(*types.Named); ok {
