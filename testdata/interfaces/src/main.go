@@ -113,6 +113,10 @@ func main() {
 		if s3 != nil {
 			panic("want nil interface")
 		}
+		s5 := Shape(nil)
+		if s5 != nil {
+			panic("want nil interface")
+		}
 		isRect := shapeIsRect(nil)
 		if isRect {
 			panic("want isRect == false")

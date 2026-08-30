@@ -113,6 +113,10 @@ int main(void) {
         if (s3.self != NULL) {
             so_panic("want nil interface");
         }
+        main_Shape s5 = (main_Shape){};
+        if (s5.self != NULL) {
+            so_panic("want nil interface");
+        }
         bool isRect = shapeIsRect((main_Shape){});
         if (isRect) {
             so_panic("want isRect == false");

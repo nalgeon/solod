@@ -562,6 +562,20 @@ int main(void) {
         }
     }
     {
+        // Nil slice: convert nil to a slice.
+        so_Slice s = (so_Slice){};
+        if (s.cap != 0 || so_len(s) != 0) {
+            so_panic("want ([]byte)(nil) == nil");
+        }
+        main_Bytes named = (so_Slice){};
+        if (named.cap != 0 || so_len(named) != 0) {
+            so_panic("want Bytes(nil) == nil");
+        }
+        if (so_len(so_bytes_string((so_Slice){})) != 0) {
+            so_panic("want string(([]byte)(nil)) == \"\"");
+        }
+    }
+    {
         // Slice assigned to another variable (shared backing).
         so_Slice s1 = (so_Slice){(so_int[3]){1, 2, 3}, 3, 3};
         so_Slice s2 = s1;

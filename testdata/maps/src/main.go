@@ -459,6 +459,13 @@ func main() {
 		}
 	}
 	{
+		// Nil: convert nil to a map.
+		m := (map[string]int)(nil)
+		if m != nil {
+			panic("want (map[string]int)(nil) == nil")
+		}
+	}
+	{
 		// Pass map to function
 		m := map[string]int{"a": 10, "b": 20}
 		if takeMap(m) != 30 {

@@ -328,6 +328,11 @@ func (g *Generator) emitCallExpr(w io.Writer, n *ast.CallExpr) {
 	}
 
 	if tv, ok := g.types.Types[n.Fun]; ok && tv.IsType() {
+		// Convert nil to the target type (e.g. ([]byte)(nil)).
+		if isNilType(g.types.TypeOf(n.Args[0])) {
+			g.emitExprAsType(w, n, n.Args[0], tv.Type)
+			return
+		}
 		// Convert value to an interface type (e.g. Shape(r)).
 		if isInterfaceType(tv.Type) {
 			iface := tv.Type.Underlying().(*types.Interface)

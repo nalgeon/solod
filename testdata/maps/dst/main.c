@@ -485,6 +485,13 @@ int main(void) {
         }
     }
     {
+        // Nil: convert nil to a map.
+        so_Map* m = NULL;
+        if (m != NULL) {
+            so_panic("want (map[string]int)(nil) == nil");
+        }
+    }
+    {
         // Pass map to function
         so_Map* m = so_map_lit(so_String, so_int, 2, ((so_String[]){so_str("a"), so_str("b")}), ((so_int[]){10, 20}));
         if (takeMap(m) != 30) {

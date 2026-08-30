@@ -31,6 +31,8 @@ func acceptSlice(s []int) {
 	_ = s
 }
 
+type Bytes []byte
+
 func nilSlice() []int {
 	return nil
 }
@@ -570,6 +572,20 @@ func main() {
 		s := nilSlice()
 		if s != nil {
 			panic("want nil from function")
+		}
+	}
+	{
+		// Nil slice: convert nil to a slice.
+		s := ([]byte)(nil)
+		if s != nil || len(s) != 0 {
+			panic("want ([]byte)(nil) == nil")
+		}
+		named := Bytes(nil)
+		if named != nil || len(named) != 0 {
+			panic("want Bytes(nil) == nil")
+		}
+		if len(string(([]byte)(nil))) != 0 {
+			panic("want string(([]byte)(nil)) == \"\"")
 		}
 	}
 	{
