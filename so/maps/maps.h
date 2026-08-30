@@ -17,8 +17,14 @@ static inline uint64_t maps_wymum(uint64_t a, uint64_t b) {
     so_String: maps_hashString(key_ptr, seed),         \
     default: maps_hash(key_ptr, sizeof(K), seed))
 
+// stringEqual compares two string keys through untyped pointers.
+// Extracted from maps_keyEqual to avoid strict-aliasing warnings.
+static inline bool maps_stringEqual(const void* a, const void* b) {
+    return so_string_eq(*(const so_String*)a, *(const so_String*)b);
+}
+
 // equal compares two typed key pointers for equality.
-#define maps_keyEqual(K, a, b)                                       \
-    _Generic((K){},                                                  \
-        so_String: so_string_eq(*(so_String*)(a), *(so_String*)(b)), \
+#define maps_keyEqual(K, a, b)                  \
+    _Generic((K){},                             \
+        so_String: maps_stringEqual((a), (b)),  \
         default: memcmp((a), (b), sizeof(K)) == 0)
