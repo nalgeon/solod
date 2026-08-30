@@ -36,6 +36,7 @@ This document lists the main changes in the So version in development.
   [runtime](#runtime) ·
   [testing](#testing) ·
   [time](#time) ·
+  [unsafe](#unsafe) ·
   [uuid](#uuid)
 - Tooling:
   [so test](#so-test) ·
@@ -575,6 +576,22 @@ A board that counts elapsed time but does not know the date returns 0 seconds fr
 
 [f2c7963](https://github.com/solod-dev/solod/commit/f2c7963cf423014b9a27cd0c48a6fa85e64b44a9) ·
 [2d55a04](https://github.com/solod-dev/solod/commit/2d55a04beff2321d5d4f889eb18807e6bc4a1cf5)
+
+### unsafe
+
+`unsafe.Offsetof` returns the offset of a struct field in bytes:
+
+```go
+type header struct {
+	kind uint8
+	size int64
+}
+
+var h header
+off := unsafe.Offsetof(h.size) // in C: offsetof(header, size)
+```
+
+The field can also come through a pointer (`hp.size`). The offset is a C constant expression, so you can use it in a constant declaration.
 
 ### uuid
 

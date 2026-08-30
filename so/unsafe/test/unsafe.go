@@ -40,6 +40,22 @@ func TestAlignof(t *testing.T) {
 	}
 }
 
+func TestOffsetof(t *testing.T) {
+	var p point
+	if off := unsafe.Offsetof(p.x); off != 0 {
+		t.Error("invalid offsetof(point.x)")
+	}
+	if off := unsafe.Offsetof(p.y); off != ptrSize {
+		t.Error("invalid offsetof(point.y)")
+	}
+
+	pp := &p
+	pp.y = 2
+	if off := unsafe.Offsetof(pp.y); off != ptrSize {
+		t.Error("invalid offsetof(point.y) via pointer")
+	}
+}
+
 func TestString(t *testing.T) {
 	var b = []byte("hello")
 	s := unsafe.String(&b[0], len(b))

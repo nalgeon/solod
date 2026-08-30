@@ -294,6 +294,11 @@ func (g *Generator) emitCallExpr(w io.Writer, n *ast.CallExpr) {
 		return
 	}
 
+	// unsafe.Offsetof intrinsic.
+	if g.emitOffsetof(w, n) {
+		return
+	}
+
 	// Generic function call with explicit type argument (e.g. fn[T](a) or pkg.Fn[T](a)).
 	if indexExpr, ok := n.Fun.(*ast.IndexExpr); ok {
 		if ident := exprIdent(indexExpr.X); ident != nil {

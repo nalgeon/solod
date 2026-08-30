@@ -10,6 +10,7 @@
 #include <inttypes.h>
 #include <stdalign.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -717,6 +718,7 @@ int so_println(const char* format, ...);
 // --- Unsafe ---
 
 #define unsafe_Alignof(x) alignof(so_typeof(x))
+#define unsafe_Offsetof(t, f) offsetof(t, f)
 #define unsafe_Sizeof(x) sizeof(x)
 
 static inline void* unsafe_Add(void* ptr, size_t offset) {

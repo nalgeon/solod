@@ -308,6 +308,29 @@ func (g *Generator) emitPrintCall(w io.Writer, call *ast.CallExpr, name string) 
 	fmt.Fprint(w, ")")
 }
 
+// emitOffsetof emits an unsafe.Offsetof call as offsetof(type, field).
+// Returns false if the call is not unsafe.Offsetof.
+func (g *Generator) emitOffsetof(w io.Writer, call *ast.CallExpr) bool {
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok || sel.Sel.Name != "Offsetof" {
+		return false
+	}
+	if obj, ok := g.types.Uses[sel.Sel].(*types.Builtin); !ok || obj.Pkg() != types.Unsafe {
+		return false
+	}
+	field, ok := ast.Unparen(call.Args[0]).(*ast.SelectorExpr)
+	if !ok {
+		g.fail(call, "unsafe.Offsetof requires a struct field")
+	}
+	structType := g.types.TypeOf(field.X)
+	if ptr, ok := structType.Underlying().(*types.Pointer); ok {
+		structType = ptr.Elem()
+	}
+	fmt.Fprintf(w, "unsafe_Offsetof(%s, %s)",
+		g.mapTypeName(call, structType), g.fieldNameOf(field.Sel))
+	return true
+}
+
 // buildFormatString constructs a C format string for the given print/println call,
 // using the types of the arguments. It breaks out of string literals when macros
 // are needed (e.g. "Value: %" PRId64) to avoid issues with macro expansion.
