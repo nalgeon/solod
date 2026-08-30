@@ -402,7 +402,7 @@ func (c *escapeChecker) isFrameConcat(x *ast.BinaryExpr) bool {
 	if x.Op != token.ADD || !isStringExpr(c.info, x.X) {
 		return false
 	}
-	return !(isStringLit(x.X) && isStringLit(x.Y))
+	return !(isStringLit(c.info, x.X) && isStringLit(c.info, x.Y))
 }
 
 // isFrameAddress reports whether &operand points into the current frame: the

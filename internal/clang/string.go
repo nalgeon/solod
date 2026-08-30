@@ -22,6 +22,9 @@ func (g *Generator) emitStringLitConcat(w io.Writer, expr ast.Expr) {
 	switch e := expr.(type) {
 	case *ast.BasicLit:
 		fmt.Fprint(w, g.cStringLit(e))
+	case *ast.CallExpr:
+		// A constant conversion, for example string('a').
+		fmt.Fprint(w, cStringVal(constant.StringVal(g.types.Types[e].Value)))
 	case *ast.BinaryExpr:
 		g.emitStringLitConcat(w, e.X)
 		fmt.Fprint(w, " ")
@@ -119,14 +122,19 @@ func cStringVal(s string) string {
 	return b.String()
 }
 
-// isStringLit reports whether an expression is a string literal
-// or a chain of string literal additions.
-func isStringLit(expr ast.Expr) bool {
+// isStringLit reports whether the generator emits an expression as a C string
+// literal: a Go string literal, a constant conversion to string, or a chain of
+// additions of these.
+func isStringLit(info *types.Info, expr ast.Expr) bool {
 	switch e := expr.(type) {
 	case *ast.BasicLit:
 		return e.Kind == token.STRING
+	case *ast.CallExpr:
+		// A constant conversion, for example string('a').
+		val := info.Types[e].Value
+		return val != nil && val.Kind() == constant.String
 	case *ast.BinaryExpr:
-		return e.Op == token.ADD && isStringLit(e.X) && isStringLit(e.Y)
+		return e.Op == token.ADD && isStringLit(info, e.X) && isStringLit(info, e.Y)
 	}
 	return false
 }

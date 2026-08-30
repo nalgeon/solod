@@ -1,5 +1,10 @@
 #include "main.h"
 
+// -- Variables and constants --
+
+// Emitted as adjacent string literals.
+static const so_unused so_String quoted = so_str("\"" "ok" "\"");
+
 // -- Implementation --
 
 int main(void) {
@@ -163,6 +168,9 @@ int main(void) {
         const so_unused so_String c = so_str("�");
         if (so_string_ne(c, so_str("�"))) {
             so_panic("want c == replacement char");
+        }
+        if (so_string_ne(quoted, so_str("\"ok\""))) {
+            so_panic("want quoted == \"ok\"");
         }
     }
     {

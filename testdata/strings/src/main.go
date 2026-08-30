@@ -4,6 +4,9 @@ package main
 type Byte byte
 type Rune rune
 
+// Emitted as adjacent string literals.
+const quoted = string('"') + "ok" + string('"')
+
 func main() {
 	{
 		// Empty string.
@@ -145,6 +148,9 @@ func main() {
 		const c = string(1 << 100)
 		if c != "\uFFFD" {
 			panic("want c == replacement char")
+		}
+		if quoted != `"ok"` {
+			panic("want quoted == \"ok\"")
 		}
 	}
 	{

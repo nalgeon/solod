@@ -110,7 +110,7 @@ func (g *Generator) emitBinaryExpr(w io.Writer, n *ast.BinaryExpr) {
 
 	// String addition.
 	if n.Op == token.ADD && g.hasStringType(n.X) {
-		if isStringLit(n.X) && isStringLit(n.Y) {
+		if isStringLit(g.types, n.X) && isStringLit(g.types, n.Y) {
 			fmt.Fprint(w, "so_str(")
 			g.emitStringLitConcat(w, n)
 			fmt.Fprint(w, ")")

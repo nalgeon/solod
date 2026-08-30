@@ -153,6 +153,7 @@ func escStarRead(a, b string) BoxStr {
 
 func okConstConcat() string               { return "a" + "b" }
 func okConstToStr() string                { return string(65) }
+func okConstConvConcat() string           { return string(65) + "b" }
 func okReturnParam(s string) string       { return s }
 func okReturnPtrParam(p *int) *int        { return p }
 func okParamSubslice(s string) string     { return s[1:] }
