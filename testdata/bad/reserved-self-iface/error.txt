@@ -1,0 +1,3 @@
+main.go:4:2: identifier "self" is reserved by the compiler; rename it
+	self() int
+	^here

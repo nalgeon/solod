@@ -46,7 +46,7 @@ func (g *Generator) collectStructFieldTags(st *ast.StructType) {
 			if len(field.Names) != 1 {
 				g.fail(field, "c field tag requires exactly one field name")
 			}
-			if !isCIdent(override) || reservedNames[override] {
+			if !isCIdent(override) || reservedC[override] {
 				g.fail(field, "invalid C field name %q in c tag", override)
 			}
 			if v, ok := g.types.Defs[field.Names[0]].(*types.Var); ok {

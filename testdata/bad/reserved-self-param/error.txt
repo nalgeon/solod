@@ -1,0 +1,3 @@
+main.go:7:22: identifier "self" is reserved by the compiler; rename it
+func (r *Rect) Scale(self int) {
+                     ^here

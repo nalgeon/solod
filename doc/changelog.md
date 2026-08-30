@@ -16,7 +16,8 @@ This document lists the main changes in the So version in development.
   [Integer constants](#integer-constants) ·
   [Integer literals](#integer-literals) ·
   [Float constants](#float-constants) ·
-  [Float literals](#float-literals)
+  [Float literals](#float-literals) ·
+  [Reserved names](#reserved-names)
 - Interop:
   [Name overrides](#c-field-name-override) ·
   [Variadic nodecay](#variadic-nodecay) ·
@@ -345,6 +346,20 @@ _ = x == 0.1 // was false, now true
 Without the suffix the literal was a `double`. C then promoted the other operand to `double`, while Go computed the same expression in `float`.
 
 [0d81c8b](https://github.com/solod-dev/solod/commit/0d81c8b88c96d569f0e1428ed0ef9c1d5a22d4ce)
+
+### Reserved names
+
+The identifier `self` is now rejected, because the generator already uses it for the method receiver and the interface data pointer:
+
+```go
+func (r *Rect) Scale(self int) { } // rejected
+
+type Shape interface {
+	self() int // rejected
+}
+```
+
+Previously, such a declaration emitted invalid C code.
 
 ## Interop
 

@@ -5,9 +5,9 @@ import (
 	"go/types"
 )
 
-// reservedNames contains C identifiers that would conflict with C grammar if
+// reservedC contains C identifiers that would conflict with C grammar if
 // used directly. This includes C keywords and some built-in macros.
-var reservedNames = map[string]bool{
+var reservedC = map[string]bool{
 	// C keywords that are valid Go identifiers.
 	"auto": true, "char": true, "do": true, "double": true, "enum": true,
 	"extern": true, "float": true, "inline": true, "int": true, "long": true,
@@ -23,8 +23,14 @@ var reservedNames = map[string]bool{
 	"assert": true, "offsetof": true,
 }
 
-// handleReservedNames rewrites identifiers that conflict with a C keyword
-// or macro so the generated C compiles.
+// reservedSo contains identifiers that the generator emits itself.
+var reservedSo = map[string]bool{
+	// The method receiver parameter and the interface data pointer.
+	"self": true,
+}
+
+// handleReservedNames rewrites identifiers that conflict with reserved C names
+// and reject identifiers that conflict with reserved So names.
 //
 // Function-local variables, parameters, and constants are mangled by adding
 // "_" at the end (Go "long" -> C "long_"). This works because every time a
@@ -40,7 +46,17 @@ func (g *Generator) handleReservedNames() {
 	for _, file := range g.pkg.Syntax {
 		ast.Inspect(file, func(n ast.Node) bool {
 			ident, ok := n.(*ast.Ident)
-			if !ok || !reservedNames[ident.Name] {
+			if !ok {
+				return true
+			}
+			if reservedSo[ident.Name] {
+				// Report the name once, at the declaration.
+				if _, isDef := g.types.Defs[ident]; isDef {
+					g.fail(ident, "identifier %q is reserved by the compiler; rename it", ident.Name)
+				}
+				return true
+			}
+			if !reservedC[ident.Name] {
 				return true
 			}
 			obj := g.types.Uses[ident]
