@@ -541,6 +541,10 @@ func (c *escapeChecker) isFrameConversion(target types.Type, call *ast.CallExpr)
 	if len(call.Args) != 1 {
 		return false
 	}
+	// A constant conversion becomes a literal. A literal needs no frame storage.
+	if c.info.Types[call].Value != nil {
+		return false
+	}
 	arg := call.Args[0]
 	argT := c.info.TypeOf(arg)
 	switch t := target.Underlying().(type) {
@@ -562,9 +566,9 @@ func (c *escapeChecker) isFrameConversion(target types.Type, call *ast.CallExpr)
 }
 
 // isFrameStringConv reports whether a conversion to string produces a frame
-// value. string([]rune), string(byte) and string(rune) allocate a fresh buffer
-// in the frame. string([]byte) is a zero-copy view, so it is a frame value only
-// when its argument is.
+// value. string([]rune) and string(integer) allocate a fresh buffer in the
+// frame. string([]byte) is a zero-copy view, so it is a frame value only when
+// its argument is.
 func (c *escapeChecker) isFrameStringConv(argT types.Type, arg ast.Expr) bool {
 	switch a := argT.Underlying().(type) {
 	case *types.Slice:
@@ -577,9 +581,8 @@ func (c *escapeChecker) isFrameStringConv(argT types.Type, arg ast.Expr) bool {
 			}
 		}
 	case *types.Basic:
-		switch a.Kind() {
-		case types.Byte, types.Int32:
-			return true // string(byte) / string(rune)
+		if a.Info()&types.IsInteger != 0 {
+			return true // string(integer): so_int_string
 		}
 	}
 	return c.isFrameValue(arg)

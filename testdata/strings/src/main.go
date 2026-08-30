@@ -130,6 +130,22 @@ func main() {
 		if string(r) != "世" {
 			panic("want string(r) == 世")
 		}
+		var b2 byte = 200
+		if string(b2) != "È" {
+			panic("want string(b2) == È")
+		}
+		var n int = 0x4e16
+		if string(n) != "世" {
+			panic("want string(n) == 世")
+		}
+		var u uint64 = 0x10001f4a9
+		if string(u) != "\uFFFD" {
+			panic("want string(u) == replacement char")
+		}
+		const c = string(1 << 100)
+		if c != "\uFFFD" {
+			panic("want c == replacement char")
+		}
 	}
 	{
 		// String conversion to slices of named byte and rune types.

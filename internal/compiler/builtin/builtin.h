@@ -370,20 +370,15 @@ static inline bool so_string_gte(so_String s1, so_String s2) {
     return so_string_gt(s1, s2) || so_string_eq(s1, s2);
 }
 
-// byte_string creates a string from a single byte.
-// Allocates memory on the stack until the calling function returns.
-#define so_byte_string(b) ({   \
-    char* _buf = so_alloca(1); \
-    _buf[0] = (char)(b);       \
-    (so_String){_buf, 1};      \
-})
-
-// rune_string creates a UTF-8 string from a single rune.
-// Allocates memory on the stack until the calling function returns.
-#define so_rune_string(r) ({                        \
-    char* _buf = so_alloca(4);                      \
-    so_int _n = so_utf8_encode((so_rune)(r), _buf); \
-    (so_String){_buf, _n};                          \
+// int_string creates a UTF-8 string from a single code point.
+// The argument is an integer of any type. Allocates memory on
+// the stack until the calling function returns.
+#define so_int_string(i) ({                              \
+    uint64_t _cp = (uint64_t)(i);                        \
+    so_rune _r = _cp > 0x10FFFF ? 0xFFFD : (so_rune)_cp; \
+    char* _buf = so_alloca(4);                           \
+    so_int _n = so_utf8_encode(_r, _buf);                \
+    (so_String){_buf, _n};                               \
 })
 
 // utf8_encode encodes a single rune into buf (up to 4 bytes).

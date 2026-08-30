@@ -67,15 +67,20 @@ func (g *Generator) hasStringType(expr ast.Expr) bool {
 	return ok && (basic.Kind() == types.String || basic.Kind() == types.UntypedString)
 }
 
-// cStringLit returns the C string literal for a Go string literal, interpreted or
-// raw. The literal is decoded to its bytes and re-encoded, because Go escape rules
-// differ from C. Does not include the so_str() wrapper.
+// cStringLit returns the C string literal for a Go string literal,
+// interpreted or raw. Does not include the so_str() wrapper.
 func (g *Generator) cStringLit(n *ast.BasicLit) string {
 	s, err := strconv.Unquote(n.Value)
 	if err != nil {
 		g.fail(n, "invalid string literal: %s", n.Value)
 	}
+	return cStringVal(s)
+}
 
+// cStringVal returns the C string literal for a Go string value. The value is
+// re-encoded byte by byte, because Go escape rules differ from C. Does not
+// include the so_str() wrapper.
+func cStringVal(s string) string {
 	var b strings.Builder
 	b.WriteByte('"')
 	for i := 0; i < len(s); i++ {

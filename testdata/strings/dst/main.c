@@ -141,12 +141,28 @@ int main(void) {
             so_panic("want s3 == s1");
         }
         so_byte b = 'A';
-        if (so_string_ne(so_byte_string(b), so_str("A"))) {
+        if (so_string_ne(so_int_string(b), so_str("A"))) {
             so_panic("want string(b) == A");
         }
         so_rune r = 0x4e16;
-        if (so_string_ne(so_rune_string(r), so_str("世"))) {
+        if (so_string_ne(so_int_string(r), so_str("世"))) {
             so_panic("want string(r) == 世");
+        }
+        so_byte b2 = 200;
+        if (so_string_ne(so_int_string(b2), so_str("È"))) {
+            so_panic("want string(b2) == È");
+        }
+        so_int n = 0x4e16;
+        if (so_string_ne(so_int_string(n), so_str("世"))) {
+            so_panic("want string(n) == 世");
+        }
+        uint64_t u = 0x10001f4a9;
+        if (so_string_ne(so_int_string(u), so_str("�"))) {
+            so_panic("want string(u) == replacement char");
+        }
+        const so_unused so_String c = so_str("�");
+        if (so_string_ne(c, so_str("�"))) {
+            so_panic("want c == replacement char");
         }
     }
     {

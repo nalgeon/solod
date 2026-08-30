@@ -60,6 +60,7 @@ func escRunes(s string) []rune            { return []rune(s) }
 func escRunesToStr(rs []rune) string      { return string(rs) }
 func escByteToStr(b byte) string          { return string(b) }
 func escRuneToStr(r rune) string          { return string(r) }
+func escIntToStr(i int) string            { return string(i) }
 func escArray() [2][3]int                 { return [2][3]int{} }
 func escArrayPtr() *[3]int                { a := [3]int{}; return &a }
 func escLocalArray() [3]int               { var a [3]int; return a }
@@ -151,6 +152,7 @@ func escStarRead(a, b string) BoxStr {
 // --- should NOT be flagged (safe) ---
 
 func okConstConcat() string               { return "a" + "b" }
+func okConstToStr() string                { return string(65) }
 func okReturnParam(s string) string       { return s }
 func okReturnPtrParam(p *int) *int        { return p }
 func okParamSubslice(s string) string     { return s[1:] }

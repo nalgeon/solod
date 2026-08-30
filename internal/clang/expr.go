@@ -351,26 +351,23 @@ func (g *Generator) emitCallExpr(w io.Writer, n *ast.CallExpr) {
 				return
 			}
 		}
-		// Slice/byte/rune-to-string conversion.
+		// Slice/integer-to-string conversion.
 		if basic, ok := tv.Type.Underlying().(*types.Basic); ok && basic.Kind() == types.String {
+			// A constant conversion becomes a string literal.
+			if val := g.types.Types[n].Value; val != nil && val.Kind() == constant.String {
+				fmt.Fprintf(w, "so_str(%s)", cStringVal(constant.StringVal(val)))
+				return
+			}
 			argType := g.types.TypeOf(n.Args[0])
 			if sl, ok := argType.Underlying().(*types.Slice); ok {
 				g.emitStringCast(w, n, sl)
 				return
 			}
-			if argBasic, ok := argType.Underlying().(*types.Basic); ok {
-				switch argBasic.Kind() {
-				case types.Byte:
-					fmt.Fprint(w, "so_byte_string(")
-					g.emitExpr(w, n.Args[0])
-					fmt.Fprint(w, ")")
-					return
-				case types.Int32:
-					fmt.Fprint(w, "so_rune_string(")
-					g.emitExpr(w, n.Args[0])
-					fmt.Fprint(w, ")")
-					return
-				}
+			if isIntegerType(argType) {
+				fmt.Fprint(w, "so_int_string(")
+				g.emitExpr(w, n.Args[0])
+				fmt.Fprint(w, ")")
+				return
 			}
 		}
 		// Slice-to-array conversion (e.g. [3]int(s)). Unlike in Go, it doesn't
