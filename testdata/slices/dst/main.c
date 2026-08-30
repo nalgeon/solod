@@ -613,6 +613,18 @@ int main(void) {
         }
     }
     {
+        // Named slice type: conversion.
+        so_Slice s = (so_Slice){(so_int[3]){1, 2, 3}, 3, 3};
+        main_IntSlice named = s;
+        so_Slice plain = named;
+        if (so_len(named) != 3 || so_at(so_int, named, 0) != 1) {
+            so_panic("want named type conversion");
+        }
+        if (so_len(plain) != 3 || so_at(so_int, plain, 2) != 3) {
+            so_panic("want plain type conversion");
+        }
+    }
+    {
         // Named slice type: range.
         main_IntSlice s = (so_Slice){(so_int[3]){1, 2, 3}, 3, 3};
         so_int sum = 0;

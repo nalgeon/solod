@@ -401,3 +401,14 @@ func isPointerType(t types.Type) bool {
 	}
 	return false
 }
+
+// isCStructType reports whether the emitted C type of t is a struct.
+// A string maps to so_String, a slice maps to so_Slice, and a Go struct
+// maps to a C struct.
+func isCStructType(t types.Type) bool {
+	switch t.Underlying().(type) {
+	case *types.Struct, *types.Slice:
+		return true
+	}
+	return isStringType(t)
+}

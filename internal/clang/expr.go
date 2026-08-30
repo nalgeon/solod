@@ -392,9 +392,16 @@ func (g *Generator) emitCallExpr(w io.Writer, n *ast.CallExpr) {
 				return
 			}
 		}
-		// Regular type conversion (e.g. int(3.14)).
+		// Struct, slice and array conversions.
 		g.checkStructConv(n, tv.Type, n.Args[0])
 		g.checkArrayConv(n, tv.Type, n.Args[0])
+		// The cast isn't needed because the target and the argument have the
+		// same C type, as guaranteed by checkStructConv.
+		if isCStructType(tv.Type) {
+			g.emitPostfixOperand(w, n.Args[0])
+			return
+		}
+		// Regular type conversion (e.g. int(3.14)).
 		cType := g.mapTypeName(n, tv.Type)
 		fmt.Fprintf(w, "(%s)", cType)
 		g.emitParenExpr(w, n.Args[0])

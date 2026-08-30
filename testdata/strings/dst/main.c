@@ -191,5 +191,21 @@ int main(void) {
             so_panic("want string(rs) == s1");
         }
     }
+    {
+        // Conversion between string types.
+        so_String s = so_str("1世3");
+        if (so_string_ne(s, s)) {
+            so_panic("want string(s) == s");
+        }
+        if (so_string_ne(so_string_slice(s, 1, s.len), so_str("世3"))) {
+            so_panic("want string(s)[1:] == 世3");
+        }
+        so_println("%.*s", so_string_slice(s, 0, 1).len, so_string_slice(s, 0, 1).ptr);
+        main_Name n = s;
+        if (so_string_ne(n, s)) {
+            so_panic("want string(n) == s");
+        }
+        so_println("%.*s", so_string_slice(n, 0, 1).len, so_string_slice(n, 0, 1).ptr);
+    }
     return 0;
 }

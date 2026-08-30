@@ -4,6 +4,9 @@ package main
 type Byte byte
 type Rune rune
 
+// Named string type.
+type Name string
+
 // Emitted as adjacent string literals.
 const quoted = string('"') + "ok" + string('"')
 
@@ -170,5 +173,21 @@ func main() {
 		if string(rs) != s1 {
 			panic("want string(rs) == s1")
 		}
+	}
+	{
+		// Conversion between string types.
+		s := "1世3"
+		if string(s) != s {
+			panic("want string(s) == s")
+		}
+		if string(s)[1:] != "世3" {
+			panic("want string(s)[1:] == 世3")
+		}
+		println(string(s[0:1]))
+		var n Name = Name(s)
+		if string(n) != s {
+			panic("want string(n) == s")
+		}
+		println(string(n[0:1]))
 	}
 }

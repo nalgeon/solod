@@ -626,6 +626,18 @@ func main() {
 		}
 	}
 	{
+		// Named slice type: conversion.
+		s := []int{1, 2, 3}
+		named := IntSlice(s)
+		plain := []int(named)
+		if len(named) != 3 || named[0] != 1 {
+			panic("want named type conversion")
+		}
+		if len(plain) != 3 || plain[2] != 3 {
+			panic("want plain type conversion")
+		}
+	}
+	{
 		// Named slice type: range.
 		s := IntSlice{1, 2, 3}
 		sum := 0
