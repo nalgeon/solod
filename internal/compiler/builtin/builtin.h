@@ -299,12 +299,12 @@ typedef struct {
 #define so_str(s) ((so_String){s, (so_int)(sizeof(s) - 1)})
 
 // cstr returns a null-terminated C string copy on the stack.
-// alloca returns NULL for a zero size, but the size here is len + 1,
-// so the buffer is never NULL. The assume signals this to the compiler.
+// A string length is never negative. The assume signals this to the
+// compiler, which otherwise reports a write outside the buffer.
 #define so_cstr(s) ({                                     \
     so_String _s = (s);                                   \
+    so_assume(_s.len >= 0);                               \
     char* _buf = so_alloca(_s.len + 1);                   \
-    so_assume(_buf != NULL);                              \
     if (_s.len > 0) memcpy(_buf, _s.ptr, (size_t)_s.len); \
     _buf[_s.len] = '\0';                                  \
     _buf;                                                 \
@@ -322,12 +322,14 @@ typedef struct {
 
 // string_add concatenates two strings.
 // Allocates memory on the stack until the calling function returns.
+// A string length is never negative. The assume signals this to the
+// compiler, which otherwise reports a write outside the buffer.
 #define so_string_add(s1, s2) ({                                       \
     so_String _s1 = (s1);                                              \
     so_String _s2 = (s2);                                              \
+    so_assume(_s1.len >= 0 && _s2.len >= 0);                           \
     so_int _total = _s1.len + _s2.len;                                 \
     char* _buf = so_alloca(_total);                                    \
-    so_assume(_buf != NULL || _total == 0);                            \
     if (_s1.len > 0) memcpy(_buf, _s1.ptr, (size_t)_s1.len);           \
     if (_s2.len > 0) memcpy(_buf + _s1.len, _s2.ptr, (size_t)_s2.len); \
     (so_String){_buf, _total};                                         \
