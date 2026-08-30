@@ -384,6 +384,17 @@ func (g *Generator) emitCallExpr(w io.Writer, n *ast.CallExpr) {
 				return
 			}
 		}
+		// Slice-to-array-pointer conversion (e.g. (*[3]int)(s)).
+		if ptrType, ok := tv.Type.Underlying().(*types.Pointer); ok {
+			arrType, isArray := ptrType.Elem().Underlying().(*types.Array)
+			_, isSlice := g.types.TypeOf(n.Args[0]).Underlying().(*types.Slice)
+			if isArray && isSlice {
+				fmt.Fprintf(w, "(%s)so_slice_array(", g.mapTypeName(n, tv.Type))
+				g.emitMacroArg(w, n.Args[0])
+				fmt.Fprintf(w, ", %d)", arrType.Len())
+				return
+			}
+		}
 		// Regular type conversion (e.g. int(3.14)).
 		g.checkStructConv(n, tv.Type, n.Args[0])
 		g.checkArrayConv(n, tv.Type, n.Args[0])

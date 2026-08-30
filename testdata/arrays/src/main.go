@@ -310,6 +310,30 @@ func main() {
 		}
 	}
 	{
+		// Slice-to-array-pointer conversion. The pointer aliases
+		// the slice data, so a write through it changes the slice.
+		s := []int{11, 22, 33}
+		p := (*[3]int)(s)
+		if p[0] != 11 || p[2] != 33 {
+			panic("want p == &{11, 22, 33}")
+		}
+		*p = [3]int{1, 2, 3}
+		if s[0] != 1 || s[2] != 3 {
+			panic("want s == {1, 2, 3}")
+		}
+		// A sub-slice converts to a shorter array pointer.
+		q := (*[2]int)(s[1:])
+		q[0] = 42
+		if s[1] != 42 {
+			panic("want s[1] == 42")
+		}
+		// Assignment through an unnamed array pointer.
+		*(*[1]int)(s[2:]) = [1]int{7}
+		if s[2] != 7 {
+			panic("want s[2] == 7")
+		}
+	}
+	{
 		// Array copy in a var declaration.
 		src := [3]int{1, 2, 3}
 		var d1 [3]int = src

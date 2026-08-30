@@ -133,7 +133,7 @@ int main(void) {
     {
         // Returning arrays from functions.
         so_int a[3] = {1, 2, 3};
-        memcpy(a, reverse(a), sizeof(a));
+        memcpy(a, reverse(a), sizeof(so_int[3]));
         if (a[0] != 3 || a[1] != 2 || a[2] != 1) {
             so_panic("want reverse({1, 2, 3}) == {3, 2, 1}");
         }
@@ -145,13 +145,13 @@ int main(void) {
             so_panic("want b1.nums[1] == 22");
         }
         box b2 = {};
-        memcpy(b2.nums, (so_int[3]){1, 2, 3}, sizeof(b2.nums));
+        memcpy(b2.nums, (so_int[3]){1, 2, 3}, sizeof(so_int[3]));
         if (b2.nums[1] != 2) {
             so_panic("want b2.nums[1] == 2");
         }
         box b3 = {};
         so_int arr[3] = {1, 2, 3};
-        memcpy(b3.nums, arr, sizeof(b3.nums));
+        memcpy(b3.nums, arr, sizeof(so_int[3]));
         if (b3.nums[1] != 2) {
             so_panic("want b3.nums[1] == 2");
         }
@@ -160,12 +160,12 @@ int main(void) {
         // Array-to-array assignment.
         so_int a[3] = {1, 2, 3};
         so_int b[3] = {0, 0, 0};
-        memcpy(b, a, sizeof(b));
+        memcpy(b, a, sizeof(so_int[3]));
         if (b[0] != 1 || b[2] != 3) {
             so_panic("want b == {1, 2, 3}");
         }
         so_int c[3] = {};
-        memcpy(c, (so_int[3]){1, 2, 3}, sizeof(c));
+        memcpy(c, (so_int[3]){1, 2, 3}, sizeof(so_int[3]));
         if (c[0] != 1 || c[2] != 3) {
             so_panic("want c == {1, 2, 3}");
         }
@@ -244,7 +244,7 @@ int main(void) {
         if (twoD[0][0] != 1 || twoD[1][2] != 13) {
             so_panic("want twoD == {{1, 2, 3}, {11, 12, 13}}");
         }
-        memcpy(twoD, (int32_t[2][3]){{1, 2, 3}, {11, 12, 13}}, sizeof(twoD));
+        memcpy(twoD, (int32_t[2][3]){{1, 2, 3}, {11, 12, 13}}, sizeof(int32_t[2][3]));
         if (twoD[0][0] != 1 || twoD[1][2] != 13) {
             so_panic("want twoD == {{1, 2, 3}, {11, 12, 13}}");
         }
@@ -319,6 +319,30 @@ int main(void) {
         }
     }
     {
+        // Slice-to-array-pointer conversion. The pointer aliases
+        // the slice data, so a write through it changes the slice.
+        so_Slice s = (so_Slice){(so_int[3]){11, 22, 33}, 3, 3};
+        so_int (*p)[3] = (so_int(*)[3])so_slice_array(s, 3);
+        if ((*p)[0] != 11 || (*p)[2] != 33) {
+            so_panic("want p == &{11, 22, 33}");
+        }
+        memcpy(*p, (so_int[3]){1, 2, 3}, sizeof(so_int[3]));
+        if (so_at(so_int, s, 0) != 1 || so_at(so_int, s, 2) != 3) {
+            so_panic("want s == {1, 2, 3}");
+        }
+        // A sub-slice converts to a shorter array pointer.
+        so_int (*q)[2] = (so_int(*)[2])so_slice_array(so_slice(so_int, s, 1, s.len), 2);
+        (*q)[0] = 42;
+        if (so_at(so_int, s, 1) != 42) {
+            so_panic("want s[1] == 42");
+        }
+        // Assignment through an unnamed array pointer.
+        memcpy(*(so_int(*)[1])so_slice_array(so_slice(so_int, s, 2, s.len), 1), (so_int[1]){7}, sizeof(so_int[1]));
+        if (so_at(so_int, s, 2) != 7) {
+            so_panic("want s[2] == 7");
+        }
+    }
+    {
         // Array copy in a var declaration.
         so_int src[3] = {1, 2, 3};
         so_int d1[3];
@@ -333,7 +357,7 @@ int main(void) {
             so_panic("want an independent copy");
         }
         box b = {};
-        memcpy(b.nums, src, sizeof(b.nums));
+        memcpy(b.nums, src, sizeof(so_int[3]));
         so_int field[3];
         memcpy(field, b.nums, sizeof(field));
         if (field[2] != 3) {
