@@ -162,7 +162,7 @@ func (g *Generator) emitSliceExpr(w io.Writer, n *ast.SliceExpr) {
 		if n.High != nil {
 			g.emitExpr(w, n.High)
 		} else {
-			g.emitExpr(w, n.X)
+			g.emitPostfixOperand(w, n.X)
 			fmt.Fprint(w, ".len")
 		}
 		fmt.Fprint(w, ")")
@@ -185,7 +185,7 @@ func (g *Generator) emitSliceExpr(w io.Writer, n *ast.SliceExpr) {
 		if n.High != nil {
 			g.emitExpr(w, n.High)
 		} else {
-			g.emitMacroArg(w, n.X)
+			g.emitPostfixOperand(w, n.X)
 			fmt.Fprint(w, ".len")
 		}
 		if n.Slice3 {

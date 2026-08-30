@@ -596,11 +596,10 @@ func (g *Generator) emitSelectorExpr(w io.Writer, n *ast.SelectorExpr) {
 	// Struct/interface field access.
 	xType := g.types.TypeOf(n.X)
 	_, isPtr := xType.Underlying().(*types.Pointer)
+	g.emitPostfixOperand(w, n.X)
 	if isPtr {
-		g.emitExpr(w, n.X)
 		fmt.Fprintf(w, "->%s", g.fieldNameOf(n.Sel))
 	} else {
-		g.emitExpr(w, n.X)
 		fmt.Fprintf(w, ".%s", g.fieldNameOf(n.Sel))
 	}
 }
@@ -611,11 +610,11 @@ func (g *Generator) emitStarExpr(w io.Writer, n *ast.StarExpr) {
 	g.emitExpr(w, n.X)
 }
 
-// emitPostfixOperand emits an expression that a postfix operator (., [], ++)
-// will be appended to. C postfix operators bind tighter than unary *, so a
-// dereference must be parenthesized: *p++ parses as *(p++), not (*p)++.
+// emitPostfixOperand emits an expression that a postfix operator (., ->, [], ++)
+// will be appended to. C postfix operators bind tighter than a cast and than
+// unary *, so both forms must be parenthesized, e.g. ((T*)p)->f or (*p)++.
 func (g *Generator) emitPostfixOperand(w io.Writer, expr ast.Expr) {
-	if _, ok := expr.(*ast.StarExpr); !ok {
+	if !g.emitsCastOrUnary(expr) {
 		g.emitExpr(w, expr)
 		return
 	}
@@ -793,6 +792,22 @@ func (g *Generator) emitDiscard(w io.Writer, expr ast.Expr) {
 		g.emitExpr(w, expr)
 	}
 	fmt.Fprint(w, ";\n")
+}
+
+// emitsCastOrUnary reports whether the emitted C expression starts with a cast
+// or a unary operator. Go's grammar already requires parentheses around other
+// unary forms, so only these two need special handling.
+func (g *Generator) emitsCastOrUnary(expr ast.Expr) bool {
+	switch e := expr.(type) {
+	case *ast.StarExpr:
+		return true
+	case *ast.CallExpr:
+		// A conversion to a pointer type emits a cast. Every other conversion
+		// emits a call, a compound literal, or the argument alone.
+		tv, ok := g.types.Types[e.Fun]
+		return ok && tv.IsType() && isPointerType(g.types.TypeOf(e))
+	}
+	return false
 }
 
 // needsVoidParens reports whether expr needs parentheses in a (void) cast.

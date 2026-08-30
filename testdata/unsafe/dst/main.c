@@ -14,15 +14,22 @@ typedef struct header {
 typedef struct packet {
     header head;
     so_byte body[8];
+    so_String name;
+    so_Slice nums;
 } packet;
+
+// Named pointer type.
+typedef packet* packetPtr;
 
 // -- Forward declarations --
 static void testOffsetof(void);
+static void testPointerConv(void);
 
 // -- Implementation --
 
 int main(void) {
     testOffsetof();
+    testPointerConv();
     return 0;
 }
 
@@ -53,5 +60,29 @@ static void testOffsetof(void) {
     const so_unused uintptr_t off = unsafe_Offsetof(packet, body);
     if (off != unsafe_Sizeof(p.head)) {
         so_panic("unexpected packet.body offset");
+    }
+}
+
+static void testPointerConv(void) {
+    packet p = (packet){.name = so_str("hello"), .nums = (so_Slice){(so_int[3]){1, 2, 3}, 3, 3}};
+    void* ptr = (void*)(&p);
+    // Field access through a converted pointer.
+    ((packet*)(ptr))->head.kind = 7;
+    ((packet*)(ptr))->head.size++;
+    if (((packet*)(ptr))->head.kind != 7 || p.head.size != 1) {
+        so_panic("unexpected header fields");
+    }
+    // A string field keeps the parentheses for .len and .ptr.
+    so_println("%.*s", ((packet*)(ptr))->name.len, ((packet*)(ptr))->name.ptr);
+    if (so_string_ne(so_string_slice(((packet*)(ptr))->name, 1, ((packet*)(ptr))->name.len), so_str("ello"))) {
+        so_panic("unexpected name suffix");
+    }
+    // A slice field does the same.
+    if (so_len(so_slice(so_int, ((packet*)(ptr))->nums, 1, ((packet*)(ptr))->nums.len)) != 2) {
+        so_panic("unexpected nums length");
+    }
+    // Conversion to a named pointer type.
+    if (((packetPtr)(&p))->head.kind != 7) {
+        so_panic("unexpected header.kind");
     }
 }

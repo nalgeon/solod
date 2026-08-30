@@ -11,10 +11,16 @@ type header struct {
 type packet struct {
 	head header
 	body [8]byte
+	name string
+	nums []int
 }
+
+// Named pointer type.
+type packetPtr *packet
 
 func main() {
 	testOffsetof()
+	testPointerConv()
 }
 
 func testOffsetof() {
@@ -48,5 +54,33 @@ func testOffsetof() {
 	const off = unsafe.Offsetof(p.body)
 	if off != unsafe.Sizeof(p.head) {
 		panic("unexpected packet.body offset")
+	}
+}
+
+func testPointerConv() {
+	p := packet{name: "hello", nums: []int{1, 2, 3}}
+	ptr := unsafe.Pointer(&p)
+
+	// Field access through a converted pointer.
+	(*packet)(ptr).head.kind = 7
+	(*packet)(ptr).head.size++
+	if (*packet)(ptr).head.kind != 7 || p.head.size != 1 {
+		panic("unexpected header fields")
+	}
+
+	// A string field keeps the parentheses for .len and .ptr.
+	println((*packet)(ptr).name)
+	if (*packet)(ptr).name[1:] != "ello" {
+		panic("unexpected name suffix")
+	}
+
+	// A slice field does the same.
+	if len((*packet)(ptr).nums[1:]) != 2 {
+		panic("unexpected nums length")
+	}
+
+	// Conversion to a named pointer type.
+	if packetPtr(&p).head.kind != 7 {
+		panic("unexpected header.kind")
 	}
 }
