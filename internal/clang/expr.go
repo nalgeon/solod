@@ -288,6 +288,8 @@ func (g *Generator) emitEqual(w io.Writer, n *ast.BinaryExpr) {
 
 // emitCallExpr emits a function call or type conversion.
 func (g *Generator) emitCallExpr(w io.Writer, n *ast.CallExpr) {
+	g.checkMultiForward(n)
+
 	// c.Val intrinsic: emit the string literal as a raw C expression.
 	if raw, ok := g.cIntrinsic(n); ok {
 		fmt.Fprint(w, raw)

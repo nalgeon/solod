@@ -665,10 +665,14 @@ Forwarding a multi-return call:
 func forwardCall() (int, error) {
     return divide(10, 3)
 }
+```
 
-func forwardDivmod() (int, int) {
-    return divmod(10, 3)
-}
+Forwarding a multi-return call into the parameters of another call is not supported:
+
+```go
+d, m := divmod(10, 3)
+println(d, m)           // do this
+println(divmod(10, 3))  // not this
 ```
 
 Supported return types:

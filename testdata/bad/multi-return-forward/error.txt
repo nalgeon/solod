@@ -1,0 +1,3 @@
+main.go:12:2: forwarding a multi-return is not supported
+	check(divmod(10, 3))
+	^here

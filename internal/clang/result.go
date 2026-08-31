@@ -71,6 +71,17 @@ func (g *Generator) emitMultiReturnAssign(w io.Writer, stmt *ast.AssignStmt, cal
 	}
 }
 
+// checkMultiForward rejects a call that passes a multi-return call
+// as its arguments, like f(g()) where g returns two values.
+func (g *Generator) checkMultiForward(call *ast.CallExpr) {
+	if len(call.Args) != 1 {
+		return
+	}
+	if _, ok := g.types.TypeOf(call.Args[0]).(*types.Tuple); ok {
+		g.fail(call, "forwarding a multi-return is not supported")
+	}
+}
+
 // makeMultiReturn validates a multi-return signature and returns info
 // about both positions. The second type is either error or a supported type.
 func (g *Generator) makeMultiReturn(node ast.Node, sig *types.Signature) multiReturn {
