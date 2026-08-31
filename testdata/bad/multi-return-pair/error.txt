@@ -1,0 +1,3 @@
+main.go:3:1: unsupported multi-return type pair: (int, *int)
+func f() (int, *int) {
+^here

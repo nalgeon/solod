@@ -98,7 +98,40 @@ func (g *Generator) makeMultiReturn(node ast.Node, sig *types.Signature) multiRe
 		return multiReturn{suffix1: s1, hasError: true}
 	}
 	s2 := resultTypeSuffix(g, node, second)
+	if !multiReturnPairs[s1+"_"+s2] {
+		g.fail(node, "unsupported multi-return type pair: (%s, %s)",
+			g.typeString(first), g.typeString(second))
+	}
 	return multiReturn{suffix1: s1, suffix2: s2}
+}
+
+// multiReturnPairs lists supported (T1, T2) suffix pairs (mirrors builtin.h).
+var multiReturnPairs = map[string]bool{
+	"bool_bool": true,
+	"bool_int":  true,
+	"byte_int":  true,
+	"f32_bool":  true,
+	"f32_f32":   true,
+	"f64_bool":  true,
+	"f64_f64":   true,
+	"f64_int":   true,
+	"i64_i32":   true,
+	"int_bool":  true,
+	"int_int":   true,
+	"int_u64":   true,
+	"ptr_bool":  true,
+	"ptr_int":   true,
+	"rune_bool": true,
+	"rune_int":  true,
+	"str_bool":  true,
+	"str_str":   true,
+	"u32_bool":  true,
+	"u32_int":   true,
+	"u32_u32":   true,
+	"u64_bool":  true,
+	"u64_int":   true,
+	"u64_u64":   true,
+	"uint_uint": true,
 }
 
 // multiReturn describes a two-value return: (T, error) or (T, T).

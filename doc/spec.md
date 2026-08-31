@@ -217,7 +217,7 @@ String concatenation with `+` and `+=` is supported for both literals and variab
 
 ## Arrays
 
-Arrays are represented as plain C arrays (`T name[N]`). They are value types - copied on struct assignment and support direct indexing.
+Arrays are represented as plain C arrays (`T name[N]`). They are value types — copied on struct assignment and support direct indexing.
 
 Array literals:
 
@@ -623,7 +623,7 @@ sum(x, y)
 
 Solod supports two-value multiple returns in two patterns: `(T, error)` and `(T1, T2)`.
 
-The `(T, error)` pattern - the second value is `error`:
+The `(T, error)` pattern — the second value is `error`:
 
 ```go
 func divide(a, b int) (int, error) {
@@ -631,7 +631,7 @@ func divide(a, b int) (int, error) {
 }
 ```
 
-The `(T1, T2)` pattern - two values of any supported type:
+The `(T1, T2)` pattern — a small set of type combinations that are often returned together:
 
 ```go
 func divmod(a, b int) (int, int) {
