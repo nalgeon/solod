@@ -186,6 +186,7 @@ func (g *Generator) emitDefine(w io.Writer, stmt *ast.AssignStmt) {
 // emitAssign emits a regular assignment (=).
 func (g *Generator) emitAssign(w io.Writer, stmt *ast.AssignStmt) {
 	g.checkAssignTargets(stmt)
+	g.checkAssignAnonStruct(stmt)
 
 	// Detect: _, ok = s.(Rect)
 	if len(stmt.Lhs) == 2 && len(stmt.Rhs) == 1 {
@@ -290,6 +291,21 @@ func (g *Generator) checkAssignTargets(stmt *ast.AssignStmt) {
 			if assigned[name] {
 				g.fail(stmt, "multiple assignment reads and assigns %q in the same statement", name)
 			}
+		}
+	}
+}
+
+// checkAssignAnonStruct rejects an assignment to an anonymous struct variable
+// or field. Every anonymous struct declaration emits a separate C struct type,
+// and C does not assign between two separate struct types.
+func (g *Generator) checkAssignAnonStruct(stmt *ast.AssignStmt) {
+	for _, lhs := range stmt.Lhs {
+		// A blank target is not emitted, so its type is irrelevant.
+		if ident, ok := lhs.(*ast.Ident); ok && ident.Name == "_" {
+			continue
+		}
+		if isAnonStruct(g.types.TypeOf(lhs)) {
+			g.fail(stmt, "cannot assign an anonymous struct; declare a named struct type instead")
 		}
 	}
 }

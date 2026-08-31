@@ -1,0 +1,3 @@
+main.go:6:2: cannot assign an anonymous struct; declare a named struct type instead
+	y = x
+	^here
