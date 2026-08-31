@@ -7,6 +7,7 @@ typedef so_int (*sum3Fn)(so_int, so_int, so_int);
 // -- Forward declarations --
 static so_int sum3(so_int a, so_int b, so_int c);
 static so_int pickThird(so_int _0 so_unused, float _1 so_unused, so_int c);
+static so_int countUp(so_int _0 so_unused, float _1 so_unused);
 
 // -- Variables and constants --
 
@@ -22,6 +23,11 @@ static so_int sum3(so_int a, so_int b, so_int c) {
 // Blank parameters.
 static so_int pickThird(so_int _0 so_unused, float _1 so_unused, so_int c) {
     return c;
+}
+
+// Unnamed parameters.
+static so_int countUp(so_int _0 so_unused, float _1 so_unused) {
+    return 1;
 }
 
 int main(void) {
@@ -47,6 +53,8 @@ int main(void) {
     (void)s5;
     so_int s6 = pickThird(1, 2.0f, 3);
     (void)s6;
+    so_int s7 = countUp(1, 2.0f);
+    (void)s7;
     // A bare return in main translate to return 0 in C.
     if (stop) {
         return 0;

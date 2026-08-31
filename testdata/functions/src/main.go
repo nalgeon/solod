@@ -14,6 +14,11 @@ func pickThird(_ int, _ float32, c int) int {
 	return c
 }
 
+// Unnamed parameters.
+func countUp(int, float32) int {
+	return 1
+}
+
 // stop guards an early return in main.
 var stop = false
 
@@ -46,6 +51,9 @@ func main() {
 
 	s6 := pickThird(1, 2, 3)
 	_ = s6
+
+	s7 := countUp(1, 2)
+	_ = s7
 
 	// A bare return in main translate to return 0 in C.
 	if stop {

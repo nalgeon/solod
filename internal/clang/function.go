@@ -67,10 +67,12 @@ func (g *Generator) emitFuncProto(w io.Writer, decl *ast.FuncDecl) *types.Signat
 		for _, field := range decl.Type.Params.List {
 			typ := g.types.TypeOf(field.Type)
 			ct := g.mapTypeDecl(field.Type, typ)
+			if len(field.Names) == 0 {
+				parts = append(parts, ct.Decl(blankParamName(len(parts)))+" so_unused")
+				continue
+			}
 			for _, n := range field.Names {
 				if n.Name == "_" {
-					// C has no blank parameter. Name it after
-					// its position and mark it unused.
 					parts = append(parts, ct.Decl(blankParamName(len(parts)))+" so_unused")
 					continue
 				}
@@ -178,10 +180,12 @@ func (g *Generator) emitMacroFuncDecl(w io.Writer, decl *ast.FuncDecl) {
 	}
 	if decl.Type.Params != nil {
 		for _, field := range decl.Type.Params.List {
+			if len(field.Names) == 0 {
+				params = append(params, blankParamName(len(params))+"_")
+				continue
+			}
 			for _, n := range field.Names {
 				if n.Name == "_" {
-					// The macro body never uses a blank parameter,
-					// so it only needs a unique name.
 					params = append(params, blankParamName(len(params))+"_")
 					continue
 				}
