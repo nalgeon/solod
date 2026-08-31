@@ -468,8 +468,9 @@ func (g *Generator) emitTypeSpec(w io.Writer, spec *ast.TypeSpec, dirs directive
 	case *ast.Ident, *ast.SelectorExpr, *ast.ArrayType, *ast.StarExpr, *ast.MapType:
 		typ := g.types.Defs[spec.Name].Type()
 		resolved := typ.Underlying()
-		// When the underlying type is a struct and the spec references
-		// a named type, preserve the name instead of emitting "so_auto".
+		// The underlying type of a named struct is an anonymous struct, which
+		// mapTypeDecl rejects. When the spec references a named type, use that
+		// name instead.
 		if _, isStruct := resolved.(*types.Struct); isStruct {
 			var refIdent *ast.Ident
 			switch t := spec.Type.(type) {
@@ -504,11 +505,6 @@ func (g *Generator) emitTypeSpec(w io.Writer, spec *ast.TypeSpec, dirs directive
 		}
 
 	case *ast.StructType:
-		// An alias gets a typedef with a C struct name, but every use of the
-		// alias unaliases to the anonymous struct, which has no C name.
-		if spec.Assign.IsValid() {
-			g.fail(spec, "alias for an anonymous struct is not supported; declare a named struct type instead")
-		}
 		g.emitStructTypeSpec(w, spec, dirs)
 
 	default:

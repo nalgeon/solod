@@ -1,0 +1,3 @@
+main.go:3:13: use a named struct type instead of an anonymous struct
+func show(p struct{ x int }) {
+            ^here

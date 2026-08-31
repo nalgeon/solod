@@ -135,7 +135,7 @@ func (g *Generator) emitDefine(w io.Writer, stmt *ast.AssignStmt) {
 		}
 
 		typ := def.Type()
-		ct := g.mapTypeDecl(stmt, typ)
+		ct := g.mapVarType(stmt, typ, true)
 
 		if ct.IsArray() {
 			// Arrays can't be grouped with other variables.
@@ -446,7 +446,7 @@ func (g *Generator) hoistRhs(w io.Writer, stmt *ast.AssignStmt) []ast.Expr {
 		g.types.Types[ref] = types.TypeAndValue{Type: typ}
 		refs[i] = ref
 
-		ct := g.mapTypeDecl(stmt, typ)
+		ct := g.mapVarType(stmt, typ, true)
 		if !ct.IsArray() {
 			fmt.Fprintf(w, "%s%s = ", g.indent(), ct.Decl(ref.Name))
 			g.emitExprAsType(w, stmt, rhs, typ)

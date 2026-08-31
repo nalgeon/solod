@@ -91,6 +91,7 @@ func (g *Generator) collect() {
 	g.checkPromoted()
 	g.checkEmbeddedTypes()
 	g.checkFieldNames()
+	g.checkAnonStructAliases()
 	g.checkValueOrder()
 	g.checkFrameValues()
 }

@@ -163,6 +163,22 @@ func (g *Generator) emitFieldValue(w io.Writer, n ast.Node, expr ast.Expr, field
 	g.emitExprAsType(w, n, expr, fieldType)
 }
 
+// checkAnonStructAliases rejects aliases for anonymous structs.
+func (g *Generator) checkAnonStructAliases() {
+	for _, file := range g.pkg.Syntax {
+		ast.Inspect(file, func(n ast.Node) bool {
+			spec, ok := n.(*ast.TypeSpec)
+			if !ok {
+				return true
+			}
+			if _, ok := spec.Type.(*ast.StructType); ok && spec.Assign.IsValid() {
+				g.fail(spec, "alias for an anonymous struct is not supported; declare a named struct type instead")
+			}
+			return true
+		})
+	}
+}
+
 // checkFieldNames rejects structs with two fields of the same C name.
 func (g *Generator) checkFieldNames() {
 	for _, file := range g.pkg.Syntax {

@@ -54,14 +54,16 @@ func (t CType) IsPointer() bool {
 // mapVarType maps the type of a declared variable to a [CType].
 // hasInit reports whether the declaration has an initializer expression.
 func (g *Generator) mapVarType(node ast.Node, typ types.Type, hasInit bool) CType {
-	ct := g.mapTypeDecl(node, typ)
-	if hasInit {
-		return ct
-	}
 	if st, ok := types.Unalias(typ).(*types.Struct); ok {
-		ct.Base = g.anonStructType(node, st)
+		// A variable declaration is the only place that accepts an anonymous struct.
+		if hasInit {
+			// With an initializer the type is declared as so_auto.
+			return CType{Base: "so_auto"}
+		}
+		// Without an initializer the type is declared inline.
+		return CType{Base: g.anonStructType(node, st)}
 	}
-	return ct
+	return g.mapTypeDecl(node, typ)
 }
 
 // mapTypeDecl maps a Go type to a [CType].
@@ -95,14 +97,8 @@ func (g *Generator) mapTypeDecl(node ast.Node, typ types.Type) CType {
 			FuncParams: params,
 		}
 	}
-	// Anonymous struct is only valid as a local variable with an initializer:
-	// `s := struct{ v int }{42}` translates to `so_auto s = (struct{ so_int v; }){42}`.
-	// Value contexts (slice/array elements, params, returns) go through
-	// mapTypeName instead, which fails because there is no C type name.
-	if _, ok := types.Unalias(typ).(*types.Struct); ok {
-		return CType{Base: "so_auto"}
-	}
 	// Regular type (including arrays and named function types).
+	// An anonymous struct reaches mapTypeName here, which rejects it.
 	return CType{
 		Base: g.mapTypeName(node, typ),
 		Dims: arrayDims(typ),
