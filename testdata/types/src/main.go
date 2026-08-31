@@ -166,6 +166,19 @@ func main() {
 		if a.x+b.x != 3 {
 			panic("a.x+b.x != 3")
 		}
+
+		// Anonymous struct literal without values.
+		zero := struct {
+			name   string
+			isGood bool
+		}{}
+		if zero.name != "" || zero.isGood {
+			panic("zero is not zeroed")
+		}
+
+		// Anonymous struct literal without fields.
+		unit := struct{}{}
+		_ = unit
 	}
 	{
 		// Named struct type inside a function.

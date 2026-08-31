@@ -96,12 +96,13 @@ func (g *Generator) emitAnonStructLit(w io.Writer, n *ast.CompositeLit, st *ast.
 	fmt.Fprintf(w, "%s})", g.indent())
 
 	// Struct fields initialization.
+	if len(n.Elts) == 0 {
+		fmt.Fprint(w, "{}")
+		return
+	}
 	fmt.Fprint(w, "{\n")
 	struc := g.types.TypeOf(n).Underlying().(*types.Struct)
 	for i, elt := range n.Elts {
-		if i > 0 {
-			fmt.Fprint(w, ",\n")
-		}
 		if kv, ok := elt.(*ast.KeyValueExpr); ok {
 			key := kv.Key.(*ast.Ident)
 			fmt.Fprintf(w, "%s    .%s = ", g.indent(), g.fieldNameOf(key))
@@ -110,8 +111,8 @@ func (g *Generator) emitAnonStructLit(w io.Writer, n *ast.CompositeLit, st *ast.
 			fmt.Fprintf(w, "%s    .%s = ", g.indent(), g.fieldNameAt(struc.Field(i), i))
 			g.emitFieldValue(w, n, elt, struc.Field(i).Type())
 		}
+		fmt.Fprint(w, ",\n")
 	}
-	fmt.Fprint(w, ",\n")
 	fmt.Fprintf(w, "%s}", g.indent())
 }
 

@@ -128,6 +128,18 @@ int main(void) {
         if (a.x + b.x != 3) {
             so_panic("a.x+b.x != 3");
         }
+        // Anonymous struct literal without values.
+        so_auto zero = (struct {
+            so_String name;
+            bool isGood;
+        }){};
+        if (so_string_ne(zero.name, so_str("")) || zero.isGood) {
+            so_panic("zero is not zeroed");
+        }
+        // Anonymous struct literal without fields.
+        so_auto unit = (struct {
+        }){};
+        (void)unit;
     }
     {
         // Named struct type inside a function.
