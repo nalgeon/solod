@@ -1,0 +1,3 @@
+main.go:4:6: use a named struct type instead of an anonymous struct
+	var s struct{ inner struct{ f int } }
+	    ^here

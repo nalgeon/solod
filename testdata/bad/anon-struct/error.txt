@@ -1,3 +1,0 @@
-main.go:5:6: use a named struct type instead of an anonymous struct
-	var items [2]struct{ x int }
-	    ^here
