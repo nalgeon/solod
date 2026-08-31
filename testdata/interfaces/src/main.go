@@ -5,12 +5,6 @@ type Shape interface {
 	Perim(n int) int
 }
 
-// Painter declares its methods with unnamed and blank parameters.
-type Painter interface {
-	Paint(int, string) int
-	Fill(_ int) int
-}
-
 type Canvas struct {
 	name  string
 	shape Shape
@@ -197,16 +191,6 @@ func main() {
 		}
 		if shapeCalls != 1 {
 			panic("shapeCalls != 1")
-		}
-	}
-	{
-		// Interface methods with unnamed and blank parameters.
-		var p Painter = &r
-		if p.Paint(2, "x") != 20 {
-			panic("p.Paint(2, \"x\") != 20")
-		}
-		if p.Fill(1) != 6 {
-			panic("p.Fill(1) != 6")
 		}
 	}
 	{

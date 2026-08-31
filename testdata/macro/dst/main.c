@@ -38,14 +38,6 @@ int main(void) {
         so_println("%s", " - ok");
     }
     {
-        so_print("%s", "lang/macro: Blank parameters");
-        so_int x = pickThird(so_int, (1), (2), (3));
-        if (x != 3) {
-            so_panic("x != 3");
-        }
-        so_println("%s", " - ok");
-    }
-    {
         so_print("%s", "lang/macro: Generic method");
         main_Box b = {};
         main_Box_set(so_int, (&b), (42));

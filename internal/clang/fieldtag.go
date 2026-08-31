@@ -39,29 +39,19 @@ func (g *Generator) collectFieldTags() {
 // collectStructFieldTags validates and records the C field name overrides from
 // the `c` tags on the fields of a named struct in the current package.
 func (g *Generator) collectStructFieldTags(st *ast.StructType) {
-	cNames := map[string]bool{} // C names emitted for this struct
 	for _, field := range st.Fields.List {
 		override := cFieldTag(field.Tag)
-		if override != "" {
-			if len(field.Names) != 1 {
-				g.fail(field, "c field tag requires exactly one field name")
-			}
-			if !isCIdent(override) || reservedC[override] {
-				g.fail(field, "invalid C field name %q in c tag", override)
-			}
-			if v, ok := g.types.Defs[field.Names[0]].(*types.Var); ok {
-				g.fieldNames[v] = override
-			}
+		if override == "" {
+			continue
 		}
-		for _, name := range field.Names {
-			cName := override
-			if cName == "" {
-				cName = name.Name
-			}
-			if cNames[cName] {
-				g.fail(name, "duplicate C field name %q in struct", cName)
-			}
-			cNames[cName] = true
+		if len(field.Names) != 1 {
+			g.fail(field, "c field tag requires exactly one field name")
+		}
+		if !isCIdent(override) || reservedC[override] {
+			g.fail(field, "invalid C field name %q in c tag", override)
+		}
+		if v, ok := g.types.Defs[field.Names[0]].(*types.Var); ok {
+			g.fieldNames[v] = override
 		}
 	}
 }

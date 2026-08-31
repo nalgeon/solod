@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/types"
 	"io"
+	"strconv"
 	"strings"
 )
 
@@ -20,10 +21,12 @@ func (g *Generator) emitStructTypeSpec(w io.Writer, spec *ast.TypeSpec, dirs dir
 		fmt.Fprintf(w, "%stypedef struct %s {\n", g.indent(), cName)
 	}
 	g.state.depth++
+	index := 0
 	for _, field := range st.Fields.List {
 		typ := g.types.TypeOf(field.Type)
 		for _, name := range field.Names {
-			fieldName := g.fieldNameOf(name)
+			fieldName := g.fieldNameOfAt(name, index)
+			index++
 			if innerSt, ok := field.Type.(*ast.StructType); ok {
 				g.emitInlineStructField(w, innerSt, fieldName)
 			} else if sig, ok := typ.(*types.Signature); ok {
@@ -63,11 +66,13 @@ func (g *Generator) emitFuncPtrField(w io.Writer, node ast.Node, fieldName strin
 func (g *Generator) emitInlineStructField(w io.Writer, st *ast.StructType, fieldName string) {
 	fmt.Fprintf(w, "%sstruct {\n", g.indent())
 	g.state.depth++
+	index := 0
 	for _, f := range st.Fields.List {
 		typ := g.types.TypeOf(f.Type)
 		ct := g.mapTypeDecl(f, typ)
 		for _, name := range f.Names {
-			fmt.Fprintf(w, "%s%s;\n", g.indent(), ct.Decl(g.fieldNameOf(name)))
+			fmt.Fprintf(w, "%s%s;\n", g.indent(), ct.Decl(g.fieldNameOfAt(name, index)))
+			index++
 		}
 	}
 	g.state.depth--
@@ -79,11 +84,13 @@ func (g *Generator) emitInlineStructField(w io.Writer, st *ast.StructType, field
 func (g *Generator) emitAnonStructLit(w io.Writer, n *ast.CompositeLit, st *ast.StructType) {
 	// Struct fields declaration.
 	fmt.Fprint(w, "(struct {\n")
+	index := 0
 	for _, field := range st.Fields.List {
 		typ := g.types.TypeOf(field.Type)
 		cType := g.mapTypeName(field, typ)
 		for _, name := range field.Names {
-			fmt.Fprintf(w, "%s    %s %s;\n", g.indent(), cType, g.fieldNameOf(name))
+			fmt.Fprintf(w, "%s    %s %s;\n", g.indent(), cType, g.fieldNameOfAt(name, index))
+			index++
 		}
 	}
 	fmt.Fprintf(w, "%s})", g.indent())
@@ -100,7 +107,7 @@ func (g *Generator) emitAnonStructLit(w io.Writer, n *ast.CompositeLit, st *ast.
 			fmt.Fprintf(w, "%s    .%s = ", g.indent(), g.fieldNameOf(key))
 			g.emitFieldValue(w, n, kv.Value, structFieldType(struc, key.Name))
 		} else {
-			fmt.Fprintf(w, "%s    .%s = ", g.indent(), g.fieldName(struc.Field(i)))
+			fmt.Fprintf(w, "%s    .%s = ", g.indent(), g.fieldNameAt(struc.Field(i), i))
 			g.emitFieldValue(w, n, elt, struc.Field(i).Type())
 		}
 	}
@@ -156,6 +163,34 @@ func (g *Generator) emitFieldValue(w io.Writer, n ast.Node, expr ast.Expr, field
 	g.emitExprAsType(w, n, expr, fieldType)
 }
 
+// checkFieldNames rejects structs with two fields of the same C name.
+func (g *Generator) checkFieldNames() {
+	for _, file := range g.pkg.Syntax {
+		ast.Inspect(file, func(n ast.Node) bool {
+			if st, ok := n.(*ast.StructType); ok {
+				g.checkStructFields(st)
+			}
+			return true
+		})
+	}
+}
+
+// checkStructFields rejects a struct with two fields of the same C name.
+func (g *Generator) checkStructFields(st *ast.StructType) {
+	seen := map[string]bool{} // C names emitted for this struct
+	index := 0
+	for _, field := range st.Fields.List {
+		for _, name := range field.Names {
+			cName := g.fieldNameOfAt(name, index)
+			index++
+			if seen[cName] {
+				g.fail(name, "duplicate C field name %q in struct", cName)
+			}
+			seen[cName] = true
+		}
+	}
+}
+
 // checkEmbeddedFields rejects struct fields declared without a name.
 func (g *Generator) checkEmbeddedFields(st *ast.StructType) {
 	for _, field := range st.Fields.List {
@@ -187,10 +222,11 @@ func (g *Generator) checkStructConv(n *ast.CallExpr, target types.Type, arg ast.
 func (g *Generator) anonStructType(node ast.Node, st *types.Struct) string {
 	var sb strings.Builder
 	sb.WriteString("struct {")
-	for f := range st.Fields() {
-		ct := g.mapTypeDecl(node, f.Type())
+	for i := range st.NumFields() {
+		field := st.Field(i)
+		ct := g.mapTypeDecl(node, field.Type())
 		sb.WriteString(" ")
-		sb.WriteString(ct.Decl(g.fieldName(f)))
+		sb.WriteString(ct.Decl(g.fieldNameAt(field, i)))
 		sb.WriteString(";")
 	}
 	sb.WriteString(" }")
@@ -223,6 +259,30 @@ func (g *Generator) fieldName(field *types.Var) string {
 		return name
 	}
 	return field.Name()
+}
+
+// fieldNameOfAt resolves the C name for the field declared at position index by
+// ident. A blank field has no Go name, so it gets a generated C name.
+func (g *Generator) fieldNameOfAt(ident *ast.Ident, index int) string {
+	if ident.Name == "_" {
+		return blankFieldName(index)
+	}
+	return g.fieldNameOf(ident)
+}
+
+// fieldNameAt returns the C name of the struct field at position index.
+// A blank field has no Go name, so it gets a generated C name.
+func (g *Generator) fieldNameAt(field *types.Var, index int) string {
+	if field.Name() == "_" {
+		return blankFieldName(index)
+	}
+	return g.fieldName(field)
+}
+
+// blankFieldName returns the C name of the blank ("_") field at position index.
+// C needs a distinct name for every struct member.
+func blankFieldName(index int) string {
+	return "_" + strconv.Itoa(index)
 }
 
 // structFieldType returns the type of a struct field by name.

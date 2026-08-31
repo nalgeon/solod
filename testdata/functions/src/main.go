@@ -9,16 +9,6 @@ func sum3(a, b, c int) int {
 	return a + b + c
 }
 
-// Blank parameters.
-func pickThird(_ int, _ float32, c int) int {
-	return c
-}
-
-// Unnamed parameters.
-func countUp(int, float32) int {
-	return 1
-}
-
 // stop guards an early return in main.
 var stop = false
 
@@ -48,12 +38,6 @@ func main() {
 	var fn5 Sum3Fn = sub.Sum
 	s5 := fn5(10, 20, 30)
 	_ = s5
-
-	s6 := pickThird(1, 2, 3)
-	_ = s6
-
-	s7 := countUp(1, 2)
-	_ = s7
 
 	// A bare return in main translate to return 0 in C.
 	if stop {

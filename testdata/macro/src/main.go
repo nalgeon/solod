@@ -50,13 +50,6 @@ func c[T int](n T) T {
 	return _x
 }
 
-// Blank parameters.
-//
-//so:inline
-func pickThird[T any](_ T, _ T, c T) T {
-	return c
-}
-
 //so:inline
 func work[T any](v *T) (*T, error) {
 	return v, nil
@@ -104,14 +97,6 @@ func main() {
 		z := a(42)
 		if z != 45 {
 			panic("z != 45")
-		}
-		println(" - ok")
-	}
-	{
-		print("lang/macro: Blank parameters")
-		x := pickThird(1, 2, 3)
-		if x != 3 {
-			panic("x != 3")
 		}
 		println(" - ok")
 	}

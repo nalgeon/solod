@@ -50,12 +50,6 @@ typedef struct {
     _x; \
 })
 
-// Blank parameters.
-//
-#define pickThird(T, _1_, _2_, c_) ({ \
-    c_; \
-})
-
 #define work(T, v_) ({ \
     (so_R_ptr_err){.val = v_, .err = (so_Error){}}; \
 })

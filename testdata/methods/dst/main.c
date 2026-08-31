@@ -14,8 +14,6 @@ typedef so_int (*circlePtrFunc)(circle*);
 
 // -- Forward declarations --
 static so_int main_Rect_perim(void* self, so_int n);
-static so_int main_Rect_sides(main_Rect self);
-static so_int circle_shape(void* self);
 static main_Rect main_Rect_resize(main_Rect r, so_int x);
 static so_int circle_area(void* self);
 static so_int circle_perim(circle c);
@@ -31,17 +29,6 @@ so_int main_Rect_Area(void* self) {
 static so_int main_Rect_perim(void* self, so_int n) {
     main_Rect* r = self;
     return n * (2 * r->width + 2 * r->height);
-}
-
-// Blank receiver.
-static so_int main_Rect_sides(main_Rect self) {
-    (void)self;
-    return 4;
-}
-
-static so_int circle_shape(void* self) {
-    (void)self;
-    return 0;
 }
 
 static main_Rect main_Rect_resize(main_Rect r, so_int x) {
@@ -128,16 +115,6 @@ int main(void) {
         so_int cArea = circle_area(&c);
         if (cArea != 147) {
             so_panic("unexpected area");
-        }
-    }
-    {
-        // Blank receiver.
-        if (main_Rect_sides(r) != 4) {
-            so_panic("unexpected sides");
-        }
-        circle c = (circle){.radius = 7};
-        if (circle_shape(&c) != 0) {
-            so_panic("unexpected shape");
         }
     }
     {

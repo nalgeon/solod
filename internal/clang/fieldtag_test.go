@@ -76,10 +76,25 @@ func TestFieldTagValidation(t *testing.T) {
 			src:  "package x\ntype T struct{ a int `json:\"a\"` }",
 			want: "",
 		},
+		{
+			name: "blank fields get distinct names",
+			src:  "package x\ntype T struct{ a int; _, _ string }",
+			want: "",
+		},
+		{
+			name: "override collides with blank field",
+			src:  "package x\ntype T struct{ a int `c:\"_1\"`; _ int }",
+			want: "duplicate C field name",
+		},
+		{
+			name: "plain field collides with blank field",
+			src:  "package x\ntype T struct{ _ int; _0 int }",
+			want: "duplicate C field name",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := collectFieldTagsFail(t, tt.src)
+			got := fieldNamesFail(t, tt.src)
 			switch {
 			case tt.want == "" && got != "":
 				t.Errorf("unexpected failure: %s", got)
@@ -90,9 +105,9 @@ func TestFieldTagValidation(t *testing.T) {
 	}
 }
 
-// collectFieldTagsFail runs collectFieldTags over src and returns the failure
-// message, or "" if collection succeeds.
-func collectFieldTagsFail(t *testing.T, src string) (msg string) {
+// fieldNamesFail runs the field tag collection and the field name check over
+// src and returns the failure message, or "" if both succeed.
+func fieldNamesFail(t *testing.T, src string) (msg string) {
 	t.Helper()
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, "x.go", src, 0)
@@ -118,5 +133,6 @@ func collectFieldTagsFail(t *testing.T, src string) (msg string) {
 		}
 	}()
 	g.collectFieldTags()
+	g.checkFieldNames()
 	return ""
 }

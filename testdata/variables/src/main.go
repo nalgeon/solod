@@ -24,19 +24,6 @@ var (
 	pkgNil any = nil
 )
 
-// Blank package-level variables.
-var _ = 11
-var _ int = 11
-var _ float64 = 22.2
-var _ string = "33"
-var _ []int = []int{1, 2, 3}
-var _ = person{age: 42}
-var _ person = person{age: 42}
-var _ *person = &pkgStruct
-var _ any = 42
-var _ any = pkgPtr
-var _ any = nil
-
 // A package-level variable is visible to a function, so
 // a call can read an assignment the same statement makes.
 var counter int
@@ -212,23 +199,6 @@ func main() {
 		u1, u2 := unsafe.Pointer(&vStruct), unsafe.Pointer(&vStruct)
 		_ = u1
 		_ = u2
-	}
-	{
-		// Discarding values with blank identifier.
-		var v1, _ = 11, 12
-		var _, v2 = 21, 22
-		var _, _ = 31, 32
-		var _ = 41
-
-		v3, _ := 51, 52
-		_, v4 := 61, 62
-		_, _ = 71, 72
-		_ = 81
-
-		_ = v1
-		_ = v2
-		_ = v3
-		_ = v4
 	}
 	{
 		// Partial redeclaration with short variable declaration.

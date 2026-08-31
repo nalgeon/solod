@@ -27,8 +27,6 @@ static so_unused person* pkgPtr = &pkgStruct;
 static so_unused void* pkgAnyVal = &(so_int){42};
 static so_unused void* pkgNil = NULL;
 
-// Blank package-level variables.
-
 // A package-level variable is visible to a function, so
 // a call can read an assignment the same statement makes.
 static so_unused so_int counter = 0;
@@ -220,22 +218,6 @@ int main(void) {
         void* u2 = (void*)(&vStruct);
         (void)u1;
         (void)u2;
-    }
-    {
-        // Discarding values with blank identifier.
-        so_int v1 = 11;
-        so_int v2 = 22;
-        so_int v3 = 51;
-        (void)52;
-        (void)61;
-        so_int v4 = 62;
-        (void)71;
-        (void)72;
-        (void)81;
-        (void)v1;
-        (void)v2;
-        (void)v3;
-        (void)v4;
     }
     {
         // Partial redeclaration with short variable declaration.

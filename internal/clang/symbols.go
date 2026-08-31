@@ -90,6 +90,7 @@ func (g *Generator) collect() {
 	g.checkExportedDecls()
 	g.checkPromoted()
 	g.checkEmbeddedTypes()
+	g.checkFieldNames()
 	g.checkValueOrder()
 	g.checkFrameValues()
 }

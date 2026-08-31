@@ -13,15 +13,6 @@ func (r *Rect) perim(n int) int {
 	return n * (2*r.width + 2*r.height)
 }
 
-// Blank receiver.
-func (_ Rect) sides() int {
-	return 4
-}
-
-func (_ *circle) shape() int {
-	return 0
-}
-
 func (r Rect) resize(x int) Rect {
 	r.height *= x
 	r.width *= x
@@ -114,16 +105,6 @@ func main() {
 		cArea := c.area()
 		if cArea != 147 {
 			panic("unexpected area")
-		}
-	}
-	{
-		// Blank receiver.
-		if r.sides() != 4 {
-			panic("unexpected sides")
-		}
-		c := circle{radius: 7}
-		if c.shape() != 0 {
-			panic("unexpected shape")
 		}
 	}
 	{

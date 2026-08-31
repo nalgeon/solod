@@ -51,14 +51,15 @@ func (g *Generator) emitFuncProto(w io.Writer, decl *ast.FuncDecl) *types.Signat
 
 	// Parameters: methods prepend receiver
 	// (void* self for pointer, T name for value).
+	names := g.paramNames(decl)
+	g.checkParamNames(decl, names)
 	var parts []string
 	if decl.Recv != nil {
 		recv := decl.Recv.List[0]
 		if _, ok := recv.Type.(*ast.Ident); ok {
 			// Value receiver: pass struct by value.
 			cStructType := g.symbolName(g.recvTypeObj(recv))
-			name, _ := recvVarName(recv)
-			parts = append(parts, cStructType+" "+name)
+			parts = append(parts, cStructType+" "+names[0])
 		} else {
 			parts = append(parts, "void* self")
 		}
@@ -68,15 +69,15 @@ func (g *Generator) emitFuncProto(w io.Writer, decl *ast.FuncDecl) *types.Signat
 			typ := g.types.TypeOf(field.Type)
 			ct := g.mapTypeDecl(field.Type, typ)
 			if len(field.Names) == 0 {
-				parts = append(parts, ct.Decl(blankParamName(len(parts)))+" so_unused")
+				parts = append(parts, ct.Decl(names[len(parts)])+" so_unused")
 				continue
 			}
 			for _, n := range field.Names {
+				part := ct.Decl(names[len(parts)])
 				if n.Name == "_" {
-					parts = append(parts, ct.Decl(blankParamName(len(parts)))+" so_unused")
-					continue
+					part += " so_unused"
 				}
-				parts = append(parts, ct.Decl(n.Name))
+				parts = append(parts, part)
 			}
 		}
 	}
@@ -194,6 +195,7 @@ func (g *Generator) emitMacroFuncDecl(w io.Writer, decl *ast.FuncDecl) {
 			}
 		}
 	}
+	g.checkParamNames(decl, params)
 
 	// Capture body output.
 	var buf strings.Builder
@@ -472,6 +474,50 @@ func (g *Generator) funcSig(decl *ast.FuncDecl) *types.Signature {
 // callSig extracts the function signature from a call expression.
 func (g *Generator) callSig(call *ast.CallExpr) *types.Signature {
 	return g.types.TypeOf(call.Fun).Underlying().(*types.Signature)
+}
+
+// paramNames returns the C name of every parameter of a non-generic function,
+// in order: the receiver first, then the declared parameters. A blank ("_")
+// parameter has no Go name, so it gets a generated name.
+func (g *Generator) paramNames(decl *ast.FuncDecl) []string {
+	var names []string
+	if decl.Recv != nil {
+		recv := decl.Recv.List[0]
+		if _, ok := recv.Type.(*ast.Ident); ok {
+			name, _ := recvVarName(recv)
+			names = append(names, name)
+		} else {
+			names = append(names, "self")
+		}
+	}
+	if decl.Type.Params == nil {
+		return names
+	}
+	for _, field := range decl.Type.Params.List {
+		if len(field.Names) == 0 {
+			names = append(names, blankParamName(len(names)))
+			continue
+		}
+		for _, n := range field.Names {
+			if n.Name == "_" {
+				names = append(names, blankParamName(len(names)))
+				continue
+			}
+			names = append(names, n.Name)
+		}
+	}
+	return names
+}
+
+// checkParamNames rejects a function with two parameters of the same C name.
+func (g *Generator) checkParamNames(decl *ast.FuncDecl, names []string) {
+	seen := map[string]bool{}
+	for _, name := range names {
+		if seen[name] {
+			g.fail(decl, "duplicate C parameter name %q in func %s", name, decl.Name.Name)
+		}
+		seen[name] = true
+	}
 }
 
 // recvTypeName returns the Go type name from a method receiver field.

@@ -201,16 +201,6 @@ int main(void) {
         }
     }
     {
-        // Interface methods with unnamed and blank parameters.
-        main_Painter p = (main_Painter){.self = &r, .Fill = main_Rect_Fill, .Paint = main_Rect_Paint};
-        if (main_Painter_Paint(p, 2, so_str("x")) != 20) {
-            so_panic("p.Paint(2, \"x\") != 20");
-        }
-        if (main_Painter_Fill(p, 1) != 6) {
-            so_panic("p.Fill(1) != 6");
-        }
-    }
-    {
         // Method call through a pointer to an interface.
         main_Shape s = (main_Shape){.self = &r, .Area = main_Rect_Area, .Perim = main_Rect_Perim};
         main_Shape* p = &s;

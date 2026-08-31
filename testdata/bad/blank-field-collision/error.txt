@@ -1,0 +1,3 @@
+main.go:5:2: duplicate C field name "_0" in struct
+	_0 int
+	^here
