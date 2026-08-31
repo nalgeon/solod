@@ -54,7 +54,7 @@ func TestAssert(t *testing.T) {
 	_ = t
 	a, b := 11, 11
 	c.Assert(a == b, "a != b")
-	// A false condition panics, and So has no recover,
+	// A false condition panics, and Solod has no recover,
 	// so a test cannot take the failing branch.
 }
 
@@ -95,7 +95,7 @@ func TestRaw(t *testing.T) {
 }
 
 func TestRawVars(t *testing.T) {
-	// The block reads the So variables of the function. Go does not see the
+	// The block reads the Solod variables of the function. Go does not see the
 	// read, so the variable needs a blank assignment to stay in use.
 	a := 7
 	_ = a

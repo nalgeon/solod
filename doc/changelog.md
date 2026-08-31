@@ -1,6 +1,6 @@
 # Solod 0.4 (in progress)
 
-This document lists the main changes in the So version in development.
+This document lists the main changes in the Solod version in development.
 
 - Language:
   [Type parameters](#type-parameters) ·
@@ -195,7 +195,7 @@ A blank identifier no longer drops its value in a short variable declaration:
 _, y := next(), 2  // next() was never called, now it runs
 ```
 
-So still rejects statements that read a variable in the same statement where it is assigned, because C evaluates the index at the time of assignment:
+Solod still rejects statements that read a variable in the same statement where it is assigned, because C evaluates the index at the time of assignment:
 
 ```go
 i, arr[i] = 0, 5   // not supported
@@ -377,9 +377,9 @@ type SDL_CommonEvent struct {
 
 ### Variadic nodecay
 
-A plain extern variadic is a C variadic: every argument decays, and the callee reads C types. A nodecay extern variadic passes So types instead. Each argument goes to the C `...` on its own, at its So type, and every scalar widens:
+A plain extern variadic is a C variadic: every argument decays, and the callee reads C types. A nodecay extern variadic passes Solod types instead. Each argument goes to the C `...` on its own, at its Solod type, and every scalar widens:
 
-| So type                            | C type read by `va_arg` |
+| Solod type                         | C type read by `va_arg` |
 | ---------------------------------- | ----------------------- |
 | any signed integer, `rune`, `bool` | `so_int`                |
 | any unsigned integer               | `so_uint`               |

@@ -28,7 +28,7 @@ var hostPortSeeds = []string{
 }
 
 // sameErr reports whether the error of this package and the error of Go's net
-// package name the same defect. So merges Go's two bracket errors into
+// package name the same defect. Solod merges Go's two bracket errors into
 // ErrUnexpectedBracket, so that sentinel accepts either message.
 func sameErr(soErr, goErr error) bool {
 	if soErr == nil || goErr == nil {

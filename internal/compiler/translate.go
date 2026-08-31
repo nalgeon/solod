@@ -36,7 +36,7 @@ func dirSource(dir string) source {
 	return source{dir: dir, pattern: "."}
 }
 
-// Translate loads all Go packages from srcDir (including So stdlib dependencies),
+// Translate loads all Go packages from srcDir (including Solod stdlib dependencies),
 // translates them to C, and writes the output to outDir. It returns the C
 // libraries the transpiled packages must link against, deduplicated and sorted,
 // without the -l prefix.
@@ -176,12 +176,12 @@ func packageOutDir(pkg, entry *packages.Package, outDir string) string {
 	return filepath.Join(outDir, relPath)
 }
 
-// isOSPackage reports whether pkg is the So os package.
+// isOSPackage reports whether pkg is the Solod os package.
 func isOSPackage(pkg *packages.Package) bool {
 	return pkg.PkgPath == "solod.dev/so/os"
 }
 
-// isStdlib reports whether pkg is a So standard library package.
+// isStdlib reports whether pkg is a Solod standard library package.
 func isStdlib(pkg *packages.Package) bool {
 	const stdlibPrefix = "solod.dev/so/"
 	return strings.HasPrefix(pkg.PkgPath, stdlibPrefix)
@@ -189,7 +189,7 @@ func isStdlib(pkg *packages.Package) bool {
 
 // shouldTranspile returns true if a package should be transpiled to C.
 // Go standard library packages (Module == nil) are skipped;
-// everything else (user code, So stdlib, third-party So packages) is transpiled.
+// everything else (user code, Solod stdlib, third-party Solod packages) is transpiled.
 func shouldTranspile(pkg *packages.Package) bool {
 	return pkg.Module != nil
 }

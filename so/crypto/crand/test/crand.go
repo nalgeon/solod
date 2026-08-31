@@ -74,7 +74,7 @@ const chiLo = 128.0
 const chiHi = 448.0
 
 // checkUniform checks that b holds a uniform stream of bytes. Go compresses the
-// stream with flate and rejects a stream that gets smaller. So has no
+// stream with flate and rejects a stream that gets smaller. Solod has no
 // compression package, so the check is a chi-square test over the byte values
 // and over the differences of the neighboring bytes. A constant stream fails
 // the first test, and a counter fails the second one.
@@ -154,7 +154,7 @@ func TestReaderReadEmpty(t *testing.T) {
 	checkReadEmpty(t, true)
 }
 
-// checkReadEmpty checks the result of a read into an empty buffer. So gives one
+// checkReadEmpty checks the result of a read into an empty buffer. Solod gives one
 // representation to a nil slice and to an empty slice, so one check covers both.
 func checkReadEmpty(t *testing.T, useReader bool) {
 	name := readName(useReader)

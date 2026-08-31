@@ -335,7 +335,7 @@ func (g *Generator) checkPackage(node ast.Node, obj types.Object) {
 	if g.modulePkgs[pkg.Path()] {
 		return
 	}
-	g.fail(node, "Go package %q is not supported; use the So standard library", pkg.Path())
+	g.fail(node, "Go package %q is not supported; use the Solod standard library", pkg.Path())
 }
 
 // declSymbolName returns the C name for a declaration that could be

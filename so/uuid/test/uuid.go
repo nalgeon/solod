@@ -139,9 +139,9 @@ func TestParseErrors(t *testing.T) {
 		"urn:uuid:x000000-0000-0000-0000-000000000000",
 		"x0000000000000000000000000000000",
 		// Some parsers permit hyphens in non-standard locations,
-		// but So does not.
+		// but Solod does not.
 		"0000-0000-0000-0000-0000-0000-0000-0000",
-		// Combinations of variant encodings that So could parse,
+		// Combinations of variant encodings that Solod could parse,
 		// but does not.
 		"{00000000000000000000000000000000}",
 		"{urn:uuid:00000000-0000-0000-0000-000000000000}",
@@ -195,7 +195,7 @@ func checkNew(t *testing.T, name string, u uuid.UUID, version int) {
 }
 
 // uid returns the UUID that ustr represents.
-// So cannot use an array value in a composite literal,
+// Solod cannot use an array value in a composite literal,
 // so the test assigns the field separately.
 func uid() uuid.UUID {
 	var u uuid.UUID

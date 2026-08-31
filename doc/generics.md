@@ -1,6 +1,6 @@
 # Generics
 
-So supports generic functions as [extern declarations](#generic-extern-declarations) and [inline macros](#generic-inline-macros), and also supports [generic types](#generic-types). However, these features are very limited, and you should only use generics for the simplest cases (or, even better — don't use them at all).
+Solod supports generic functions as [extern declarations](#generic-extern-declarations) and [inline macros](#generic-inline-macros), and also supports [generic types](#generic-types). However, these features are very limited, and you should only use generics for the simplest cases (or, even better — don't use them at all).
 
 ## Generic extern declarations
 
@@ -76,7 +76,7 @@ Constraints (`any`, `comparable`, etc.) are not emitted in C. See [Type constrai
 
 ## Generic inline macros
 
-When `//so:inline` is applied to a generic function, the transpiler automatically generates a C `#define` macro instead of a `static inline` function. This is the primary mechanism for writing type-generic code directly in So without hand-writing C macros.
+When `//so:inline` is applied to a generic function, the transpiler automatically generates a C `#define` macro instead of a `static inline` function. This is the primary mechanism for writing type-generic code directly in Solod without hand-writing C macros.
 
 ```go
 //so:inline

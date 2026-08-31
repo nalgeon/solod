@@ -5,12 +5,12 @@
 extern so_Error fmt_ErrPrint;  // print failure
 extern so_Error fmt_ErrScan;   // scan failure
 
-// The print family is nodecay, so every argument arrives as a So type.
+// The print family is nodecay, so every argument arrives as a Solod type.
 
 // Print writes its arguments to standard output, separated by spaces.
 // It returns the number of bytes written and any write error encountered.
 //
-// The last argument marks the end of the list. No real So string has a
+// The last argument marks the end of the list. No real Solod string has a
 // negative length, so an argument cannot collide with the marker. The ##
 // deletes the comma when the argument list is empty.
 #define fmt_Print(...) fmt_print(false, ##__VA_ARGS__, (so_String){NULL, -1})

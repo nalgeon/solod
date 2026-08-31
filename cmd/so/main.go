@@ -55,7 +55,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, `So is a tool for managing Solod source code.
+	fmt.Fprintf(os.Stderr, `so is a tool for managing Solod source code.
 
 Usage: so <command> [arguments]
 

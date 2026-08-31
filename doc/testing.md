@@ -1,6 +1,6 @@
 # Testing
 
-So programs are tested with the `so test` command and the [so/testing](https://pkg.go.dev/solod.dev/so/testing) package. The model mirrors Go's `testing`, but stays deliberately small: no subtests and no parallelism.
+Solod programs are tested with the `so test` command and the [so/testing](https://pkg.go.dev/solod.dev/so/testing) package. The model mirrors Go's `testing`, but stays deliberately small: no subtests and no parallelism.
 
 ## Layout
 
@@ -16,7 +16,7 @@ so/bytes/
 
 Test files are plain `.go` files (no `_test.go` suffix). `go test` ignores them, so you can still keep ordinary Go-level tests elsewhere and run them with `go test`.
 
-The test directory declares a package of its own, not `package main`. `so test` can join the tests of many packages into one program, so it must be able to import each test package. Two test packages of one run must also have distinct names: the So compiler prefixes an exported C name with the package name, so equal package names give equal C names.
+The test directory declares a package of its own, not `package main`. `so test` can join the tests of many packages into one program, so it must be able to import each test package. Two test packages of one run must also have distinct names: the Solod compiler prefixes an exported C name with the package name, so equal package names give equal C names.
 
 A common convention is to name a test package after the package under test, with a `_test` suffix: `so/bytes/test` declares `package bytes_test`, `so/sync/test` declares `package sync_test`, etc.
 
@@ -267,7 +267,7 @@ func main() {
 
 ### Keeping the measured code alive
 
-Unlike Go, So's `b.Loop` doesn't automatically keep the loop body alive. If you
+Unlike Go, Solod's `b.Loop` doesn't automatically keep the loop body alive. If you
 compile the benchmarks to C with aggressive optimization (`-Ofast -flto`), the
 compiler can remove any work whose result isn't used. A clear sign of this is
 seeing an unrealistically low time, like `0.3 ns/op`, for something that should
@@ -305,7 +305,7 @@ func BenchmarkStore(b *testing.B) {
 
 `so bench` (and `so test`) ignore `_test.go` files. This lets you drop native
 Go benchmarks of the same code into the `bench` directory and compare the two
-side by side: `so bench ./so/bufio` runs the So versions, while
+side by side: `so bench ./so/bufio` runs the Solod versions, while
 `go test -bench=. ./so/bufio/bench` runs the Go ones. Give the Go functions
 distinct names (e.g. a `_Go` suffix) so both sets can share the directory
 without colliding.
@@ -314,7 +314,7 @@ without colliding.
 
 ### Fatal and Skip need an explicit return
 
-So has no `recover`, so a test cannot be unwound from the outside. `Fatal` and `Skip` only set state and print the message; they do **not** stop the function. Always `return` right after:
+Solod has no `recover`, so a test cannot be unwound from the outside. `Fatal` and `Skip` only set state and print the message; they do **not** stop the function. Always `return` right after:
 
 ```go
 if err != nil {
@@ -342,4 +342,4 @@ if !runtime.Hosted {
 
 ### A hard crash aborts the whole run
 
-Tests run in a single process, and So has no `recover`. So a hard crash — a `panic` or a segfault — in one test aborts the entire run, not just that test: the tests after it do not execute. With a `...` pattern the run covers many packages, so a crash also stops the packages after the crashing one. Reported failures (`Error`, `Fatal`) are unaffected; only an actual crash stops the run. The `=== RUN` line printed before each test tells you which one crashed.
+Tests run in a single process, and Solod has no `recover`. So a hard crash — a `panic` or a segfault — in one test aborts the entire run, not just that test: the tests after it do not execute. With a `...` pattern the run covers many packages, so a crash also stops the packages after the crashing one. Reported failures (`Error`, `Fatal`) are unaffected; only an actual crash stops the run. The `=== RUN` line printed before each test tells you which one crashed.

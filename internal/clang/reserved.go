@@ -30,7 +30,7 @@ var reservedSo = map[string]bool{
 }
 
 // handleReservedNames rewrites identifiers that conflict with reserved C names
-// and reject identifiers that conflict with reserved So names.
+// and reject identifiers that conflict with reserved Solod names.
 //
 // Function-local variables, parameters, and constants are mangled by adding
 // "_" at the end (Go "long" -> C "long_"). This works because every time a

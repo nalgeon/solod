@@ -192,7 +192,7 @@ const nFuzzKinds = 7
 const maxFuzzAttrs = 8
 
 // The bounds of the instant of a fuzzed record. UnixNano holds every instant
-// inside the bounds, and Go and So write the same year for it.
+// inside the bounds, and Go and Solod write the same year for it.
 const (
 	minFuzzSec = -8000000000
 	maxFuzzSec = 8000000000

@@ -119,7 +119,7 @@ func TestFprintf(t *testing.T) {
 	sb := strings.NewBuilder(t.Allocator())
 	defer sb.Free()
 
-	// %d takes a So int. A narrower integer needs no conversion, because the
+	// %d takes a Solod int. A narrower integer needs no conversion, because the
 	// print family is nodecay and every scalar widens.
 	var i int32 = 42
 	s := "world"

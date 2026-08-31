@@ -1,6 +1,6 @@
 # Freestanding mode
 
-So can target freestanding (bare-metal) environments where no C standard library is available.
+Solod can target freestanding (bare-metal) environments where no C standard library is available.
 
 [Compiling](#compiling) •
 [Stdlib packages](#stdlib-packages) •
@@ -25,7 +25,7 @@ A target whose OS is `freestanding` (zig) or `none` (LLVM) changes the behavior:
 
 `so test`, `so bench` and `so run` take the same flag.
 
-So doesn't infer linker flags, so the three above stay in `CFLAGS`:
+Solod doesn't infer linker flags, so the three above stay in `CFLAGS`:
 
 - `-nostdlib`, because some freestanding targets link a small C library of their own.
 - `-Wl,--no-entry`, because it is a `wasm-ld` option that GNU ld rejects.
@@ -128,7 +128,7 @@ conc  flag  log/slog  net  os  sync
 
 ## Target hooks
 
-A freestanding environment has no standard output, no entropy source and no clock, and only the target knows how to reach its own hardware. So declares a C function for each of these, and the target defines the ones its program needs:
+A freestanding environment has no standard output, no entropy source and no clock, and only the target knows how to reach its own hardware. Solod declares a C function for each of these, and the target defines the ones its program needs:
 
 | Hook            | Description                     | With no definition                            |
 | --------------- | ------------------------------- | --------------------------------------------- |

@@ -115,7 +115,7 @@ help:
 	@echo "Single case:"
 	@echo "  run-case name=NAME    transpile, compile and run testdata/NAME"
 	@echo "  run-test name=PKG     transpile, compile and run the tests of PKG (e.g. so/sync)"
-	@echo "  bench name=PKG        run the Go and So benchmarks in PKG/bench"
+	@echo "  bench name=PKG        run the Go and Solod benchmarks in PKG/bench"
 	@echo "  inspect path=PATH     print the Go AST of the file at PATH"
 	@echo ""
 	@echo "Golden files:"

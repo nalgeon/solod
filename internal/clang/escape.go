@@ -9,7 +9,7 @@ import (
 
 // Escape analysis
 //
-// So has no garbage collector and no heap by default. Several builtins allocate
+// Solod has no garbage collector and no heap by default. Several builtins allocate
 // their result in the current function's stack frame: string concatenation, rune
 // and []rune conversions, make for slices and maps, array literals, and taking
 // the address of a local, etc. Such a value is a "frame value": it is valid only
@@ -589,7 +589,7 @@ func (c *escapeChecker) isFrameStringConv(argT types.Type, arg ast.Expr) bool {
 }
 
 // escapes returns the return-value expressions that are frame values. It skips
-// nested closures. A bare return has no results, so it never escapes (So has no
+// nested closures. A bare return has no results, so it never escapes (Solod has no
 // named results, so bare returns occur only in functions that return nothing).
 func (c *escapeChecker) escapes(decl *ast.FuncDecl) []ast.Node {
 	var found []ast.Node
@@ -802,7 +802,7 @@ func isStringType(t types.Type) bool {
 	return ok && (b.Kind() == types.String || b.Kind() == types.UntypedString)
 }
 
-// isUnderlyingArray reports whether t is an array, named or not. So returns an
+// isUnderlyingArray reports whether t is an array, named or not. Solod returns an
 // array by value as a pointer into the frame (see returnType), so a local array
 // is a frame value. A struct that wraps an array is copied by value and stays
 // safe.

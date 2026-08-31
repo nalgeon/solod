@@ -32,7 +32,7 @@ The verbs:
 The flags are Go's: '+', '-', '#', ' ' and '0'. A width and a precision are
 decimal numbers, and a '*' takes the value from an argument.
 
-Two differences against Go. So has no reflection, so the verbs that need type
+Two differences against Go. Solod has no reflection, so the verbs that need type
 information are absent: %v, %T, %w, %q and %U. And %u is added, because a call
 carries no type information either, so nothing else can tell a signed value
 from an unsigned one.

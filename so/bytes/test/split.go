@@ -8,7 +8,7 @@ import (
 	"solod.dev/so/unicode/utf8"
 )
 
-// partSep separates the wanted subslices of a split case. So has no nested
+// partSep separates the wanted subslices of a split case. Solod has no nested
 // composite literals in a table, so a case joins the wanted subslices into
 // one string. No case holds the byte 0x02.
 const partSep = "\x02"

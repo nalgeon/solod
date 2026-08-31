@@ -1,6 +1,4 @@
-// Differential test of the ported formatter against Go's fmt. A So functional
-// test cannot reach Go's fmt, so this check has to be a Go test. The So tests
-// in so/fmt/test own the shipped behavior.
+// Differential test of the ported formatter against Go's fmt.
 //
 // Every case builds a format string from a spec, formats a value with the
 // ported formatter, and compares the output to what Go's fmt gives for the

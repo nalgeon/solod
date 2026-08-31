@@ -1,6 +1,6 @@
 # Building
 
-So programs are built with the `so build` command, which transpiles the package to C and compiles it with a system C compiler. The `run`, `test`, and `bench` commands build the same way before running. This guide covers the build options they share.
+Solod programs are built with the `so build` command, which transpiles the package to C and compiles it with a system C compiler. The `run`, `test`, and `bench` commands build the same way before running. This guide covers the build options they share.
 
 [Compiler and flags](#compiler-and-flags) •
 [Target](#target) •
@@ -16,7 +16,7 @@ POSIX targets are fully supported. Other targets have some restrictions. For mor
 
 ## Compiler and flags
 
-So invokes the compiler named by the `CC` environment variable (default `cc`) and passes along `CFLAGS` and `LDFLAGS`:
+Solod invokes the compiler named by the `CC` environment variable (default `cc`) and passes along `CFLAGS` and `LDFLAGS`:
 
 ```sh
 export CC=clang
@@ -36,7 +36,7 @@ CFLAGS="-Oz" so build -o app .
 
 ### Integer overflow
 
-So passes `-fwrapv` to make a signed integer overflow wrap around, as Go does:
+Solod passes `-fwrapv` to make a signed integer overflow wrap around, as Go does:
 
 ```go
 var a int32 = 2147483647
@@ -50,7 +50,7 @@ println(c * c) // 1410065408, as in Go
 
 ## Target
 
-The `-target` flag names the target of a cross-compilation. It takes the value that `clang` and `zig cc` accept after `--target=`, and So passes it through unchanged:
+The `-target` flag names the target of a cross-compilation. It takes the value that `clang` and `zig cc` accept after `--target=`, and Solod passes it through unchanged:
 
 ```sh
 export CC="zig cc"
@@ -100,7 +100,7 @@ so run -panic=trace .
 - `exit`: call `exit(1)`. Clean, deterministic exit code.
 - `abort`: call `abort()`, raising `SIGABRT` so a debugger, AddressSanitizer, or core dump can report the stack.
 
-Trace mode adds `-rdynamic -fno-omit-frame-pointer` to the C build so frames can be unwound and named. The trace shows C symbols (`package_Func`), which map directly onto So functions; combine it with `-track-source` to relate the panic site back to So source.
+Trace mode adds `-rdynamic -fno-omit-frame-pointer` to the C build so frames can be unwound and named. The trace shows C symbols (`package_Func`), which map directly onto Solod functions; combine it with `-track-source` to relate the panic site back to Solod source.
 
 ## Assertions
 
@@ -116,7 +116,7 @@ A removed assertion doesn't evaluate its condition at all, so conditions must be
 
 ## Source locations
 
-By default, panic messages report the C file and line number. Use the `-track-source` flag to print the original So source locations instead:
+By default, panic messages report the C file and line number. Use the `-track-source` flag to print the original Solod source locations instead:
 
 ```
 so build -track-source .

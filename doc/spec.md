@@ -1,6 +1,6 @@
-# So language description
+# Solod language description
 
-Solod (So) is a strict subset of Go that transpiles to regular C. This document lists the features it supports. If a feature isn't listed, it's not supported.
+Solod is a strict subset of Go that transpiles to regular C. This document lists the features it supports. If a feature isn't listed, it's not supported.
 
 [Values](#values) •
 [Constants](#constants) •
@@ -30,7 +30,7 @@ Solod (So) is a strict subset of Go that transpiles to regular C. This document 
 
 ## Values
 
-So supports basic Go types:
+Solod supports basic Go types:
 
 ```go
 // Integers.
@@ -82,7 +82,7 @@ const twoPi = 2 * pi  // folds to 6.28318
 
 ## Variables
 
-So supports all the main ways to declare and initialize a variable in Go.
+Solod supports all the main ways to declare and initialize a variable in Go.
 
 `var` with an explicit or inferred type:
 
@@ -604,7 +604,7 @@ Exported functions must only use exported types in their signatures (parameters 
 
 ### Call order
 
-Go evaluates the calls in an expression from left to right. So does not define the order because it passes each expression to the C compiler, and C does not specify the order of operands and arguments. As a result, two different C compilers might choose different orders for the same generated code:
+Go evaluates the calls in an expression from left to right. Solod does not define the order because it passes each expression to the C compiler, and C does not specify the order of operands and arguments. As a result, two different C compilers might choose different orders for the same generated code:
 
 ```go
 sum(next(), next())  // either call can run first
@@ -621,7 +621,7 @@ sum(x, y)
 
 ## Multiple return values
 
-So supports two-value multiple returns in two patterns: `(T, error)` and `(T1, T2)`.
+Solod supports two-value multiple returns in two patterns: `(T, error)` and `(T1, T2)`.
 
 The `(T, error)` pattern - the second value is `error`:
 
@@ -679,7 +679,7 @@ int int64 rune
 string []T *T
 ```
 
-So also supports the `(T, error)` pattern, where `T` is a custom struct type:
+Solod also supports the `(T, error)` pattern, where `T` is a custom struct type:
 
 ```go
 func create(size int) (File, error) {
@@ -863,7 +863,7 @@ Method expressions (`T.method` or `(*T).method`) are supported. Method values (`
 
 ## Interfaces
 
-Interfaces in So are like Go interfaces, but they don't include runtime type information.
+Interfaces in Solod are like Go interfaces, but they don't include runtime type information.
 
 Interface declarations list the required methods:
 
@@ -1005,7 +1005,7 @@ if a == n { }    // not supported
 
 ## Enums
 
-So supports typed constant groups as enums:
+Solod supports typed constant groups as enums:
 
 ```go
 type HttpStatus int
@@ -1107,7 +1107,7 @@ panic(err)
 
 In C, this is emitted as a macro call `so_panic(...)`.
 
-A panic prints its message with a source location, then terminates the program. How it terminates (the panic mode), how traces are symbolized, and how to report the original So source location are build options; see [Building](building.md).
+A panic prints its message with a source location, then terminates the program. How it terminates (the panic mode), how traces are symbolized, and how to report the original Solod source location are build options; see [Building](building.md).
 
 `recover` is not supported.
 
@@ -1130,11 +1130,11 @@ Defer can only use variables declared at the top level of a function, not inside
 
 ## C interop
 
-So provides several tools for easy C interop. See the [interop guide](./interop.md) for details.
+Solod provides several tools for easy C interop. See the [interop guide](./interop.md) for details.
 
 ## Generics
 
-So supports generic functions as extern declarations and inline macros, and also supports generic types. However, these features are very limited, and you should only use generics for the simplest cases (or, even better — don't use them at all). See the [generics guide](./generics.md) for details.
+Solod supports generic functions as extern declarations and inline macros, and also supports generic types. However, these features are very limited, and you should only use generics for the simplest cases (or, even better — don't use them at all). See the [generics guide](./generics.md) for details.
 
 ## Packages
 

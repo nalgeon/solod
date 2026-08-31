@@ -41,7 +41,7 @@ const (
 	kindPtr    = 7
 )
 
-// arg is one argument, collected by the C shim. So has no unions, so the
+// arg is one argument, collected by the C shim. Solod has no unions, so the
 // signed, the unsigned, the rune, the boolean and the pointer values share
 // the integer field.
 //

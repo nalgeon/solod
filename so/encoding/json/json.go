@@ -1,6 +1,6 @@
 // Package json implements a small, streaming JSON reader and writer.
 //
-// Unlike Go's encoding/json, So has no reflection, so there is no
+// Unlike Go's encoding/json, Solod has no reflection, so there is no
 // Marshal/Unmarshal over arbitrary structs. Instead this package exposes a
 // token-level API: a [Decoder] that pulls one validated token at a time, and
 // an [Encoder] that writes tokens to an [io.Writer] while inserting commas and

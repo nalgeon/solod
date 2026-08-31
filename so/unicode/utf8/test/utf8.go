@@ -179,7 +179,7 @@ func TestDecodeRune(t *testing.T) {
 			t.Errorf("DecodeRuneInString(U+%04X cut short) = U+%04X, %d, want RuneError, %d", m.r, r, size, wantSize)
 		}
 
-		// A bad sequence must fail. So gives a zero-copy view for
+		// A bad sequence must fail. Solod gives a zero-copy view for
 		// []byte(string), so the test copies the bytes before it writes.
 		var arr [utf8.UTFMax]byte
 		bad := arr[:copy(arr[:], b)]

@@ -148,7 +148,7 @@ func TestWriterAppend(t *testing.T) {
 			break
 		}
 
-		// So has no append that grows a slice, so the buffer must have
+		// Solod has no append that grows a slice, so the buffer must have
 		// room for the whole number.
 		if cap(b) < maxNumLen {
 			w.Flush()

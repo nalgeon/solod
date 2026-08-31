@@ -1,13 +1,13 @@
-# So standard library
+# Solod standard library
 
-So provides a growing set of packages similar to Go's standard library, plus a low-level package for C interop. This document gives a general overview of what each package does and how it differs from its Go counterpart.
+Solod provides a growing set of packages similar to Go's standard library, plus a low-level package for C interop. This document gives a general overview of what each package does and how it differs from its Go counterpart.
 
 For the full package API, see the [package documentation](https://pkg.go.dev/solod.dev/so) or run `go doc` (for example, `go doc -all solod.dev/so/slices`).
 
 Three language traits shape the whole library:
 
 - **Memory is manual.** There is no garbage collector. Anything that allocates takes a `mem.Allocator`, and you free it yourself.
-- **There is no reflection.** Values carry no runtime type information, so there is no `Marshal`/`Unmarshal` and no `%v`. Where Go inspects a type at runtime, So asks you to pass a function instead.
+- **There is no reflection.** Values carry no runtime type information, so there is no `Marshal`/`Unmarshal` and no `%v`. Where Go inspects a type at runtime, Solod asks you to pass a function instead.
 - **There is no user-space concurrency.** Concurrency is OS threads, provided by packages rather than by the language.
 
 ## Memory
@@ -82,7 +82,7 @@ Three language traits shape the whole library:
 
 ## Program support
 
-[errors](https://pkg.go.dev/solod.dev/so/errors) creates errors from a message. So natively supports only sentinel errors, defined once at package level. There is no error wrapping or `Is`/`As`. You can create custom error types, but if you want to return them as `error` from functions, you'll need to allocate them.
+[errors](https://pkg.go.dev/solod.dev/so/errors) creates errors from a message. Solod natively supports only sentinel errors, defined once at package level. There is no error wrapping or `Is`/`As`. You can create custom error types, but if you want to return them as `error` from functions, you'll need to allocate them.
 
 [cmp](https://pkg.go.dev/solod.dev/so/cmp) compares ordered values. Beyond Go's `Compare`, it provides `Func`, an untyped comparison function, and `FuncFor[T]`, which produces one for a given type. This is how sorting and searching work without reflection.
 
@@ -96,8 +96,8 @@ Three language traits shape the whole library:
 
 ## Testing
 
-[testing](https://pkg.go.dev/solod.dev/so/testing) is the minimal `T` API for So tests and benchmarks, which live in a package's `test` and `bench` subdirectories and are run with `so test` and `so bench`. See the [testing guide](testing.md).
+[testing](https://pkg.go.dev/solod.dev/so/testing) is the minimal `T` API for Solod tests and benchmarks, which live in a package's `test` and `bench` subdirectories and are run with `so test` and `so bench`. See the [testing guide](testing.md).
 
 ## C interop
 
-[c](https://pkg.go.dev/solod.dev/so/c) is the escape hatch into C: types for C's numeric and character types, conversions between So and C strings, slices, and pointers, stack allocation, size and alignment queries, and a way to emit raw C. See the [interop guide](interop.md).
+[c](https://pkg.go.dev/solod.dev/so/c) is the escape hatch into C: types for C's numeric and character types, conversions between Solod and C strings, slices, and pointers, stack allocation, size and alignment queries, and a way to emit raw C. See the [interop guide](interop.md).

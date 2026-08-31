@@ -1,18 +1,18 @@
 # ☀️ Solod: Go can be a better C
 
-Solod (**So**) is a strict subset of Go that translates to regular C.
+Solod is a strict subset of Go that translates to regular C.
 
 Highlights:
 
 - Go in, C out. You write regular Go code and get readable C11 as output.
 - Zero runtime. No garbage collection, no reference counting, no hidden allocations.
 - Rich standard library. Use familiar types and functions ported from Go's stdlib.
-- Native C interop. Call C from So and So from C — no CGO, no overhead.
+- Native C interop. Call C from Solod and Solod from C — no CGO, no overhead.
 - Go tooling works out of the box. Syntax highlighting, LSP, linting and modules.
 
-So supports structs, methods, interfaces, slices, maps, multiple returns, and defer. Everything is stack-allocated by default; heap is opt-in through the standard library. There is limited support for generics, and concurrency is provided by the standard library instead of being built into the language.
+Solod supports structs, methods, interfaces, slices, maps, multiple returns, and defer. Everything is stack-allocated by default; heap is opt-in through the standard library. There is limited support for generics, and concurrency is provided by the standard library instead of being built into the language.
 
-So is for Go developers who want systems-level control without learning a new language. And for C programmers who like Go's safety, structure, and tooling.
+Solod is for Go developers who want systems-level control without learning a new language. And for C programmers who like Go's safety, structure, and tooling.
 
 [Example](#example) •
 [Install](#installation) •
@@ -120,17 +120,17 @@ int main(void) {
 }
 ```
 
-Check out more examples in [So by example](https://github.com/solod-dev/example) and learn about the supported language features in the [language tour](doc/spec.md).
+Check out more examples in [Solod by example](https://github.com/solod-dev/example) and learn about the supported language features in the [language tour](doc/spec.md).
 
 ## Installation
 
-Install the So command line tool:
+Install the Solod command line tool:
 
 ```
 go install solod.dev/cmd/so@latest
 ```
 
-Create a new Go project and add the Solod dependency to use the So standard library:
+Create a new Go project and add the Solod dependency to use the Solod standard library:
 
 ```
 go mod init example
@@ -141,7 +141,7 @@ Use `main` or a specific commit hash instead of `latest` to install the newest d
 
 ## Usage
 
-Write regular Go code, but use So packages instead of the standard Go packages:
+Write regular Go code, but use Solod packages instead of the standard Go packages:
 
 ```go
 package main
@@ -178,41 +178,41 @@ All commands work with Go modules, not individual files (`so run .`, not `so run
 
 ## Learn the language
 
-**[Language tour](./doc/spec.md)**. To learn about So's features and limitations, check out the brief overview of the language.
+**[Language tour](./doc/spec.md)**. To learn about Solod's features and limitations, check out the brief overview of the language.
 
-**[Standard library](./doc/stdlib.md)**. So provides a growing set of packages similar to Go's stdlib.
+**[Standard library](./doc/stdlib.md)**. Solod provides a growing set of packages similar to Go's stdlib.
 
-**[Playground](https://codapi.org/so/)**. Try So online without installing anything. You can run the code or view the translated C output.
+**[Playground](https://codapi.org/so/)**. Try Solod online without installing anything. You can run the code or view the translated C output.
 
-**[So by example](https://github.com/solod-dev/example)**. If you like learning by doing, try a hands-on introduction to So with annotated example programs.
+**[Solod by example](https://github.com/solod-dev/example)**. If you like learning by doing, try a hands-on introduction to Solod with annotated example programs.
 
 ## Build and test
 
-**[Building](./doc/building.md)**. Compile So programs with `so build` and manage safety features.
+**[Building](./doc/building.md)**. Compile Solod programs with `so build` and manage safety features.
 
-**[Testing](doc/testing.md)**. Write tests with the `so test` command and the `so/testing` package. Since So code is also valid Go code, you can still use `go test` where it fits — those tests are never transpiled, so they can use all Go features.
+**[Testing](doc/testing.md)**. Write tests with the `so test` command and the `so/testing` package. Since Solod code is also valid Go code, you can still use `go test` where it fits — those tests are never transpiled, so they can use all Go features.
 
-**[AI skill](https://github.com/solod-dev/ai)**. You can have a clanker write So code for you. But where's the fun in that?
+**[AI skill](https://github.com/solod-dev/ai)**. You can have a clanker write Solod code for you. But where's the fun in that?
 
 ## Frequently asked questions
 
-**[Principles](doc/design.md)**. So is highly opinionated. Simplicity is key. Heap allocations are explicit. Strictly Go syntax.
+**[Principles](doc/design.md)**. Solod is highly opinionated. Simplicity is key. Heap allocations are explicit. Strictly Go syntax.
 
-**[Benchmarks](doc/benchmarks.md)**. So truly shines when it comes to C interop, but it's also quite fast on regular Go code — typically on par with or faster than Go.
+**[Benchmarks](doc/benchmarks.md)**. Solod truly shines when it comes to C interop, but it's also quite fast on regular Go code — typically on par with or faster than Go.
 
 **[FAQ](doc/faq.md)**. I have heard these several times, so it's worth answering.
 
 ## Interop
 
-C interop in So is easy to write and has zero runtime overhead. See the [interop](doc/interop.md) guide for details.
+C interop in Solod is easy to write and has zero runtime overhead. See the [interop](doc/interop.md) guide for details.
 
-So offers native bindings for popular C libraries like [libuv](https://github.com/solod-dev/libuv), [raylib](https://github.com/solod-dev/raylib), [sodium](https://github.com/solod-dev/sodium), and [sqlite](https://github.com/solod-dev/sqlite).
+Solod offers native bindings for popular C libraries like [libuv](https://github.com/solod-dev/libuv), [raylib](https://github.com/solod-dev/raylib), [sodium](https://github.com/solod-dev/sodium), and [sqlite](https://github.com/solod-dev/sqlite).
 
 To automatically generate bindings for any C library from its headers, use the [sobind](https://github.com/solod-dev/sobind) tool.
 
 ## Compatibility
 
-So generates C11 code that relies on several GCC/Clang extensions:
+Solod generates C11 code that relies on several GCC/Clang extensions:
 
 - Binary literals (`0b1010`) in generated code.
 - Statement expressions (`({...})`) in macros.
@@ -227,7 +227,7 @@ Supported operating systems: Linux, BSDs, macOS, and [Windows](doc/windows.md).
 
 Supported platforms: amd64, arm64, riscv64, i386, and wasm32.
 
-So can also target [freestanding](doc/freestanding.md) environments.
+Solod can also target [freestanding](doc/freestanding.md) environments.
 
 ## Roadmap
 
@@ -259,6 +259,6 @@ Make sure to add or update tests as needed.
 
 Go stdlib code by the [Go Authors](https://github.com/golang/go).
 
-Transpiler and So stdlib code by [Anton Zhiyanov](https://antonz.org/).
+Transpiler and Solod stdlib code by [Anton Zhiyanov](https://antonz.org/).
 
 Released under the BSD 3-Clause License.

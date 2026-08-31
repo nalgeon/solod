@@ -117,7 +117,7 @@ func TestSplit(t *testing.T) {
 }
 
 // A joinCase is a test case of Join. The elements are joined with elemSep,
-// because So has no nested composite literal in a table.
+// because Solod has no nested composite literal in a table.
 type joinCase struct {
 	elems string // the elements, separated by elemSep
 	n     int    // the number of the elements

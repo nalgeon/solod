@@ -15,7 +15,7 @@ import (
 // and it caps nesting at MaxDepth. So a Go-valid document may still be turned
 // away, but only with ErrValue or ErrDepth.
 //
-// The two So decoders, on the other hand, must agree exactly. They share every
+// The two Solod decoders, on the other hand, must agree exactly. They share every
 // scanner and differ only in where the bytes come from, so any disagreement is
 // a bug in the buffer's refill, compaction, or growth - the code a fixed
 // document never reaches. Driving it across buffer and chunk sizes is what

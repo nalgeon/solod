@@ -9,10 +9,6 @@ import (
 	"solod.dev/so/strings"
 )
 
-// The C backing for the variadic Errorf/Fatalf methods, which cannot be
-// expressed in So (a So variadic packs its args into a slice; a real C variadic
-// is needed to forward them to fmt).
-//
 //so:embed testing.h
 var testing_h string
 
@@ -51,7 +47,7 @@ func heapRelease(mark uintptr) {}
 //
 //	t.Errorf("Index = %d, want 6", got)
 //
-// So also has no recover, so T cannot unwind a running test. Fatal only marks
+// Solod also has no recover, so T cannot unwind a running test. Fatal only marks
 // the test failed and prints the message; by convention the test function must
 // return right after calling it:
 //

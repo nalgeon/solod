@@ -76,7 +76,7 @@ func (r *stdChunkReader) Read(p []byte) (int, error) {
 }
 
 func TestCopyBufferPanic(t *testing.T) {
-	// So has no recover, so only a Go test checks a panic.
+	// Solod has no recover, so only a Go test checks a panic.
 	t.Run("nil buffer", func(t *testing.T) {
 		defer func() {
 			if r := recover(); r == nil {

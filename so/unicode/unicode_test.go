@@ -26,7 +26,7 @@ func FuzzRune(f *testing.F) {
 		r := rune(v)
 
 		// The fast path of each Is function must agree with its table.
-		// The So test checks this over Latin-1 only.
+		// The Solod test checks this over Latin-1 only.
 		checkIs(t, r, "Letter", IsLetter(r), Is(Letter, r))
 		checkIs(t, r, "Upper", IsUpper(r), Is(Upper, r))
 		checkIs(t, r, "Lower", IsLower(r), Is(Lower, r))

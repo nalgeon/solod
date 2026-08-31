@@ -12,7 +12,7 @@ func BenchmarkCond8_Go(b *testing.B)  { benchmarkCondGo(b, 8) }
 func BenchmarkCond16_Go(b *testing.B) { benchmarkCondGo(b, 16) }
 func BenchmarkCond32_Go(b *testing.B) { benchmarkCondGo(b, 32) }
 
-// benchmarkCondGo mirrors benchmarkCond on the So side: waiters+1 persistent
+// benchmarkCondGo mirrors benchmarkCond on the Solod side: waiters+1 persistent
 // pool workers rendezvous on a Cond for numLoops rounds per iteration.
 func benchmarkCondGo(b *testing.B, waiters int) {
 	var mu sync.Mutex

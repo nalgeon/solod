@@ -1,6 +1,6 @@
 # Windows
 
-So builds for `windows/amd64` and `windows/arm64`. The build requires GCC or Clang toolchain, not MSVC. MinGW works, and so does `zig cc` cross-compilation:
+Solod builds for `windows/amd64` and `windows/arm64`. The build requires GCC or Clang toolchain, not MSVC. MinGW works, and so does `zig cc` cross-compilation:
 
 ```sh
 export CC="zig cc"

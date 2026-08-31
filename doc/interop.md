@@ -1,6 +1,6 @@
 # C interop
 
-So provides several tools for easy C interop.
+Solod provides several tools for easy C interop.
 
 [Includes](#includes) •
 [Linking](#linking) •
@@ -63,7 +63,7 @@ func dec_balance(acc *Account, amount int64) int64 {
 }
 ```
 
-An extern body is never emitted, so it can call the Go standard library, unlike the regular So code.
+An extern body is never emitted, so it can call the Go standard library, unlike the regular Solod code.
 
 A function with no body is extern even without the directive, so these two declarations are the same:
 
@@ -105,7 +105,7 @@ type Account struct {
 // Uses "Account" in C instead of "main_Account"
 ```
 
-_Nodecay_ skips the automatic decay of So types (`so_String`, `so_Slice`) to raw C types. Use this for C functions that are "So-aware" and accept So types directly:
+_Nodecay_ skips the automatic decay of Solod types (`so_String`, `so_Slice`) to raw C types. Use this for C functions that are "Solod-aware" and accept Solod types directly:
 
 ```go
 //so:extern nodecay
@@ -125,11 +125,11 @@ func MyFunc(s string)
 
 ### Nodecay and variadics
 
-A plain extern variadic is a C variadic: every argument decays, and the callee reads C types. A nodecay extern variadic is not. Each argument goes to the C `...` on its own, at its So type, so the callee reads `so_String` for a string and `so_Slice` for a slice.
+A plain extern variadic is a C variadic: every argument decays, and the callee reads C types. A nodecay extern variadic is not. Each argument goes to the C `...` on its own, at its Solod type, so the callee reads `so_String` for a string and `so_Slice` for a slice.
 
 For a nodecay variadic function, the transpiler emits the variadic argument types as follows:
 
-| So type                            | C type read by `va_arg` |
+| Solod type                         | C type read by `va_arg` |
 | ---------------------------------- | ----------------------- |
 | any signed integer, `rune`, `bool` | `so_int`                |
 | any unsigned integer               | `so_uint`               |
@@ -137,7 +137,7 @@ For a nodecay variadic function, the transpiler emits the variadic argument type
 | `string`                           | `so_String`             |
 | anything else                      | the type itself         |
 
-`so_int` and `so_uint` are as wide as So's `int`, which is 32 bits on a 32-bit target. An `int64` or a `uint64` argument truncates there.
+`so_int` and `so_uint` are as wide as Solod's `int`, which is 32 bits on a 32-bit target. An `int64` or a `uint64` argument truncates there.
 
 The call must list its arguments explicitly rather than using spread syntax. `f(args...)` spreads a slice, and C has no way to take a slice apart, so it is an error. An `any` argument is an error as well, because it carries no type the callee can read.
 
@@ -178,7 +178,7 @@ type SDL_CommonEvent struct {
 }
 ```
 
-So sees the field as `etype`; the generated C uses `type` everywhere, including field accesses in packages that import the struct. The tag value must be a valid C identifier that is not a C keyword, and it may not collide with another field's C name in the same struct.
+Solod sees the field as `etype`; the generated C uses `type` everywhere, including field accesses in packages that import the struct. The tag value must be a valid C identifier that is not a C keyword, and it may not collide with another field's C name in the same struct.
 
 The tag is honored only on the fields of a named struct type, not on anonymous or function-local structs. It works on any named struct, not just extern ones, but its main use is matching an external C layout.
 
@@ -354,8 +354,8 @@ Functions:
 - `Assert` panics with a message if a condition is false.
 - `Assume` tells the C compiler that a condition is always true.
 - `Bitcast` reinterprets the bits of a value as another type of the same size.
-- `Bytes`, `Slice` and `String` wrap C pointers to So types.
-- `CString` converts a So string to a null-terminated C string.
+- `Bytes`, `Slice` and `String` wrap C pointers to Solod types.
+- `CString` converts a Solod string to a null-terminated C string.
 - `PtrAdd`, `PtrAs` and `PtrAt` manipulate pointers.
 - `SliceData` and `StringData` return a typed pointer to the slice or string data.
 - `Zero` returns the zero value of type T.

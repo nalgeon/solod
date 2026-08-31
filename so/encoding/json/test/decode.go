@@ -106,7 +106,7 @@ func TestDecodeKeepsSource(t *testing.T) {
 		t.Error("the decoder rewrote the document")
 	}
 
-	// So decoding it a second time yields the same thing, rather than tripping
+	// Decoding it a second time yields the same thing, rather than tripping
 	// over the leftovers of the first pass.
 	dec2 := json.NewDecoder(mem.System, doc)
 	defer dec2.Free()

@@ -188,7 +188,7 @@ func readPkgFile(path string) ([]string, error) {
 	return pkgs, nil
 }
 
-// hasGoFiles reports whether dir holds a Go file that the So compiler reads.
+// hasGoFiles reports whether dir holds a Go file that the Solod compiler reads.
 // A Go test file (_test.go) is not one: `go test` runs it, `so test` does not.
 func hasGoFiles(dir string) bool {
 	entries, err := os.ReadDir(dir)
@@ -205,7 +205,7 @@ func hasGoFiles(dir string) bool {
 }
 
 // collectSuites discovers the tests of every directory and returns one suite
-// per directory. The So compiler prefixes an exported C name with the package
+// per directory. The Solod compiler prefixes an exported C name with the package
 // name, so two test packages with the same name give two identical C names.
 // collectSuites rejects that.
 func collectSuites(root, modPath string, dirs []string) ([]suite, error) {

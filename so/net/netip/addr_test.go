@@ -116,7 +116,7 @@ var fuzzAddrs = []string{
 }
 
 // FuzzParseAddr compares ParseAddr against the Go original.
-// It skips an input with a zone: So stores a scope id, Go stores the zone
+// It skips an input with a zone: Solod stores a scope id, Go stores the zone
 // text, so the two results cannot be compared.
 func FuzzParseAddr(f *testing.F) {
 	for _, s := range fuzzAddrs {

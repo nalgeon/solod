@@ -6,7 +6,7 @@ import "strings"
 // zig cc accept after --target=. An empty target means the host.
 //
 // The position of a component is not fixed: zig writes arch-os-abi, LLVM
-// writes arch-vendor-os-abi, and both spellings reach So. The methods below
+// writes arch-vendor-os-abi, and both spellings reach Solod. The methods below
 // search every component, so they read the same target either way.
 type target string
 

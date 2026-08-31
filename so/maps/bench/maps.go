@@ -135,8 +135,8 @@ func BenchmarkStrDel_So(b *testing.B) {
 	}
 }
 
-// The Builtin* benchmarks measure the language builtin map (make(map)) under
-// So, as a counterpart to the so/maps package benchmarks above. The builtin map
+// The Builtin benchmarks measure the language builtin map (make(map))
+// as a counterpart to the so/maps package benchmarks above. The builtin map
 // allocates on the stack (alloca), so it is only freed when the enclosing
 // function returns; the Set benchmarks delegate to a helper called each
 // iteration so the map does not accumulate across the loop.

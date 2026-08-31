@@ -33,7 +33,7 @@ type funcScope struct {
 	sig  *types.Signature
 }
 
-// enterFunc starts a function body scope. Scopes never nest: So has no
+// enterFunc starts a function body scope. Scopes never nest: Solod has no
 // function literals, and generic functions are always top-level.
 func (s *State) enterFunc(decl *ast.FuncDecl, sig *types.Signature) {
 	*s = State{fn: funcScope{decl: decl, sig: sig}}

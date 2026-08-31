@@ -153,7 +153,7 @@ func TestVerbString(t *testing.T) {
 }
 
 func TestVerbStringNUL(t *testing.T) {
-	// An %s argument with an embedded NUL byte. A So string
+	// An %s argument with an embedded NUL byte. A Solod string
 	// carries its length, so the byte is part of the output.
 	buf := make([]byte, 32)
 	if fmt.Sprintf(buf, "[%s]", "a\x00b") != "[a\x00b]" {

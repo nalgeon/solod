@@ -43,8 +43,8 @@ static so_int fmt_argCount(so_String format) {
 }
 
 // fill pulls the arguments that format needs from ap into args, which holds
-// fmt_argCount(format) values. The So side gives the kind of each argument, so
-// the C type of every va_arg follows the verb table in print.go.
+// fmt_argCount(format) values. The Solod side gives the kind of each argument,
+// so the C type of every va_arg follows the verb table in print.go.
 //
 // A va_list argument is used up here. The caller must pass it to va_end and
 // must not read it again.

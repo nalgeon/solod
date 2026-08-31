@@ -63,7 +63,7 @@ func BenchmarkAtomicAddContended_Go(b *testing.B) {
 	}
 }
 
-// pool is a fixed set of persistent worker goroutines. It mirrors So's conc.Pool
+// pool is a fixed set of persistent worker goroutines. It mirrors Solod's conc.Pool
 // so the contended benchmark is structurally equivalent on both sides: numWorkers
 // goroutines stay alive for the whole benchmark and pick up tasks each iteration,
 // instead of the benchmark spawning fresh goroutines every iteration (which would

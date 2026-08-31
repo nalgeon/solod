@@ -1,6 +1,4 @@
 // Package c provides convenience helpers for C interop.
-// It bridges C's null-terminated strings and raw pointers
-// with So's string and slice types.
 package c
 
 import "unsafe"
@@ -175,7 +173,7 @@ func Bytes(ptr *byte, n int) []byte {
 	return unsafe.Slice(ptr, n)
 }
 
-// CString converts a So string to a null-terminated C string.
+// CString converts a Solod string to a null-terminated C string.
 // Allocates memory on the stack using alloca until the calling function returns.
 //
 //so:extern so_cstr nodecay
@@ -253,7 +251,7 @@ func SliceData[T, V any](s []V) *T {
 	return (*T)(unsafe.Pointer(unsafe.SliceData(s)))
 }
 
-// String converts a null-terminated C string to a So string.
+// String converts a null-terminated C string to a Solod string.
 // If ptr is nil, returns "".
 //
 //	(so_String){s, strlen(s)}

@@ -68,7 +68,7 @@ func TestCStringCopy(t *testing.T) {
 		t.Error("CString returns the string data, want a copy")
 	}
 
-	// The copy is writable, and the write leaves the So string alone.
+	// The copy is writable, and the write leaves the Solod string alone.
 	*c.PtrAt(p, 0) = '!'
 	if str := c.String(p); str != "!ello" {
 		t.Errorf("String(p) = %s, want !ello", str)

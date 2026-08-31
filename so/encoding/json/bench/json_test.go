@@ -7,13 +7,13 @@ import (
 	"testing"
 )
 
-// The Go benchmarks mirror the So ones over the same input (benchDoc, uniDoc,
+// The Go benchmarks mirror the Solod ones over the same input (benchDoc, uniDoc,
 // defined in json.go).
 //
 // Decode is a fair, token-level comparison: encoding/json's Token stream is
-// the direct analogue of So's Next/Kind/getters.
+// the direct analogue of Solod's Next/Kind/getters.
 //
-// Encode is not: Go's Encoder streams to an io.Writer like So's, but it has
+// Encode is not: Go's Encoder streams to an io.Writer like Solod's, but it has
 // no token-level API, so it marshals the whole value by reflection (the same
 // work as Marshal for a single value). [BenchmarkEncode_Go] therefore measures
 // a different kind of work and the numbers are indicative at best.
@@ -59,7 +59,7 @@ func BenchmarkDecodeUnicode_Go(b *testing.B) {
 	}
 }
 
-// goRec is Marshaled to the same shape emitDoc writes on the So side.
+// goRec is Marshaled to the same shape emitDoc writes on the Solod side.
 type goRec struct {
 	ID     int64    `json:"id"`
 	Name   string   `json:"name"`
@@ -96,7 +96,7 @@ func BenchmarkEncode_Go(b *testing.B) {
 	b.SetBytes(int64(buf.Len()))
 
 	// Reuse one Encoder writing to Discard, as Go's own BenchmarkCodeEncoder
-	// does. The So side builds a fresh Encoder per document (a value type, so no
+	// does. The Solod side builds a fresh Encoder per document (a value type, so no
 	// allocation), which its single-root design requires.
 	enc := json.NewEncoder(io.Discard)
 	for b.Loop() {

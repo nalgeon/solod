@@ -103,7 +103,7 @@ func (k kind) find(dir string) (pkg string, names []string, err error) {
 			continue
 		}
 		// Skip Go test files (_test.go). They let a package keep native
-		// Go tests and benchmarks next to the So ones (for A/B comparison).
+		// Go tests and benchmarks next to the Solod ones (for A/B comparison).
 		if strings.HasSuffix(name, "_test.go") {
 			continue
 		}

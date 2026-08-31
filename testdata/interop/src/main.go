@@ -45,7 +45,7 @@ func printf(format string, args ...any) int
 func write_acc(acc *Account, format string, args ...any)
 
 // measure sums the arguments the kinds string describes. It is nodecay, so
-// every argument arrives as a So type.
+// every argument arrives as a Solod type.
 //
 //so:extern nodecay
 func measure(kinds string, args ...any) int
@@ -72,7 +72,7 @@ func FirstChar(buf *uchar) uchar {
 
 func main() {
 	{
-		// Passing values between So and C and vice versa.
+		// Passing values between Solod and C and vice versa.
 		acc := Account{
 			name:    "Alice",
 			balance: 100,
@@ -88,7 +88,7 @@ func main() {
 		)
 	}
 	{
-		// Calling variadic C functions from So.
+		// Calling variadic C functions from Solod.
 		printf("One: %d\n", 1)
 		printf("Two: %d, %d\n", 2, 3)
 		printf("Three: %d, %d, %d\n", 4, 5, 6)
@@ -115,7 +115,7 @@ func main() {
 	}
 	{
 		// Extern nodecay variadic function: the args go flat,
-		// at their So types, and every scalar widens.
+		// at their Solod types, and every scalar widens.
 		name := "Alice"
 		var i32 int32 = 7
 		var u uint = 4

@@ -46,7 +46,7 @@ func FuzzLimitReader(f *testing.F) {
 
 func FuzzSectionReader(f *testing.F) {
 	// The section length n is never negative: NewSectionReader of Go overflows
-	// on a negative n, and So copies that arithmetic.
+	// on a negative n, and Solod copies that arithmetic.
 	f.Add([]byte("a long sample data, 1234567890"), int8(0), uint8(30), int8(0), uint8(30), uint8(0))
 	f.Add([]byte("a long sample data, 1234567890"), int8(3), uint8(10), int8(2), uint8(6), uint8(1))
 	f.Add([]byte("a long sample data, 1234567890"), int8(-4), uint8(0), int8(0), uint8(4), uint8(2))
