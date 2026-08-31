@@ -21,6 +21,7 @@ static so_int at(so_int a[3], so_int i);
 static so_int* reverse(so_int a[3]);
 static box newBox(void);
 static so_int box_sum(box b, so_int a[3]);
+static so_int sum3(so_int a[3]);
 
 // -- Variables and constants --
 static so_unused arange aranges[16] = {[0] = (arange){0x10, 0x20}, [1] = (arange){0x30, 0x40}, [2] = (arange){0x50, 0x60}};
@@ -364,6 +365,30 @@ int main(void) {
             so_panic("want field == {1, 2, 3}");
         }
     }
+    {
+        // Parentheses around an array literal.
+        so_int a[3] = {1, 2, 3};
+        so_int b[3] = {};
+        memcpy(b, (so_int[3]){4, 5, 6}, sizeof(so_int[3]));
+        if (a[0] != 1 || b[2] != 6) {
+            so_panic("want a == {1, 2, 3} and b == {4, 5, 6}");
+        }
+        if (!(so_mem_eq(a, ((so_int[3]){1, 2, 3}), 3 * sizeof(so_int)))) {
+            so_panic("want a == {1, 2, 3}");
+        }
+        if (sum3((so_int[3]){1, 2, 3}) != 6) {
+            so_panic("want sum3 == 6");
+        }
+        box c = (box){.nums = {7, 8, 9}};
+        if (c.nums[1] != 8) {
+            so_panic("want c.nums == {7, 8, 9}");
+        }
+    }
     (void)aranges;
     return 0;
+}
+
+// sum3 adds the elements of a three-element array.
+static so_int sum3(so_int a[3]) {
+    return a[0] + a[1] + a[2];
 }

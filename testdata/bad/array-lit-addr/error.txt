@@ -1,0 +1,3 @@
+main.go:6:7: cannot take the address of an array literal; assign it to a variable first
+	p := &T{}
+	     ^here

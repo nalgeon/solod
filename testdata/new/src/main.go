@@ -55,15 +55,7 @@ func main() {
 		}
 	}
 	{
-		// new with an array value
-		a := new([3]int{1, 2, 3})
-		if a[0] != 1 || a[2] != 3 {
-			panic("expected a == [1 2 3]")
-		}
-		b := new(buf{1, 2, 3, 4})
-		if b[3] != 4 {
-			panic("expected b[3] == 4")
-		}
+		// new with an array variable
 		aval := [3]int{5, 6, 7}
 		c := new(aval)
 		if c[1] != 6 {

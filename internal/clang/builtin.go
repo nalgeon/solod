@@ -222,16 +222,11 @@ func (g *Generator) emitNewCall(w io.Writer, call *ast.CallExpr) {
 		fmt.Fprintf(w, "&(%s%s){}", cType, arrayDims(tv.Type))
 		return
 	}
-	if _, ok := call.Args[0].(*ast.CompositeLit); ok {
+	if lit, ok := ast.Unparen(call.Args[0]).(*ast.CompositeLit); ok {
 		// new(T{...}) - addressed composite literal.
+		g.checkLitAddress(call, lit)
 		fmt.Fprint(w, "&")
-		if arr, ok := g.types.TypeOf(call.Args[0]).Underlying().(*types.Array); ok {
-			// An array literal carries no type token of its own,
-			// so the generator adds one.
-			g.emitArrayArg(w, call, call.Args[0], arr)
-			return
-		}
-		g.emitExpr(w, call.Args[0])
+		g.emitExpr(w, lit)
 		return
 	}
 	if _, ok := call.Args[0].(*ast.CallExpr); ok {

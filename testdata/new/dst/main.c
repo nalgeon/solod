@@ -61,15 +61,7 @@ int main(void) {
         }
     }
     {
-        // new with an array value
-        so_int (*a)[3] = &(so_int[3]){1, 2, 3};
-        if ((*a)[0] != 1 || (*a)[2] != 3) {
-            so_panic("expected a == [1 2 3]");
-        }
-        buf* b = &(so_int[4]){1, 2, 3, 4};
-        if ((*b)[3] != 4) {
-            so_panic("expected b[3] == 4");
-        }
+        // new with an array variable
         so_int aval[3] = {5, 6, 7};
         so_int (*c)[3] = &aval;
         if ((*c)[1] != 6) {

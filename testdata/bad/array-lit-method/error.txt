@@ -1,0 +1,3 @@
+main.go:8:7: cannot call a method on an array literal; assign it to a variable first
+	x := T{1, 2, 3}.first()
+	     ^here

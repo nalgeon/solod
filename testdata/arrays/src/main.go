@@ -350,5 +350,29 @@ func main() {
 			panic("want field == {1, 2, 3}")
 		}
 	}
+	{
+		// Parentheses around an array literal.
+		a := ([3]int{1, 2, 3})
+		var b [3]int
+		b = ([3]int{4, 5, 6})
+		if a[0] != 1 || b[2] != 6 {
+			panic("want a == {1, 2, 3} and b == {4, 5, 6}")
+		}
+		if !(a == ([3]int{1, 2, 3})) {
+			panic("want a == {1, 2, 3}")
+		}
+		if sum3(([3]int{1, 2, 3})) != 6 {
+			panic("want sum3 == 6")
+		}
+		c := box{nums: ([3]int{7, 8, 9})}
+		if c.nums[1] != 8 {
+			panic("want c.nums == {7, 8, 9}")
+		}
+	}
 	_ = aranges
+}
+
+// sum3 adds the elements of a three-element array.
+func sum3(a [3]int) int {
+	return a[0] + a[1] + a[2]
 }

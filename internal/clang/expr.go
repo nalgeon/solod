@@ -535,7 +535,7 @@ func (g *Generator) emitIdent(w io.Writer, n *ast.Ident) {
 
 // emitParenExpr emits a parenthesized expression.
 func (g *Generator) emitParenExpr(w io.Writer, expr ast.Expr) {
-	if isSelfParenthesized(expr) {
+	if isSelfParenthesized(expr) || g.isBraceInit(expr) {
 		g.emitExpr(w, expr)
 		return
 	}
@@ -636,6 +636,9 @@ func (g *Generator) emitIndexExpr(w io.Writer, n *ast.IndexExpr) {
 
 	// Arrays use direct C indexing.
 	if _, ok := g.types.TypeOf(n.X).Underlying().(*types.Array); ok {
+		if _, ok := ast.Unparen(n.X).(*ast.CompositeLit); ok {
+			g.fail(n, "cannot index an array literal; assign it to a variable first")
+		}
 		g.emitExpr(w, n.X)
 		fmt.Fprint(w, "[")
 		g.emitExpr(w, n.Index)
@@ -692,10 +695,11 @@ func (g *Generator) emitUnaryExpr(w io.Writer, n *ast.UnaryExpr) {
 				}
 			}
 		}
-		if _, ok := n.X.(*ast.CompositeLit); ok {
+		if lit, ok := ast.Unparen(n.X).(*ast.CompositeLit); ok {
 			// &Person{...} → &(Person){...}
+			g.checkLitAddress(n, lit)
 			fmt.Fprint(w, "&")
-			g.emitExpr(w, n.X)
+			g.emitExpr(w, lit)
 			return
 		}
 	}
@@ -796,6 +800,16 @@ func (g *Generator) emitDiscard(w io.Writer, expr ast.Expr) {
 	fmt.Fprint(w, ";\n")
 }
 
+// checkLitAddress rejects the address of an array or map literal.
+func (g *Generator) checkLitAddress(node ast.Node, lit *ast.CompositeLit) {
+	switch g.types.TypeOf(lit).Underlying().(type) {
+	case *types.Array:
+		g.fail(node, "cannot take the address of an array literal; assign it to a variable first")
+	case *types.Map:
+		g.fail(node, "cannot take the address of a map literal; assign it to a variable first")
+	}
+}
+
 // emitsCastOrUnary reports whether the emitted C expression starts with a cast
 // or a unary operator. Go's grammar already requires parentheses around other
 // unary forms, so only these two need special handling.
@@ -879,6 +893,16 @@ func isSelfParenthesized(expr ast.Expr) bool {
 		return true
 	}
 	return false
+}
+
+// isBraceInit reports whether expr emits a bare C brace initializer,
+// which happens for array literals only.
+func (g *Generator) isBraceInit(expr ast.Expr) bool {
+	if _, ok := expr.(*ast.CompositeLit); !ok {
+		return false
+	}
+	_, ok := g.types.TypeOf(expr).Underlying().(*types.Array)
+	return ok
 }
 
 // isShift reports whether a token is a shift operator.

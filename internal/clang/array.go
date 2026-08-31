@@ -32,10 +32,10 @@ func (g *Generator) emitArrayLit(w io.Writer, n *ast.CompositeLit) {
 // emitArrayArg emits an array expression as a function argument.
 // Composite literals need compound literal syntax (e.g. (so_int[3]){11, 22, 33}).
 func (g *Generator) emitArrayArg(w io.Writer, node ast.Node, arg ast.Expr, arr *types.Array) {
-	if _, isLit := arg.(*ast.CompositeLit); isLit {
+	if lit, isLit := ast.Unparen(arg).(*ast.CompositeLit); isLit {
 		elemType := g.mapTypeName(node, arr.Elem())
 		fmt.Fprintf(w, "(%s%s)", elemType, arrayDims(arr))
-		g.emitExpr(w, arg)
+		g.emitExpr(w, lit)
 		return
 	}
 	g.emitExpr(w, arg)
@@ -45,10 +45,10 @@ func (g *Generator) emitArrayArg(w io.Writer, node ast.Node, arg ast.Expr, arr *
 // Composite literals need a C compound literal prefix (e.g. (so_int[3]){...})
 // wrapped in extra parentheses so commas inside braces don't split macro args.
 func (g *Generator) emitArrayCmpOperand(w io.Writer, expr ast.Expr, arr *types.Array) {
-	if _, isLit := expr.(*ast.CompositeLit); isLit {
+	if lit, isLit := ast.Unparen(expr).(*ast.CompositeLit); isLit {
 		elemType := g.mapTypeName(expr, arr.Elem())
 		fmt.Fprintf(w, "((%s%s)", elemType, arrayDims(arr))
-		g.emitExpr(w, expr)
+		g.emitExpr(w, lit)
 		fmt.Fprint(w, ")")
 		return
 	}
@@ -201,10 +201,10 @@ func (g *Generator) emitSliceExpr(w io.Writer, n *ast.SliceExpr) {
 
 // emitArrayVarDecl emits a local array declaration with an initializer.
 func (g *Generator) emitArrayVarDecl(w io.Writer, ct CType, name string, value ast.Expr) {
-	if _, ok := value.(*ast.CompositeLit); ok {
+	if lit, ok := ast.Unparen(value).(*ast.CompositeLit); ok {
 		// An array literal emits as a C brace initializer.
 		fmt.Fprintf(w, "%s%s = ", g.indent(), ct.Decl(name))
-		g.emitExpr(w, value)
+		g.emitExpr(w, lit)
 		fmt.Fprint(w, ";\n")
 		return
 	}
@@ -233,7 +233,7 @@ func (g *Generator) checkArrayValue(expr ast.Expr, targetType types.Type) {
 	if _, ok := targetType.Underlying().(*types.Array); !ok {
 		return
 	}
-	if _, ok := expr.(*ast.CompositeLit); ok {
+	if _, ok := ast.Unparen(expr).(*ast.CompositeLit); ok {
 		return
 	}
 	g.fail(expr, "cannot use an array value in a composite literal: use an array literal or assign the field separately")

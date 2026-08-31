@@ -1,0 +1,3 @@
+main.go:4:7: cannot take the address of a map literal; assign it to a variable first
+	m := new(map[string]int{"a": 1})
+	     ^here

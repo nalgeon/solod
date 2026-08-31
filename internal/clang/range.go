@@ -32,7 +32,7 @@ func (g *Generator) emitIntRange(w io.Writer, stmt *ast.RangeStmt) {
 
 // emitArrayRange emits a range loop over a fixed-size array.
 func (g *Generator) emitArrayRange(w io.Writer, stmt *ast.RangeStmt) {
-	if _, ok := stmt.X.(*ast.CompositeLit); ok {
+	if _, ok := ast.Unparen(stmt.X).(*ast.CompositeLit); ok {
 		g.fail(stmt.X, "for-range over literal not supported")
 	}
 
@@ -88,7 +88,7 @@ func (g *Generator) emitArrayRange(w io.Writer, stmt *ast.RangeStmt) {
 
 // emitSliceRange emits a range loop over a slice.
 func (g *Generator) emitSliceRange(w io.Writer, stmt *ast.RangeStmt) {
-	if _, ok := stmt.X.(*ast.CompositeLit); ok {
+	if _, ok := ast.Unparen(stmt.X).(*ast.CompositeLit); ok {
 		g.fail(stmt.X, "for-range over literal not supported")
 	}
 	if stmt.Key == nil {

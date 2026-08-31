@@ -242,11 +242,12 @@ func (g *Generator) emitAssign(w io.Writer, stmt *ast.AssignStmt) {
 			fmt.Fprintf(w, "%smemcpy(", g.indent())
 			g.emitExpr(w, lhs)
 			fmt.Fprint(w, ", ")
-			if _, isLit := rhs[i].(*ast.CompositeLit); isLit {
+			value := ast.Unparen(rhs[i])
+			if _, isLit := value.(*ast.CompositeLit); isLit {
 				// Compound literal: (int[3]){1, 2, 3}
 				fmt.Fprintf(w, "(%s)", arrCType)
 			}
-			g.emitExpr(w, rhs[i])
+			g.emitExpr(w, value)
 			fmt.Fprintf(w, ", sizeof(%s));\n", arrCType)
 			continue
 		}
@@ -455,9 +456,9 @@ func (g *Generator) hoistRhs(w io.Writer, stmt *ast.AssignStmt) []ast.Expr {
 		}
 		// C cannot assign an array, so a composite literal initializes the
 		// temporary and any other value is copied into it.
-		if _, isLit := rhs.(*ast.CompositeLit); isLit {
+		if lit, isLit := ast.Unparen(rhs).(*ast.CompositeLit); isLit {
 			fmt.Fprintf(w, "%s%s = ", g.indent(), ct.Decl(ref.Name))
-			g.emitExpr(w, rhs)
+			g.emitExpr(w, lit)
 			fmt.Fprint(w, ";\n")
 			continue
 		}

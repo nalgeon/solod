@@ -97,6 +97,14 @@ func (g *Generator) emitMethodCall(w io.Writer, sel *ast.SelectorExpr, call *ast
 	xType := g.types.TypeOf(sel.X)
 	_, isCallSitePtr := xType.Underlying().(*types.Pointer)
 
+	// An array literal receiver emits a brace initializer,
+	// which C rejects as a call argument.
+	if _, ok := ast.Unparen(sel.X).(*ast.CompositeLit); ok {
+		if _, ok := xType.Underlying().(*types.Array); ok {
+			g.fail(sel, "cannot call a method on an array literal; assign it to a variable first")
+		}
+	}
+
 	// For generic (= macro) calls, wrap non-type args in parens to protect
 	// against the preprocessor misinterpreting commas.
 	lparen, rparen := "", ""
