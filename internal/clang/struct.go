@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/types"
 	"io"
+	"strings"
 )
 
 // emitStructTypeSpec emits a typedef struct for a struct type declaration.
@@ -179,6 +180,21 @@ func (g *Generator) checkStructConv(n *ast.CallExpr, target types.Type, arg ast.
 	}
 	g.fail(n, "cannot convert %s to %s; copy the fields instead",
 		g.typeString(argType), g.typeString(target))
+}
+
+// anonStructType returns the inline C declaration of an anonymous struct type,
+// for example `struct { so_int x; so_int y; }`.
+func (g *Generator) anonStructType(node ast.Node, st *types.Struct) string {
+	var sb strings.Builder
+	sb.WriteString("struct {")
+	for f := range st.Fields() {
+		ct := g.mapTypeDecl(node, f.Type())
+		sb.WriteString(" ")
+		sb.WriteString(ct.Decl(g.fieldName(f)))
+		sb.WriteString(";")
+	}
+	sb.WriteString(" }")
+	return sb.String()
 }
 
 // fieldNameOf resolves the C name for a field named by ident, whether ident is

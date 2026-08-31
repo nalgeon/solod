@@ -149,6 +149,23 @@ func main() {
 			true,
 		}
 		_ = dog
+
+		// Anonymous struct type without an initializer.
+		var cat struct {
+			name   string
+			isGood bool
+		}
+		cat.name = "Tom"
+		if cat.isGood {
+			panic("cat.isGood")
+		}
+
+		var a, b struct{ x int }
+		a.x = 1
+		b.x = 2
+		if a.x+b.x != 3 {
+			panic("a.x+b.x != 3")
+		}
 	}
 	{
 		// Named struct type inside a function.

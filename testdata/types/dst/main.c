@@ -115,6 +115,19 @@ int main(void) {
             .isGood = true,
         };
         (void)dog;
+        // Anonymous struct type without an initializer.
+        struct { so_String name; bool isGood; } cat = {};
+        cat.name = so_str("Tom");
+        if (cat.isGood) {
+            so_panic("cat.isGood");
+        }
+        struct { so_int x; } a = {};
+        struct { so_int x; } b = {};
+        a.x = 1;
+        b.x = 2;
+        if (a.x + b.x != 3) {
+            so_panic("a.x+b.x != 3");
+        }
     }
     {
         // Named struct type inside a function.

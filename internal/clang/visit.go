@@ -358,7 +358,7 @@ func (g *Generator) emitVarSpec(w io.Writer, spec *ast.ValueSpec, dirs directive
 				continue
 			}
 			typ := g.types.Defs[name].Type()
-			ct := g.mapTypeDecl(spec, typ)
+			ct := g.mapVarType(spec, typ, len(spec.Values) > i)
 
 			// An array with an initializer needs a declaration of its own.
 			if ct.IsArray() && len(spec.Values) > i {
@@ -408,7 +408,11 @@ func (g *Generator) emitVarSpec(w io.Writer, spec *ast.ValueSpec, dirs directive
 			continue
 		}
 		typ := g.types.Defs[name].Type()
-		ct := g.mapTypeDecl(spec, typ)
+		// Anonymous structs are only supported as local variables.
+		if g.state.atTopLevel() && isAnonStruct(typ) {
+			g.fail(spec, "use a named struct type instead of an anonymous struct")
+		}
+		ct := g.mapVarType(spec, typ, len(spec.Values) > i)
 		specifier := ""
 		if g.state.atTopLevel() {
 			// Package-level variable: build specifier with qualifiers.
@@ -497,6 +501,11 @@ func (g *Generator) emitTypeSpec(w io.Writer, spec *ast.TypeSpec, dirs directive
 		}
 
 	case *ast.StructType:
+		// An alias gets a typedef with a C struct name, but every use of the
+		// alias unaliases to the anonymous struct, which has no C name.
+		if spec.Assign.IsValid() {
+			g.fail(spec, "alias for an anonymous struct is not supported; declare a named struct type instead")
+		}
 		g.emitStructTypeSpec(w, spec, dirs)
 
 	default:

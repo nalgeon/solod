@@ -51,6 +51,19 @@ func (t CType) IsPointer() bool {
 	return t.PtrToArray || strings.HasSuffix(t.Base, "*")
 }
 
+// mapVarType maps the type of a declared variable to a [CType].
+// hasInit reports whether the declaration has an initializer expression.
+func (g *Generator) mapVarType(node ast.Node, typ types.Type, hasInit bool) CType {
+	ct := g.mapTypeDecl(node, typ)
+	if hasInit {
+		return ct
+	}
+	if st, ok := types.Unalias(typ).(*types.Struct); ok {
+		ct.Base = g.anonStructType(node, st)
+	}
+	return ct
+}
+
 // mapTypeDecl maps a Go type to a [CType].
 //
 // Use it when the type introduces a name (locals, params, struct fields,

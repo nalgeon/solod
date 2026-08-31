@@ -795,7 +795,7 @@ b.loop.n = 100
 
 Structs without fields (`type T struct{}`) are supported.
 
-Anonymous structs are only supported as local variables (the `dog` example) and as inner struct fields (the `Benchmark` example). In other cases — slice/array elements, params, returns — use a named type instead.
+Anonymous structs are only supported as local variables (the `dog` example) and as inner struct fields (the `Benchmark` example). In other cases — package-level variables, slice/array elements, params, returns — use a named type instead.
 
 Embedded fields are not supported; declare named fields instead.
 
