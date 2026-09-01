@@ -753,36 +753,16 @@ func (g *Generator) emitExprAsType(w io.Writer, node ast.Node, expr ast.Expr, ta
 }
 
 // emitMacroArg emits an argument to a function-like macro.
-//
-// Composite literals reference stack-backed temporaries, so passing them to a
-// macro that indexes, slices, or stores them would create a use-after-scope
-// bug. Only a struct value literal is safe (it gets copied into the slot); it
-// is wrapped in parentheses so the preprocessor does not split it on the commas
-// of its braced initializer. Everything else fails.
-//
-// All emitted macro calls must use emitMacroArg for their arguments.
 func (g *Generator) emitMacroArg(w io.Writer, arg ast.Expr) {
-	// &T{...}: a pointer to a block-scoped temporary that dangles once it escapes.
-	if u, ok := arg.(*ast.UnaryExpr); ok && u.Op == token.AND {
-		if _, ok := u.X.(*ast.CompositeLit); ok {
-			g.fail(arg, "cannot use composite literal here; assign it to a variable first")
-		}
-	}
-	// Handle composite literals either by rejecting them (arrays, slices, maps)
-	// or emitting them with extra parens (structs).
-	if lit, ok := arg.(*ast.CompositeLit); ok {
-		// Only struct value literals are safe; they are copied into the slot.
-		if _, ok := g.types.TypeOf(lit).Underlying().(*types.Struct); ok {
-			fmt.Fprint(w, "(")
-			g.emitExpr(w, lit)
-			fmt.Fprint(w, ")")
-			return
-		}
-		// Array, slice, or map literal: references stack-backed storage.
-		g.fail(arg, "cannot use composite literal here; assign it to a variable first")
+	g.checkMacroArg(arg)
+	if _, ok := arg.(*ast.CompositeLit); ok {
+		// Without parentheses, the preprocessor
+		// might split the literal at commas.
+		fmt.Fprint(w, "(")
+		g.emitExpr(w, arg)
+		fmt.Fprint(w, ")")
 		return
 	}
-	// Not a composite literal, emit directly.
 	g.emitExpr(w, arg)
 }
 
@@ -830,6 +810,43 @@ func (g *Generator) emitDiscard(w io.Writer, expr ast.Expr) {
 		g.emitExpr(w, expr)
 	}
 	fmt.Fprint(w, ";\n")
+}
+
+// checkMacroArg fails if a macro argument contains a composite literal.
+func (g *Generator) checkMacroArg(arg ast.Expr) {
+	if !isLitOrLitAddr(arg) {
+		return
+	}
+	// A macro body is a block. A composite literal used as a macro argument
+	// exists only within that block and is destroyed when the block ends.
+	// If a macro stores a pointer to that literal, it ends up with a dangling pointer.
+	const msg = "cannot use composite literal here; assign it to a variable first"
+	lit, ok := ast.Unparen(arg).(*ast.CompositeLit)
+	if !ok {
+		// &T{...} is a pointer to a block-scoped temporary.
+		g.fail(arg, msg)
+	}
+	struc, ok := g.types.TypeOf(lit).Underlying().(*types.Struct)
+	if !ok {
+		// An array, slice, or map literal has storage of its own.
+		g.fail(arg, msg)
+	}
+	// A struct literal is the only safe literal, because the macro copies it into
+	// the slot. Its elements are not safe, so they must be checked.
+	for i, elt := range lit.Elts {
+		fieldType := struc.Field(i).Type()
+		if kv, ok := elt.(*ast.KeyValueExpr); ok {
+			fieldType = structFieldType(struc, kv.Key.(*ast.Ident).Name)
+			elt = kv.Value
+		}
+		if isLitOrLitAddr(elt) {
+			g.fail(elt, msg)
+		}
+		// Boxing into an any stores the address of the element.
+		if isEmptyInterface(fieldType) && !isEmptyInterface(g.types.TypeOf(elt)) {
+			g.fail(elt, "cannot use a value as any here; assign it to a variable first")
+		}
+	}
 }
 
 // checkLitAddress rejects the address of an array or map literal.
@@ -934,6 +951,17 @@ func (g *Generator) isBraceInit(expr ast.Expr) bool {
 		return false
 	}
 	_, ok := g.types.TypeOf(expr).Underlying().(*types.Array)
+	return ok
+}
+
+// isLitOrLitAddr reports whether expr is a composite literal,
+// or the address of a composite literal.
+func isLitOrLitAddr(expr ast.Expr) bool {
+	expr = ast.Unparen(expr)
+	if u, ok := expr.(*ast.UnaryExpr); ok && u.Op == token.AND {
+		expr = ast.Unparen(u.X)
+	}
+	_, ok := expr.(*ast.CompositeLit)
 	return ok
 }
 

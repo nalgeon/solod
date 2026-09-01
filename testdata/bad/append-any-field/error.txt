@@ -1,0 +1,3 @@
+main.go:9:29: cannot use a value as any here; assign it to a variable first
+	rows = append(rows, box{v: 42})
+	                           ^here

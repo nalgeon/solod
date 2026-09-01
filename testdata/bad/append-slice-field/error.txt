@@ -1,0 +1,3 @@
+main.go:9:29: cannot use composite literal here; assign it to a variable first
+	rows = append(rows, box{s: []int{1, 2}})
+	                           ^here

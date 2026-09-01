@@ -44,6 +44,7 @@ func (g *Generator) emitMapLit(w io.Writer, n *ast.CompositeLit) {
 			g.emitAnyMacroArg(w, n, val)
 			continue
 		}
+		g.checkMacroArg(val)
 		g.emitExprAsType(w, n, val, mapType.Elem())
 	}
 	fmt.Fprint(w, "}))")

@@ -1,0 +1,3 @@
+main.go:4:38: cannot use composite literal here; assign it to a variable first
+	m := map[string]map[string]int{"a": {}}
+	                                    ^here
