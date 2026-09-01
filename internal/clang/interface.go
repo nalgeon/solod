@@ -34,7 +34,7 @@ func (g *Generator) emitInterfaceTypeSpec(w io.Writer, spec *ast.TypeSpec) {
 		params.WriteString("void* self")
 		for p := range sig.Params().Variables() {
 			params.WriteString(", ")
-			params.WriteString(g.mapTypeName(spec, p.Type()))
+			params.WriteString(g.mapParamType(spec, p.Type()))
 		}
 		fmt.Fprintf(w, "    %s (*%s)(%s);\n", retType, m.Name(), params.String())
 	}

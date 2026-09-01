@@ -103,7 +103,7 @@ func (g *Generator) emitFuncTypeSpec(w io.Writer, spec *ast.TypeSpec) {
 
 	var params []string
 	for parVar := range sig.Params().Variables() {
-		params = append(params, g.mapTypeName(spec, parVar.Type()))
+		params = append(params, g.mapParamType(spec, parVar.Type()))
 	}
 
 	name := g.declSymbolName(g.types.Defs[spec.Name])

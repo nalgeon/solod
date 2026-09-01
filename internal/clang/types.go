@@ -73,7 +73,7 @@ func (g *Generator) mapTypeDecl(node ast.Node, typ types.Type) CType {
 	if sig, ok := types.Unalias(typ).(*types.Signature); ok {
 		var params []string
 		for p := range sig.Params().Variables() {
-			params = append(params, g.mapTypeName(node, p.Type()))
+			params = append(params, g.mapParamType(node, p.Type()))
 		}
 		return CType{
 			FuncPtr:    true,
@@ -87,6 +87,22 @@ func (g *Generator) mapTypeDecl(node ast.Node, typ types.Type) CType {
 		Base: g.mapTypeName(node, typ),
 		Dims: arrayDims(typ),
 	}
+}
+
+// mapParamType maps a Go type to the C type token for a function parameter.
+func (g *Generator) mapParamType(node ast.Node, typ types.Type) string {
+	arr, ok := types.Unalias(typ).(*types.Array)
+	if !ok {
+		return g.mapTypeName(node, typ)
+	}
+	// Array parameter emits as a pointer to its element, so [3]int becomes
+	// so_int* and [2][3]int becomes so_int (*)[3].
+	elem := g.mapTypeName(node, arr)
+	dims := arrayDims(arr.Elem())
+	if dims == "" {
+		return elem + "*"
+	}
+	return elem + " (*)" + dims
 }
 
 // mapTypeName maps a Go type to a bare C type token.
