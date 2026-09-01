@@ -4,6 +4,9 @@
 
 // Emitted as adjacent string literals.
 static const so_unused so_String quoted = so_str("\"" "ok" "\"");
+static const so_unused bool equal = true;
+static so_unused bool greater = true;
+static so_unused bool flags[2] = {true, false};
 
 // -- Implementation --
 
@@ -118,6 +121,16 @@ int main(void) {
         }
     }
     {
+        // Compare constant strings.
+        const so_unused bool localLess = true;
+        if (!main_Less || !equal || !greater || !localLess) {
+            so_panic("want true");
+        }
+        if (!flags[0] || flags[1]) {
+            so_panic("want flags == [true, false]");
+        }
+    }
+    {
         // String addition.
         so_String s1 = so_str("Hello, ");
         so_String s2 = so_str("世界!");
@@ -166,10 +179,10 @@ int main(void) {
             so_panic("want string(u) == replacement char");
         }
         const so_unused so_String c = so_str("�");
-        if (so_string_ne(c, so_str("�"))) {
+        if (false) {
             so_panic("want c == replacement char");
         }
-        if (so_string_ne(quoted, so_str("\"ok\""))) {
+        if (false) {
             so_panic("want quoted == \"ok\"");
         }
     }

@@ -32,6 +32,25 @@ func (g *Generator) emitStringLitConcat(w io.Writer, expr ast.Expr) {
 	}
 }
 
+// emitStringCompareConst emits a constant string comparison as its value
+// and reports whether it did.
+//
+// C compares strings with a function call, which isn't a constant expression.
+// Both a package-level variable and a constant declaration need a constant
+// expression, so the generator writes the value that Go computed.
+func (g *Generator) emitStringCompareConst(w io.Writer, expr ast.Expr) bool {
+	n, ok := expr.(*ast.BinaryExpr)
+	if !ok || !isCompare(n.Op) || !g.hasStringType(n.X) {
+		return false
+	}
+	val := g.types.Types[n].Value
+	if val == nil || val.Kind() != constant.Bool || g.readsExtern(n) {
+		return false
+	}
+	fmt.Fprint(w, constant.BoolVal(val))
+	return true
+}
+
 // emitCharLit emits a byte or rune literal. Like cStringLit, it works from the
 // value rather than the source text, since Go and C disagree on some escapes.
 func (g *Generator) emitCharLit(w io.Writer, n *ast.BasicLit) {

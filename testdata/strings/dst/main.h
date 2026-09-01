@@ -9,3 +9,8 @@ typedef so_rune main_Rune;
 
 // Named string type.
 typedef so_String main_Name;
+
+// -- Variables and constants --
+
+// Constant string comparisons.
+static const bool main_Less = true;

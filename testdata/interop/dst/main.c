@@ -97,6 +97,12 @@ int main(void) {
         }
     }
     {
+        // Do not fold an extern constant.
+        if (so_string_ne(SUB_TAG, so_str("sub"))) {
+            so_panic("unexpected sub.Tag value");
+        }
+    }
+    {
         // Multi-word type names.
         so_byte b = 'a';
         unsigned char ch = (unsigned char)(b);

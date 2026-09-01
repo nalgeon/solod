@@ -5,6 +5,9 @@ import "example/interop/src/sub/ctype"
 //so:embed sub.h
 var sub_h string
 
+//so:extern SUB_TAG
+const Tag = "unknown"
+
 //so:extern Stream
 type Stream struct {
 	Write func(format string, args ...any)

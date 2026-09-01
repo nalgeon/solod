@@ -174,6 +174,21 @@ func (g *Generator) hasExtern(obj types.Object) bool {
 	return ok
 }
 
+// readsExtern reports whether an expression reads an extern symbol.
+func (g *Generator) readsExtern(expr ast.Expr) bool {
+	found := false
+	ast.Inspect(expr, func(n ast.Node) bool {
+		if found {
+			return false
+		}
+		if ident, ok := n.(*ast.Ident); ok && g.hasExtern(g.types.Uses[ident]) {
+			found = true
+		}
+		return !found
+	})
+	return found
+}
+
 // getExtern returns the extern metadata for a types.Object.
 func (g *Generator) getExtern(obj types.Object) (externInfo, bool) {
 	info, ok := g.externs[obj]

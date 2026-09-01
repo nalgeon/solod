@@ -171,6 +171,12 @@ func main() {
 		}
 	}
 	{
+		// Do not fold an extern constant.
+		if sub.Tag != "sub" {
+			panic("unexpected sub.Tag value")
+		}
+	}
+	{
 		// Multi-word type names.
 		var b byte = 'a'
 		var ch uchar = uchar(b)

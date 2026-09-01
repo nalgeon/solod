@@ -13,7 +13,8 @@ import (
 // emitExpr dispatches expression generation to per-type methods.
 func (g *Generator) emitExpr(w io.Writer, expr ast.Expr) {
 	// A computed constant expression is emitted as its value.
-	if g.emitFloatConst(w, expr) || g.emitIntConst(w, expr) {
+	if g.emitFloatConst(w, expr) || g.emitIntConst(w, expr) ||
+		g.emitStringCompareConst(w, expr) {
 		return
 	}
 	switch e := expr.(type) {
@@ -973,6 +974,11 @@ func isLitOrLitAddr(expr ast.Expr) bool {
 // isShift reports whether a token is a shift operator.
 func isShift(op token.Token) bool {
 	return op == token.SHL || op == token.SHR
+}
+
+// isCompare reports whether a token is a comparison operator.
+func isCompare(op token.Token) bool {
+	return op == token.EQL || op == token.NEQ || isOrderCompare(op)
 }
 
 // isOrderCompare reports whether a token is an ordering comparison

@@ -10,6 +10,13 @@ type Name string
 // Emitted as adjacent string literals.
 const quoted = string('"') + "ok" + string('"')
 
+// Constant string comparisons.
+const Less = "a" < "b"
+const equal = Name("x") == Name("x")
+
+var greater = "b" > "a"
+var flags = [2]bool{"a" != "b", "a" >= "b"}
+
 func main() {
 	{
 		// Empty string.
@@ -98,6 +105,16 @@ func main() {
 		s2 := "world"
 		if s1 == s2 || s1 == "hello" {
 			println("ok")
+		}
+	}
+	{
+		// Compare constant strings.
+		const localLess = "a" <= "b"
+		if !Less || !equal || !greater || !localLess {
+			panic("want true")
+		}
+		if !flags[0] || flags[1] {
+			panic("want flags == [true, false]")
 		}
 	}
 	{
