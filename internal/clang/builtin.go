@@ -333,6 +333,44 @@ func (g *Generator) emitOffsetof(w io.Writer, call *ast.CallExpr) bool {
 	return true
 }
 
+// emitSizeof emits an unsafe.Sizeof or unsafe.Alignof call.
+// Returns false if the call is neither.
+func (g *Generator) emitSizeof(w io.Writer, call *ast.CallExpr) bool {
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok || (sel.Sel.Name != "Sizeof" && sel.Sel.Name != "Alignof") {
+		return false
+	}
+	if obj, ok := g.types.Uses[sel.Sel].(*types.Builtin); !ok || obj.Pkg() != types.Unsafe {
+		return false
+	}
+	fmt.Fprintf(w, "unsafe_%s(", sel.Sel.Name)
+	g.emitSizeofArg(w, call, call.Args[0])
+	fmt.Fprint(w, ")")
+	return true
+}
+
+// emitSizeofArg emits the argument of unsafe.Sizeof or unsafe.Alignof.
+func (g *Generator) emitSizeofArg(w io.Writer, node ast.Node, arg ast.Expr) {
+	lit, ok := ast.Unparen(arg).(*ast.CompositeLit)
+	if !ok {
+		g.emitExpr(w, arg)
+		return
+	}
+	if _, ok := g.types.TypeOf(lit).Underlying().(*types.Map); ok {
+		// A map literal expands to a statement expression.
+		// C does not allow a statement expression at file scope.
+		g.fail(arg, "cannot use a map literal here; assign it to a variable first")
+	}
+	// Parens protect against the preprocessor misinterpreting commas.
+	fmt.Fprint(w, "(")
+	if arr, ok := g.types.TypeOf(lit).Underlying().(*types.Array); ok {
+		// An array literal needs a type.
+		fmt.Fprintf(w, "(%s%s)", g.mapTypeName(node, arr.Elem()), arrayDims(arr))
+	}
+	g.emitExpr(w, lit)
+	fmt.Fprint(w, ")")
+}
+
 // buildFormatString constructs a C format string for the given print/println call,
 // using the types of the arguments. It breaks out of string literals when macros
 // are needed (e.g. "Value: %" PRId64) to avoid issues with macro expansion.

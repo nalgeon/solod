@@ -18,8 +18,12 @@ type packet struct {
 // Named pointer type.
 type packetPtr *packet
 
+// Size of a struct literal, as a package-level constant.
+const headSize = unsafe.Sizeof(header{})
+
 func main() {
 	testOffsetof()
+	testSizeof()
 	testPointerConv()
 }
 
@@ -54,6 +58,42 @@ func testOffsetof() {
 	const off = unsafe.Offsetof(p.body)
 	if off != unsafe.Sizeof(p.head) {
 		panic("unexpected packet.body offset")
+	}
+}
+
+func testSizeof() {
+	var p packet
+	if headSize != unsafe.Sizeof(p.head) {
+		panic("unexpected header size")
+	}
+
+	// A struct literal with several fields.
+	if unsafe.Sizeof(header{1, 2, 3}) != headSize {
+		panic("unexpected header literal size")
+	}
+	if unsafe.Alignof(header{1, 2, 3}) != unsafe.Alignof(p.head) {
+		panic("unexpected header literal alignment")
+	}
+
+	// An array literal.
+	if unsafe.Sizeof([8]byte{}) != 8 {
+		panic("unexpected byte array size")
+	}
+	if unsafe.Sizeof([2]int64{1, 2}) != 16 {
+		panic("unexpected int array size")
+	}
+	if unsafe.Alignof([2]int64{1, 2}) != unsafe.Alignof(int64(0)) {
+		panic("unexpected int array alignment")
+	}
+
+	// A two-dimensional array literal.
+	if unsafe.Sizeof([2][3]int64{}) != 48 {
+		panic("unexpected 2d array size")
+	}
+
+	// A slice literal has the size of a slice header.
+	if unsafe.Sizeof([]int{1, 2}) != unsafe.Sizeof(p.nums) {
+		panic("unexpected slice literal size")
 	}
 }
 

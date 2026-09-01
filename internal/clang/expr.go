@@ -301,6 +301,11 @@ func (g *Generator) emitCallExpr(w io.Writer, n *ast.CallExpr) {
 		return
 	}
 
+	// unsafe.Sizeof and unsafe.Alignof intrinsics.
+	if g.emitSizeof(w, n) {
+		return
+	}
+
 	// Generic function call with explicit type argument (e.g. fn[T](a) or pkg.Fn[T](a)).
 	if indexExpr, ok := n.Fun.(*ast.IndexExpr); ok {
 		if ident := exprIdent(indexExpr.X); ident != nil {
