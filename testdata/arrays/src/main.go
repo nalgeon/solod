@@ -1,6 +1,9 @@
 package main
 
 type array [3]int
+type array1 [1]int
+type array2 [2]int
+type array5 [5]int
 
 type box struct {
 	nums [3]int
@@ -178,8 +181,9 @@ func main() {
 		}
 	}
 	{
-		// Array pointers.
-		a := [3]int{1, 2, 3}
+		// Array pointers. A pointer to an unnamed array type
+		// is not supported, so these cases use named types.
+		a := array{1, 2, 3}
 		p := &a
 		if (*p) != a {
 			panic("want p == a")
@@ -190,7 +194,7 @@ func main() {
 	}
 	{
 		// Array pointer slicing.
-		a := [5]int{1, 2, 3, 4, 5}
+		a := array5{1, 2, 3, 4, 5}
 		p := &a
 		s := p[1:4]
 		if len(s) != 3 || s[0] != 2 || s[2] != 4 {
@@ -199,7 +203,7 @@ func main() {
 	}
 	{
 		// Array pointer len, range.
-		a := [3]int{10, 20, 30}
+		a := array{10, 20, 30}
 		p := &a
 		if len(p) != 3 {
 			panic("want len(p) == 3")
@@ -313,7 +317,7 @@ func main() {
 		// Slice-to-array-pointer conversion. The pointer aliases
 		// the slice data, so a write through it changes the slice.
 		s := []int{11, 22, 33}
-		p := (*[3]int)(s)
+		p := (*array)(s)
 		if p[0] != 11 || p[2] != 33 {
 			panic("want p == &{11, 22, 33}")
 		}
@@ -322,13 +326,13 @@ func main() {
 			panic("want s == {1, 2, 3}")
 		}
 		// A sub-slice converts to a shorter array pointer.
-		q := (*[2]int)(s[1:])
+		q := (*array2)(s[1:])
 		q[0] = 42
 		if s[1] != 42 {
 			panic("want s[1] == 42")
 		}
-		// Assignment through an unnamed array pointer.
-		*(*[1]int)(s[2:]) = [1]int{7}
+		// Assignment through a temporary array pointer.
+		*(*array1)(s[2:]) = array1{7}
 		if s[2] != 7 {
 			panic("want s[2] == 7")
 		}

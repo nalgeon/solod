@@ -9,6 +9,8 @@ typedef struct point {
     so_int y;
 } point;
 typedef so_int buf[4];
+typedef so_int array[3];
+typedef so_int grid[2][3];
 
 // -- Implementation --
 
@@ -42,8 +44,9 @@ int main(void) {
         }
     }
     {
-        // new with an array type
-        so_int (*a)[3] = &(so_int[3]){};
+        // new with an array type. A pointer to an unnamed array
+        // type is not supported, so these cases use named types.
+        array* a = &(array){};
         if (3 != 3 || (*a)[0] != 0 || (*a)[2] != 0) {
             so_panic("expected a == [0 0 0]");
         }
@@ -55,15 +58,15 @@ int main(void) {
         if (4 != 4 || (*b)[3] != 0) {
             so_panic("expected b == [0 0 0 0]");
         }
-        so_int (*m)[2][3] = &(so_int[2][3]){};
+        grid* m = &(grid){};
         if (2 != 2 || 3 != 3 || (*m)[1][2] != 0) {
             so_panic("expected m == [[0 0 0] [0 0 0]]");
         }
     }
     {
         // new with an array variable
-        so_int aval[3] = {5, 6, 7};
-        so_int (*c)[3] = &aval;
+        array aval = {5, 6, 7};
+        array* c = &aval;
         if ((*c)[1] != 6) {
             so_panic("expected c[1] == 6");
         }

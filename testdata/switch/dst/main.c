@@ -1,5 +1,8 @@
 #include "main.h"
 
+// -- Types --
+typedef so_int array[3];
+
 // -- Forward declarations --
 static so_int inc(void);
 static so_String name(void);
@@ -397,11 +400,12 @@ int main(void) {
         }
     }
     {
-        // Pointer to array.
-        so_int a[3] = {1, 2, 3};
-        so_int (*p)[3] = &a;
+        // Pointer to array. A pointer to an unnamed array type
+        // is not supported, so the case uses a named type.
+        array a = {1, 2, 3};
+        array* p = &a;
         {
-            so_int (*_sw24)[3] = p;
+            array* _sw24 = p;
             if (_sw24 == NULL) {
                 so_panic("unexpected p == nil");
             } else if (_sw24 == &a) {

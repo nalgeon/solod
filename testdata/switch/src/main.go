@@ -18,6 +18,8 @@ func twice(v int) int {
 	return v * 2
 }
 
+type array [3]int
+
 type Shape interface {
 	Area() int
 }
@@ -365,8 +367,9 @@ func main() {
 		}
 	}
 	{
-		// Pointer to array.
-		a := [3]int{1, 2, 3}
+		// Pointer to array. A pointer to an unnamed array type
+		// is not supported, so the case uses a named type.
+		a := array{1, 2, 3}
 		p := &a
 		switch p {
 		case nil:

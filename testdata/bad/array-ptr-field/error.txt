@@ -1,0 +1,3 @@
+main.go:4:2: use a named array type instead of *[2]int
+	p *[2]int
+	^here

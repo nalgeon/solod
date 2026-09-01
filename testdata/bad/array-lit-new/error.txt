@@ -1,3 +1,3 @@
-main.go:4:7: cannot take the address of an array literal; assign it to a variable first
-	a := new([3]int{1, 2, 3})
+main.go:6:7: cannot take the address of an array literal; assign it to a variable first
+	a := new(array{1, 2, 3})
 	     ^here

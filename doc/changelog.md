@@ -3,6 +3,7 @@
 This document lists the main changes in the Solod version in development.
 
 - Language:
+  [Array pointers](#array-pointers) ·
   [Type parameters](#type-parameters) ·
   [Constraint interfaces](#constraint-interfaces) ·
   [Interface methods](#interface-methods) ·
@@ -50,6 +51,23 @@ This document lists the main changes in the Solod version in development.
 ⚠️ indicates breaking changes.
 
 ## Language
+
+### Array pointers
+
+⚠️ A pointer to an unnamed array type, like `*[3]int`, is now rejected. Array pointers were already partly broken before, so rejecting them completely now makes the code safer and easier to understand. This decision might be revisited in future releases.
+
+If you need an array pointer, use a named type instead:
+
+```go
+type Arr [3]int
+
+func first(p *Arr) int { return p[0] }    // ok
+func first(p *[3]int) int { return p[0] } // rejected
+
+a := Arr{1, 2, 3}
+p := &a            // ok
+q := &[3]int{}     // rejected
+```
 
 ### Type parameters
 

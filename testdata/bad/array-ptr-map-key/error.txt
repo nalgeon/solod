@@ -1,0 +1,3 @@
+main.go:5:7: use a named array type instead of *[2]int
+	m := map[*[2]int]bool{}
+	     ^here

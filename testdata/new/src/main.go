@@ -5,6 +5,8 @@ type point struct {
 }
 
 type buf [4]int
+type array [3]int
+type grid [2][3]int
 
 func main() {
 	{
@@ -36,8 +38,9 @@ func main() {
 		}
 	}
 	{
-		// new with an array type
-		a := new([3]int)
+		// new with an array type. A pointer to an unnamed array
+		// type is not supported, so these cases use named types.
+		a := new(array)
 		if len(a) != 3 || a[0] != 0 || a[2] != 0 {
 			panic("expected a == [0 0 0]")
 		}
@@ -49,14 +52,14 @@ func main() {
 		if len(b) != 4 || b[3] != 0 {
 			panic("expected b == [0 0 0 0]")
 		}
-		m := new([2][3]int)
+		m := new(grid)
 		if len(m) != 2 || len(m[0]) != 3 || m[1][2] != 0 {
 			panic("expected m == [[0 0 0] [0 0 0]]")
 		}
 	}
 	{
 		// new with an array variable
-		aval := [3]int{5, 6, 7}
+		aval := array{5, 6, 7}
 		c := new(aval)
 		if c[1] != 6 {
 			panic("expected c[1] == 6")

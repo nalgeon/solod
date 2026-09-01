@@ -38,13 +38,16 @@ const (
 	Hour                 = 60 * Minute
 )
 
+// durBuf is large enough to hold the largest possible duration string.
+type durBuf [32]byte
+
 // String returns a string representing the duration in the form "72h3m0.5s".
 // Leading zero units are omitted. As a special case, durations less than one
 // second format use a smaller unit (milli-, micro-, or nanoseconds) to ensure
 // that the leading digit is non-zero. The zero duration formats as 0s.
 // buf must have a length of at least [MaxDurationLen] bytes.
 func (d Duration) String(buf []byte) string {
-	var local [32]byte
+	var local durBuf
 	n := d.format(&local)
 	m := copy(buf, local[n:])
 	return string(buf[:m])
@@ -52,7 +55,7 @@ func (d Duration) String(buf []byte) string {
 
 // format formats the representation of d into the end of buf and
 // returns the offset of the first character.
-func (d Duration) format(buf *[32]byte) int {
+func (d Duration) format(buf *durBuf) int {
 	// Largest time is 2540400h10m10.000000000s
 	w := len(buf)
 

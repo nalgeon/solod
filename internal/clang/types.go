@@ -11,7 +11,6 @@ import (
 type CType struct {
 	Base       string   // e.g. "int", "so_int"
 	Dims       string   // e.g. "[3]", "[2][3]", ""
-	PtrToArray bool     // pointer-to-array: so_int (*name)[3]
 	FuncPtr    bool     // function pointer: ret (*name)(params)
 	FuncRet    string   // return type for a FuncPtr
 	FuncParams []string // parameter types for a FuncPtr
@@ -20,21 +19,16 @@ type CType struct {
 // Decl formats a C declaration:
 //   - regular variable: so_int count
 //   - array variable: so_int arr[3]
-//   - array pointer: so_int (*arr)[3]
 //   - func pointer: bool (*fn)(double)
 func (t CType) Decl(name string) string {
 	if t.FuncPtr {
 		return t.FuncRet + " (*" + name + ")(" + funcParams(t.FuncParams) + ")"
-	}
-	if t.PtrToArray {
-		return t.Base + " (*" + name + ")" + t.Dims
 	}
 	return t.Base + " " + name + t.Dims
 }
 
 // Cast formats a C type token for a cast expression:
 //   - regular type: so_int
-//   - array pointer: so_int (*)[3]
 //   - func pointer: bool (*)(double)
 func (t CType) Cast() string {
 	return strings.TrimSpace(t.Decl(""))
@@ -42,13 +36,13 @@ func (t CType) Cast() string {
 
 // IsArray reports whether this is an array type.
 func (t CType) IsArray() bool {
-	return t.Dims != "" && !t.PtrToArray
+	return t.Dims != ""
 }
 
 // IsPointer reports whether the declaration uses a `*` to indicate a pointer.
 // A named pointer type is a typedef, so it hides the `*` and reports false.
 func (t CType) IsPointer() bool {
-	return t.PtrToArray || strings.HasSuffix(t.Base, "*")
+	return strings.HasSuffix(t.Base, "*")
 }
 
 // mapVarType maps the type of a declared variable to a [CType].
@@ -70,21 +64,11 @@ func (g *Generator) mapVarType(node ast.Node, typ types.Type, hasInit bool) CTyp
 //
 // Use it when the type introduces a name (locals, params, struct fields,
 // typedefs), because C declaration syntax is name-embedded: arrays `T x[N]`,
-// function pointers `R (*x)(A)`, pointer-to-array `T (*x)[N]`.
+// function pointers `R (*x)(A)`.
 //
 // For a bare inline type token (casts, macro args, compound-literal
 // element types), use [Generator.mapTypeName] instead.
 func (g *Generator) mapTypeDecl(node ast.Node, typ types.Type) CType {
-	// Pointer to array.
-	if ptr, ok := types.Unalias(typ).(*types.Pointer); ok {
-		if _, ok := types.Unalias(ptr.Elem()).(*types.Array); ok {
-			return CType{
-				Base:       g.mapTypeName(node, ptr.Elem()),
-				Dims:       arrayDims(ptr.Elem()),
-				PtrToArray: true,
-			}
-		}
-	}
 	// Anonymous function.
 	if sig, ok := types.Unalias(typ).(*types.Signature); ok {
 		var params []string
@@ -165,11 +149,13 @@ func (g *Generator) mapTypeName(node ast.Node, typ types.Type) string {
 		return obj.Name()
 
 	case *types.Pointer:
-		elem := t.Elem()
-		if _, ok := types.Unalias(elem).(*types.Array); ok {
-			return g.mapTypeName(node, elem) + "(*)" + arrayDims(elem)
+		// A pointer to an unnamed array type has no C type name (T (*arr)[N]).
+		// So it's easier to reject array pointers altogether than special-case
+		// them everywhere.
+		if _, ok := types.Unalias(t.Elem()).(*types.Array); ok {
+			g.fail(node, "use a named array type instead of %s", g.typeString(t))
 		}
-		return g.mapTypeName(node, elem) + "*"
+		return g.mapTypeName(node, t.Elem()) + "*"
 
 	case *types.Signature:
 		// Look for a named type with the same

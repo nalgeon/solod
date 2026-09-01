@@ -5,6 +5,9 @@
 typedef struct box box;
 typedef struct arange arange;
 typedef so_int array[3];
+typedef so_int array1[1];
+typedef so_int array2[2];
+typedef so_int array5[5];
 
 typedef struct box {
     so_int nums[3];
@@ -185,9 +188,10 @@ int main(void) {
         }
     }
     {
-        // Array pointers.
-        so_int a[3] = {1, 2, 3};
-        so_int (*p)[3] = &a;
+        // Array pointers. A pointer to an unnamed array type
+        // is not supported, so these cases use named types.
+        array a = {1, 2, 3};
+        array* p = &a;
         if (so_mem_ne((*p), a, 3 * sizeof(so_int))) {
             so_panic("want p == a");
         }
@@ -197,8 +201,8 @@ int main(void) {
     }
     {
         // Array pointer slicing.
-        so_int a[5] = {1, 2, 3, 4, 5};
-        so_int (*p)[5] = &a;
+        array5 a = {1, 2, 3, 4, 5};
+        array5* p = &a;
         so_Slice s = so_array_slice(so_int, (*p), 1, 4, 5);
         if (so_len(s) != 3 || so_at(so_int, s, 0) != 2 || so_at(so_int, s, 2) != 4) {
             so_panic("want p[1:4] == {2, 3, 4}");
@@ -206,8 +210,8 @@ int main(void) {
     }
     {
         // Array pointer len, range.
-        so_int a[3] = {10, 20, 30};
-        so_int (*p)[3] = &a;
+        array a = {10, 20, 30};
+        array* p = &a;
         if (3 != 3) {
             so_panic("want len(p) == 3");
         }
@@ -323,7 +327,7 @@ int main(void) {
         // Slice-to-array-pointer conversion. The pointer aliases
         // the slice data, so a write through it changes the slice.
         so_Slice s = (so_Slice){(so_int[3]){11, 22, 33}, 3, 3};
-        so_int (*p)[3] = (so_int(*)[3])so_slice_array(s, 3);
+        array* p = (array*)so_slice_array(s, 3);
         if ((*p)[0] != 11 || (*p)[2] != 33) {
             so_panic("want p == &{11, 22, 33}");
         }
@@ -332,13 +336,13 @@ int main(void) {
             so_panic("want s == {1, 2, 3}");
         }
         // A sub-slice converts to a shorter array pointer.
-        so_int (*q)[2] = (so_int(*)[2])so_slice_array(so_slice(so_int, s, 1, s.len), 2);
+        array2* q = (array2*)so_slice_array(so_slice(so_int, s, 1, s.len), 2);
         (*q)[0] = 42;
         if (so_at(so_int, s, 1) != 42) {
             so_panic("want s[1] == 42");
         }
-        // Assignment through an unnamed array pointer.
-        memcpy(*(so_int(*)[1])so_slice_array(so_slice(so_int, s, 2, s.len), 1), (so_int[1]){7}, sizeof(so_int[1]));
+        // Assignment through a temporary array pointer.
+        memcpy(*(array1*)so_slice_array(so_slice(so_int, s, 2, s.len), 1), (so_int[1]){7}, sizeof(so_int[1]));
         if (so_at(so_int, s, 2) != 7) {
             so_panic("want s[2] == 7");
         }

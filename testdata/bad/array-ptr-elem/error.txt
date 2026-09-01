@@ -1,0 +1,3 @@
+main.go:5:7: use a named array type instead of *[2]int
+	s := []*[2]int{&a}
+	     ^here

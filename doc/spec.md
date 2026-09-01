@@ -264,6 +264,16 @@ b2 := Box{nums: arr}              // error: use an array literal
 var b3 Box; b3.nums = arr         // ok
 ```
 
+Unnamed array pointer types, like `*[3]int`, are not supported.
+Use a named array type instead:
+
+```go
+type Arr [3]int
+
+func first(p *Arr) int { return p[0] }    // ok
+func first(p *[3]int) int { return p[0] } // rejected
+```
+
 Slices of arrays (`[][3]int`) are not supported. Use a slice of slices, or wrap
 the array in a struct.
 
