@@ -1,0 +1,3 @@
+main.go:5:16: cannot use a value as any here; assign it to a variable first
+	s = append(s, 42)
+	              ^here

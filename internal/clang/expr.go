@@ -793,11 +793,29 @@ func (g *Generator) emitMacroArgAsType(w io.Writer, node ast.Node, arg ast.Expr,
 		g.emitMacroArg(w, arg)
 		return
 	}
-	// A value could be emitted as a compound literal, so it needs parens
-	// to stop the preprocessor from splitting it on commas.
-	fmt.Fprint(w, "(")
-	g.emitAnyValue(w, node, arg)
-	fmt.Fprint(w, ")")
+	g.emitAnyMacroArg(w, node, arg)
+}
+
+// emitAnyMacroArg emits an argument to a function-like macro, converted to any.
+func (g *Generator) emitAnyMacroArg(w io.Writer, node ast.Node, arg ast.Expr) {
+	valType := g.types.TypeOf(arg)
+	if isNilType(valType) || isPointerType(valType) {
+		// nil and pointers go into the any as they are, with no address taken.
+		// emitMacroArg rejects the address of a composite literal.
+		g.emitMacroArg(w, arg)
+		return
+	}
+	// Boxing stores the address of the value. Only a variable has an address
+	// in the block around the macro call.
+	if ident, ok := arg.(*ast.Ident); ok {
+		if _, ok := g.types.Uses[ident].(*types.Var); ok {
+			g.emitAnyValue(w, node, arg)
+			return
+		}
+	}
+	// A macro body is a block. A compound literal in a macro argument dies at the
+	// end of that block, and an any that holds its address dangles.
+	g.fail(arg, "cannot use a value as any here; assign it to a variable first")
 }
 
 // emitDiscard emits an expression statement that evaluates expr

@@ -215,8 +215,10 @@ func main() {
 	}
 	{
 		// Any appended to a slice.
+		n := 42
+		p := point{1, 2}
 		s := make([]any, 0, 2)
-		s = append(s, 42, point{1, 2})
+		s = append(s, n, p)
 		if s[0].(int) != 42 {
 			panic("want s[0].(int) == 42")
 		}
@@ -227,8 +229,10 @@ func main() {
 	}
 	{
 		// Any as a map value.
-		m := map[string]any{"n": 42}
-		m["p"] = point{1, 2}
+		n := 42
+		p := point{1, 2}
+		m := map[string]any{"n": n}
+		m["p"] = p
 		if m["n"].(int) != 42 {
 			panic("want m[\"n\"].(int) == 42")
 		}

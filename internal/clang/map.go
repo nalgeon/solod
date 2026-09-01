@@ -34,11 +34,17 @@ func (g *Generator) emitMapLit(w io.Writer, n *ast.CompositeLit) {
 		g.emitExpr(w, elt.(*ast.KeyValueExpr).Key)
 	}
 	fmt.Fprintf(w, "}), ((%s[]){", valType)
+	isAny := isEmptyInterface(mapType.Elem())
 	for i, elt := range n.Elts {
 		if i > 0 {
 			fmt.Fprint(w, ", ")
 		}
-		g.emitExprAsType(w, n, elt.(*ast.KeyValueExpr).Value, mapType.Elem())
+		val := elt.(*ast.KeyValueExpr).Value
+		if isAny {
+			g.emitAnyMacroArg(w, n, val)
+			continue
+		}
+		g.emitExprAsType(w, n, val, mapType.Elem())
 	}
 	fmt.Fprint(w, "}))")
 }

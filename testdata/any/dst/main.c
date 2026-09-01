@@ -234,8 +234,10 @@ int main(void) {
     }
     {
         // Any appended to a slice.
+        so_int n = 42;
+        point p = (point){1, 2};
         so_Slice s = so_make_slice(void*, 0, 2);
-        s = so_append(void*, s, 2, (&(so_int){42}), (&(point){1, 2}));
+        s = so_append(void*, s, 2, &n, &p);
         if ((*(so_int*)so_at(void*, s, 0)) != 42) {
             so_panic("want s[0].(int) == 42");
         }
@@ -246,8 +248,10 @@ int main(void) {
     }
     {
         // Any as a map value.
-        so_Map* m = so_map_lit(so_String, void*, 1, ((so_String[]){so_str("n")}), ((void*[]){&(so_int){42}}));
-        so_map_set(so_String, void*, m, so_str("p"), (&(point){1, 2}));
+        so_int n = 42;
+        point p = (point){1, 2};
+        so_Map* m = so_map_lit(so_String, void*, 1, ((so_String[]){so_str("n")}), ((void*[]){&n}));
+        so_map_set(so_String, void*, m, so_str("p"), &p);
         if ((*(so_int*)so_map_get(so_String, void*, m, so_str("n"))) != 42) {
             so_panic("want m[\"n\"].(int) == 42");
         }

@@ -1,0 +1,3 @@
+main.go:9:16: cannot use composite literal here; assign it to a variable first
+	s = append(s, &point{1, 2})
+	              ^here
