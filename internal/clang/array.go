@@ -22,7 +22,7 @@ func (g *Generator) emitArrayLit(w io.Writer, n *ast.CompositeLit) {
 				fmt.Fprint(w, ", ")
 			}
 			g.checkArrayValue(elt, elem)
-			g.emitExpr(w, elt)
+			g.emitExprAsType(w, n, elt, elem)
 		}
 	}
 
@@ -70,7 +70,7 @@ func (g *Generator) emitSliceLit(w io.Writer, n *ast.CompositeLit) {
 		if i > 0 {
 			fmt.Fprint(w, ", ")
 		}
-		g.emitExpr(w, elt)
+		g.emitExprAsType(w, n, elt, sl.Elem())
 	}
 	fmt.Fprintf(w, "}, %d, %d}", size, size)
 }
@@ -87,10 +87,10 @@ func (g *Generator) emitSparseArrayValues(w io.Writer, n *ast.CompositeLit, elem
 			g.emitExpr(w, kv.Key)
 			fmt.Fprint(w, "] = ")
 			g.checkArrayValue(kv.Value, elem)
-			g.emitExpr(w, kv.Value)
+			g.emitExprAsType(w, n, kv.Value, elem)
 		} else {
 			g.checkArrayValue(elt, elem)
-			g.emitExpr(w, elt)
+			g.emitExprAsType(w, n, elt, elem)
 		}
 	}
 }

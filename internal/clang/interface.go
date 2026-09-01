@@ -262,7 +262,9 @@ func (g *Generator) emitAnyValue(w io.Writer, node ast.Node, expr ast.Expr) {
 	case *ast.Ident:
 		addressable = true
 	case *ast.CompositeLit:
-		addressable = true
+		// A map literal emits a macro call or an address.
+		// C cannot take the address of either.
+		addressable = !isMapType(g.types.TypeOf(e))
 	case *ast.BasicLit:
 		addressable = e.Kind == token.STRING
 	}

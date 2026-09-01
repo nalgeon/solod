@@ -786,6 +786,20 @@ func (g *Generator) emitMacroArg(w io.Writer, arg ast.Expr) {
 	g.emitExpr(w, arg)
 }
 
+// emitMacroArgAsType emits an argument to a function-like macro,
+// converted to targetType.
+func (g *Generator) emitMacroArgAsType(w io.Writer, node ast.Node, arg ast.Expr, targetType types.Type) {
+	if !isEmptyInterface(targetType) || isEmptyInterface(g.types.TypeOf(arg)) {
+		g.emitMacroArg(w, arg)
+		return
+	}
+	// A value could be emitted as a compound literal, so it needs parens
+	// to stop the preprocessor from splitting it on commas.
+	fmt.Fprint(w, "(")
+	g.emitAnyValue(w, node, arg)
+	fmt.Fprint(w, ")")
+}
+
 // emitDiscard emits an expression statement that evaluates expr
 // and throws the value away: (void)expr;
 func (g *Generator) emitDiscard(w io.Writer, expr ast.Expr) {

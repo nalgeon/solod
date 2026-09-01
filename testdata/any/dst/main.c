@@ -201,5 +201,69 @@ int main(void) {
             so_panic("want a.(shape) == shape(&r)");
         }
     }
+    {
+        // Any in an array literal.
+        void* a[3] = {&(so_int){1}, &so_str("hello"), &(point){1, 2}};
+        if ((*(so_int*)a[0]) != 1) {
+            so_panic("want a[0].(int) == 1");
+        }
+        if (so_string_ne((*(so_String*)a[1]), so_str("hello"))) {
+            so_panic("want a[1].(string) == \"hello\"");
+        }
+        point ap = (*(point*)a[2]);
+        if (ap.x != 1 || ap.y != 2) {
+            so_panic("want a[2].(point) == point{1, 2}");
+        }
+    }
+    {
+        // Any in a keyed array literal.
+        void* a[4] = {[0] = &(so_int){11}, [3] = &(so_int){44}};
+        if ((*(so_int*)a[0]) != 11 || (*(so_int*)a[3]) != 44) {
+            so_panic("want a[0].(int) == 11 and a[3].(int) == 44");
+        }
+    }
+    {
+        // Any in a slice literal.
+        so_Slice s = (so_Slice){(void*[2]){&(so_int){1}, &so_str("hello")}, 2, 2};
+        if ((*(so_int*)so_at(void*, s, 0)) != 1) {
+            so_panic("want s[0].(int) == 1");
+        }
+        if (so_string_ne((*(so_String*)so_at(void*, s, 1)), so_str("hello"))) {
+            so_panic("want s[1].(string) == \"hello\"");
+        }
+    }
+    {
+        // Any appended to a slice.
+        so_Slice s = so_make_slice(void*, 0, 2);
+        s = so_append(void*, s, 2, (&(so_int){42}), (&(point){1, 2}));
+        if ((*(so_int*)so_at(void*, s, 0)) != 42) {
+            so_panic("want s[0].(int) == 42");
+        }
+        point sp = (*(point*)so_at(void*, s, 1));
+        if (sp.x != 1 || sp.y != 2) {
+            so_panic("want s[1].(point) == point{1, 2}");
+        }
+    }
+    {
+        // Any as a map value.
+        so_Map* m = so_map_lit(so_String, void*, 1, ((so_String[]){so_str("n")}), ((void*[]){&(so_int){42}}));
+        so_map_set(so_String, void*, m, so_str("p"), (&(point){1, 2}));
+        if ((*(so_int*)so_map_get(so_String, void*, m, so_str("n"))) != 42) {
+            so_panic("want m[\"n\"].(int) == 42");
+        }
+        point mp = (*(point*)so_map_get(so_String, void*, m, so_str("p")));
+        if (mp.x != 1 || mp.y != 2) {
+            so_panic("want m[\"p\"].(point) == point{1, 2}");
+        }
+    }
+    {
+        // Map value in an any. A map is already a pointer, so the any
+        // holds the address of the map pointer.
+        void* a = &(so_Map*){so_map_lit(so_String, so_int, 1, ((so_String[]){so_str("n")}), ((so_int[]){42}))};
+        so_Map* m = (*(so_Map**)a);
+        if (so_map_get(so_String, so_int, m, so_str("n")) != 42) {
+            so_panic("want a.(map[string]int)[\"n\"] == 42");
+        }
+    }
     return 0;
 }

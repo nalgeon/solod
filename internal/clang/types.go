@@ -133,9 +133,7 @@ func (g *Generator) mapTypeName(node ast.Node, typ types.Type) string {
 		return "so_Slice"
 
 	case *types.Map:
-		if _, ok := t.Elem().Underlying().(*types.Array); ok {
-			g.fail(node, "array as map value type is not supported")
-		}
+		g.checkMap(node, t.Key(), t.Elem())
 		return "so_Map*"
 
 	case *types.Interface:
@@ -417,6 +415,12 @@ func isPointerType(t types.Type) bool {
 		return u.Kind() == types.UnsafePointer
 	}
 	return false
+}
+
+// isMapType reports whether t is a map type.
+func isMapType(t types.Type) bool {
+	_, ok := t.Underlying().(*types.Map)
+	return ok
 }
 
 // isCStructType reports whether the emitted C type of t is a struct.

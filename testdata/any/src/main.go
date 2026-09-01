@@ -182,4 +182,68 @@ func main() {
 			panic("want a.(shape) == shape(&r)")
 		}
 	}
+	{
+		// Any in an array literal.
+		a := [...]any{1, "hello", point{1, 2}}
+		if a[0].(int) != 1 {
+			panic("want a[0].(int) == 1")
+		}
+		if a[1].(string) != "hello" {
+			panic("want a[1].(string) == \"hello\"")
+		}
+		ap := a[2].(point)
+		if ap.x != 1 || ap.y != 2 {
+			panic("want a[2].(point) == point{1, 2}")
+		}
+	}
+	{
+		// Any in a keyed array literal.
+		a := [4]any{0: 11, 3: 44}
+		if a[0].(int) != 11 || a[3].(int) != 44 {
+			panic("want a[0].(int) == 11 and a[3].(int) == 44")
+		}
+	}
+	{
+		// Any in a slice literal.
+		s := []any{1, "hello"}
+		if s[0].(int) != 1 {
+			panic("want s[0].(int) == 1")
+		}
+		if s[1].(string) != "hello" {
+			panic("want s[1].(string) == \"hello\"")
+		}
+	}
+	{
+		// Any appended to a slice.
+		s := make([]any, 0, 2)
+		s = append(s, 42, point{1, 2})
+		if s[0].(int) != 42 {
+			panic("want s[0].(int) == 42")
+		}
+		sp := s[1].(point)
+		if sp.x != 1 || sp.y != 2 {
+			panic("want s[1].(point) == point{1, 2}")
+		}
+	}
+	{
+		// Any as a map value.
+		m := map[string]any{"n": 42}
+		m["p"] = point{1, 2}
+		if m["n"].(int) != 42 {
+			panic("want m[\"n\"].(int) == 42")
+		}
+		mp := m["p"].(point)
+		if mp.x != 1 || mp.y != 2 {
+			panic("want m[\"p\"].(point) == point{1, 2}")
+		}
+	}
+	{
+		// Map value in an any. A map is already a pointer, so the any
+		// holds the address of the map pointer.
+		var a any = map[string]int{"n": 42}
+		m := a.(map[string]int)
+		if m["n"] != 42 {
+			panic("want a.(map[string]int)[\"n\"] == 42")
+		}
+	}
 }

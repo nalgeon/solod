@@ -102,7 +102,7 @@ func (g *Generator) emitAppendCall(w io.Writer, call *ast.CallExpr) {
 		fmt.Fprintf(w, ", %d", len(call.Args)-1)
 		for _, arg := range call.Args[1:] {
 			fmt.Fprint(w, ", ")
-			g.emitMacroArg(w, arg)
+			g.emitMacroArgAsType(w, call, arg, sliceType.Elem())
 		}
 		fmt.Fprint(w, ")")
 	}
@@ -165,7 +165,7 @@ func (g *Generator) emitMakeCall(w io.Writer, call *ast.CallExpr) {
 		if len(call.Args) < 2 {
 			g.fail(call, "make(map) requires a capacity argument")
 		}
-		g.checkMapValueType(call, t.Elem())
+		g.checkMap(call, t.Key(), t.Elem())
 		keyType := g.mapTypeName(call, t.Key())
 		valType := g.mapTypeName(call, t.Elem())
 		fmt.Fprintf(w, "so_make_map(%s, %s, ", keyType, valType)

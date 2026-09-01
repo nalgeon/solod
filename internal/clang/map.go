@@ -16,7 +16,7 @@ import (
 //		((so_int[]){11, 22})))
 func (g *Generator) emitMapLit(w io.Writer, n *ast.CompositeLit) {
 	mapType := g.types.TypeOf(n).Underlying().(*types.Map)
-	g.checkMapValueType(n, mapType.Elem())
+	g.checkMap(n, mapType.Key(), mapType.Elem())
 	keyType := g.mapTypeName(n, mapType.Key())
 	valType := g.mapTypeName(n, mapType.Elem())
 	size := len(n.Elts)
@@ -38,7 +38,7 @@ func (g *Generator) emitMapLit(w io.Writer, n *ast.CompositeLit) {
 		if i > 0 {
 			fmt.Fprint(w, ", ")
 		}
-		g.emitExpr(w, elt.(*ast.KeyValueExpr).Value)
+		g.emitExprAsType(w, n, elt.(*ast.KeyValueExpr).Value, mapType.Elem())
 	}
 	fmt.Fprint(w, "}))")
 }
@@ -67,7 +67,7 @@ func (g *Generator) emitMapIndexAssign(w io.Writer, node ast.Node, idx *ast.Inde
 	fmt.Fprint(w, ", ")
 	g.emitMacroArg(w, idx.Index)
 	fmt.Fprint(w, ", ")
-	g.emitMacroArg(w, rhs)
+	g.emitMacroArgAsType(w, node, rhs, mapType.Elem())
 	fmt.Fprint(w, ");\n")
 }
 
@@ -163,10 +163,11 @@ func (g *Generator) emitMapRange(w io.Writer, stmt *ast.RangeStmt) {
 	fmt.Fprintf(w, "%s}\n", g.indent())
 }
 
-// checkMapValueType fails if the map value type is not supported in C.
-// mapTypeName rejects this too, but only when it sees the whole map type.
-// Map literals and make() pass the value type alone, so check it here.
-func (g *Generator) checkMapValueType(node ast.Node, valType types.Type) {
+// checkMap fails if the key or the value type of a map is not supported.
+func (g *Generator) checkMap(node ast.Node, keyType, valType types.Type) {
+	if isEmptyInterface(keyType) {
+		g.fail(node, "any as map key type is not supported")
+	}
 	if _, ok := valType.Underlying().(*types.Array); ok {
 		g.fail(node, "array as map value type is not supported")
 	}

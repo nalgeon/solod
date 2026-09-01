@@ -1,0 +1,3 @@
+main.go:4:2: any as map key type is not supported
+	m := map[any]int{}
+	^here
