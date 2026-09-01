@@ -4,6 +4,7 @@ type array [3]int
 type array1 [1]int
 type array2 [2]int
 type array5 [5]int
+type grid [2][3]int
 
 type box struct {
 	nums [3]int
@@ -284,6 +285,64 @@ func main() {
 			panic("want sum == 6")
 		}
 		for range a {
+		}
+	}
+	{
+		// For-range over an array of arrays.
+		twoD := [2][3]int{{1, 2, 3}, {11, 12, 13}}
+		sum := 0
+		for _, row := range twoD {
+			// Range copies the row, so the write does not change twoD.
+			row[0] *= 2
+			for _, v := range row {
+				sum += v
+			}
+		}
+		if sum != 54 {
+			panic("want sum == 54")
+		}
+		if twoD[0][0] != 1 {
+			panic("want twoD[0][0] == 1")
+		}
+		// The element is a named array type.
+		rows := [2]array{{1, 2, 3}, {4, 5, 6}}
+		sum = 0
+		for _, row := range rows {
+			sum += row[0] + row[1] + row[2]
+		}
+		if sum != 21 {
+			panic("want sum == 21")
+		}
+		// The loop assigns to an array declared before it.
+		var last [3]int
+		for _, last = range twoD {
+		}
+		if last[0] != 11 || last[2] != 13 {
+			panic("want last == {11, 12, 13}")
+		}
+	}
+	{
+		// For-range over a pointer to an array.
+		a := array{10, 20, 30}
+		ap := &a
+		sum := 0
+		for _, v := range *ap {
+			sum += v
+		}
+		if sum != 60 {
+			panic("want sum == 60")
+		}
+		g := grid{{1, 2, 3}, {11, 12, 13}}
+		gp := &g
+		sum = 0
+		for _, row := range gp {
+			sum += row[0]
+		}
+		for _, row := range *gp {
+			sum += row[2]
+		}
+		if sum != 28 {
+			panic("want sum == 28")
 		}
 	}
 	{

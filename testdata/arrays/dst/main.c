@@ -8,6 +8,7 @@ typedef so_int array[3];
 typedef so_int array1[1];
 typedef so_int array2[2];
 typedef so_int array5[5];
+typedef so_int grid[2][3];
 
 typedef struct box {
     so_int nums[3];
@@ -293,6 +294,75 @@ int main(void) {
             so_panic("want sum == 6");
         }
         for (so_int _i = 0; _i < 3; _i++) {
+        }
+    }
+    {
+        // For-range over an array of arrays.
+        so_int twoD[2][3] = {{1, 2, 3}, {11, 12, 13}};
+        so_int sum = 0;
+        for (so_int _ = 0; _ < 2; _++) {
+            so_int row[3];
+            memcpy(row, twoD[_], sizeof(row));
+            // Range copies the row, so the write does not change twoD.
+            row[0] *= 2;
+            for (so_int _ = 0; _ < 3; _++) {
+                so_int v = row[_];
+                sum += v;
+            }
+        }
+        if (sum != 54) {
+            so_panic("want sum == 54");
+        }
+        if (twoD[0][0] != 1) {
+            so_panic("want twoD[0][0] == 1");
+        }
+        // The element is a named array type.
+        array rows[2] = {{1, 2, 3}, {4, 5, 6}};
+        sum = 0;
+        for (so_int _ = 0; _ < 2; _++) {
+            array row;
+            memcpy(row, rows[_], sizeof(row));
+            sum += row[0] + row[1] + row[2];
+        }
+        if (sum != 21) {
+            so_panic("want sum == 21");
+        }
+        // The loop assigns to an array declared before it.
+        so_int last[3] = {};
+        for (so_int _ = 0; _ < 2; _++) {
+            memcpy(last, twoD[_], sizeof(last));
+        }
+        if (last[0] != 11 || last[2] != 13) {
+            so_panic("want last == {11, 12, 13}");
+        }
+    }
+    {
+        // For-range over a pointer to an array.
+        array a = {10, 20, 30};
+        array* ap = &a;
+        so_int sum = 0;
+        for (so_int _ = 0; _ < 3; _++) {
+            so_int v = (*ap)[_];
+            sum += v;
+        }
+        if (sum != 60) {
+            so_panic("want sum == 60");
+        }
+        grid g = {{1, 2, 3}, {11, 12, 13}};
+        grid* gp = &g;
+        sum = 0;
+        for (so_int _ = 0; _ < 2; _++) {
+            so_int row[3];
+            memcpy(row, (*gp)[_], sizeof(row));
+            sum += row[0];
+        }
+        for (so_int _ = 0; _ < 2; _++) {
+            so_int row[3];
+            memcpy(row, (*gp)[_], sizeof(row));
+            sum += row[2];
+        }
+        if (sum != 28) {
+            so_panic("want sum == 28");
         }
     }
     {

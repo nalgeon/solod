@@ -54,7 +54,6 @@ func (g *Generator) emitArrayRange(w io.Writer, stmt *ast.RangeStmt) {
 	}
 
 	key := stmt.Key.(*ast.Ident)
-	elemType := g.mapTypeName(stmt, arrType.Elem())
 	k := g.rangeKeyVar(stmt, key)
 
 	fmt.Fprintf(w, "%sfor (%s%s = 0; %s < %d; %s++) {\n",
@@ -65,25 +64,58 @@ func (g *Generator) emitArrayRange(w io.Writer, stmt *ast.RangeStmt) {
 	if stmt.Value != nil {
 		if valIdent, ok := stmt.Value.(*ast.Ident); ok && valIdent.Name != "_" {
 			g.state.depth++
-			valDecl := elemType + " "
-			if stmt.Tok == token.ASSIGN {
-				valDecl = ""
-			}
-			fmt.Fprintf(w, "%s%s%s = ", g.indent(), valDecl, valIdent.Name)
-			if ptrDeref {
-				fmt.Fprint(w, "(*")
-				g.emitExpr(w, stmt.X)
-				fmt.Fprintf(w, ")[%s];\n", k.name)
-			} else {
-				g.emitExpr(w, stmt.X)
-				fmt.Fprintf(w, "[%s];\n", k.name)
-			}
+			g.emitArrayRangeValue(w, stmt, arrType.Elem(), valIdent.Name, k.name, ptrDeref)
 			g.state.depth--
 		}
 	}
 
 	g.emitBlock(w, stmt.Body)
 	fmt.Fprintf(w, "%s}\n", g.indent())
+}
+
+// emitArrayRangeValue emits the value variable of a range loop over an array,
+// e.g. `so_int v = nums[i];`. name is the value variable and index is the key
+// variable.
+func (g *Generator) emitArrayRangeValue(w io.Writer, stmt *ast.RangeStmt, elem types.Type, name, index string, ptrDeref bool) {
+	emitElem := func() { g.emitArrayRangeElem(w, stmt.X, index, ptrDeref) }
+
+	if isUnderlyingArray(elem) {
+		// Range copies an array element, so the value needs a memcpy.
+		decl := g.mapTypeDecl(stmt, elem).Decl(name)
+		if stmt.Tok == token.ASSIGN {
+			decl = ""
+		}
+		g.emitArrayCopy(w, decl, name, emitElem)
+		return
+	}
+
+	valDecl := g.mapTypeName(stmt, elem) + " "
+	if stmt.Tok == token.ASSIGN {
+		valDecl = ""
+	}
+	fmt.Fprintf(w, "%s%s%s = ", g.indent(), valDecl, name)
+	emitElem()
+	fmt.Fprint(w, ";\n")
+}
+
+// emitArrayRangeElem emits the element access of a range loop over an array,
+// e.g. `nums[i]`. ptrDeref reports whether x is a pointer to the array.
+func (g *Generator) emitArrayRangeElem(w io.Writer, x ast.Expr, index string, ptrDeref bool) {
+	// A dereference needs parens, because [] binds tighter than * in C.
+	_, srcDeref := x.(*ast.StarExpr)
+	switch {
+	case ptrDeref:
+		fmt.Fprint(w, "(*")
+		g.emitExpr(w, x)
+		fmt.Fprint(w, ")")
+	case srcDeref:
+		fmt.Fprint(w, "(")
+		g.emitExpr(w, x)
+		fmt.Fprint(w, ")")
+	default:
+		g.emitExpr(w, x)
+	}
+	fmt.Fprintf(w, "[%s]", index)
 }
 
 // emitSliceRange emits a range loop over a slice.

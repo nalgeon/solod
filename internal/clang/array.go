@@ -208,12 +208,18 @@ func (g *Generator) emitArrayVarDecl(w io.Writer, ct CType, name string, value a
 		fmt.Fprint(w, ";\n")
 		return
 	}
-	// C has no array assignment, so any other value needs a separate
-	// declaration and a memcpy, e.g.:
-	// var a [3]int = b -> so_int a[3]; memcpy(a, b, sizeof(a));
-	fmt.Fprintf(w, "%s%s;\n", g.indent(), ct.Decl(name))
+	g.emitArrayCopy(w, ct.Decl(name), name, func() { g.emitExpr(w, value) })
+}
+
+// emitArrayCopy declares an array variable and copies the value into it, e.g.:
+// var a [3]int = b -> so_int a[3]; memcpy(a, b, sizeof(a)).
+// An empty decl skips the declaration and copies into an existing variable.
+func (g *Generator) emitArrayCopy(w io.Writer, decl, name string, emitValue func()) {
+	if decl != "" {
+		fmt.Fprintf(w, "%s%s;\n", g.indent(), decl)
+	}
 	fmt.Fprintf(w, "%smemcpy(%s, ", g.indent(), name)
-	g.emitExpr(w, value)
+	emitValue()
 	fmt.Fprintf(w, ", sizeof(%s));\n", name)
 }
 
