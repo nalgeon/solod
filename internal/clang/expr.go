@@ -101,6 +101,7 @@ func (g *Generator) emitBinaryExpr(w io.Writer, n *ast.BinaryExpr) {
 
 	// String ordering comparison: emit so_string_lt/gt/lte/gte calls.
 	if isOrderCompare(n.Op) && g.hasStringType(n.X) {
+		g.checkLocalScope(n)
 		fmt.Fprintf(w, "%s(", stringCompareFunc(n.Op))
 		g.emitExpr(w, n.X)
 		fmt.Fprint(w, ", ")
@@ -117,6 +118,7 @@ func (g *Generator) emitBinaryExpr(w io.Writer, n *ast.BinaryExpr) {
 			fmt.Fprint(w, ")")
 			return
 		}
+		g.checkLocalScope(n)
 		fmt.Fprint(w, "so_string_add(")
 		g.emitExpr(w, n.X)
 		fmt.Fprint(w, ", ")
@@ -162,6 +164,7 @@ func (g *Generator) emitBinaryExpr(w io.Writer, n *ast.BinaryExpr) {
 
 	// Integer division/modulo: guard against a zero divisor.
 	if (n.Op == token.QUO || n.Op == token.REM) && g.needsIntDivGuard(n.X, n.Y) {
+		g.checkLocalScope(n)
 		if n.Op == token.QUO {
 			fmt.Fprint(w, "so_div(")
 		} else {
@@ -224,6 +227,7 @@ func (g *Generator) emitEqual(w io.Writer, n *ast.BinaryExpr) {
 
 	// String comparison: emit so_string_eq/ne calls.
 	if g.hasStringType(left) {
+		g.checkLocalScope(n)
 		fmt.Fprintf(w, "%s(", stringCompareFunc(n.Op))
 		g.emitExpr(w, left)
 		fmt.Fprint(w, ", ")
@@ -372,6 +376,7 @@ func (g *Generator) emitCallExpr(w io.Writer, n *ast.CallExpr) {
 				return
 			}
 			if isIntegerType(argType) {
+				g.checkLocalScope(n)
 				fmt.Fprint(w, "so_int_string(")
 				g.emitExpr(w, n.Args[0])
 				fmt.Fprint(w, ")")
@@ -383,6 +388,7 @@ func (g *Generator) emitCallExpr(w io.Writer, n *ast.CallExpr) {
 		if arrType, ok := tv.Type.Underlying().(*types.Array); ok {
 			argType := g.types.TypeOf(n.Args[0])
 			if _, ok := argType.Underlying().(*types.Slice); ok {
+				g.checkLocalScope(n)
 				fmt.Fprint(w, "so_slice_array(")
 				g.emitMacroArg(w, n.Args[0])
 				fmt.Fprintf(w, ", %d)", arrType.Len())
@@ -394,6 +400,7 @@ func (g *Generator) emitCallExpr(w io.Writer, n *ast.CallExpr) {
 			arrType, isArray := ptrType.Elem().Underlying().(*types.Array)
 			_, isSlice := g.types.TypeOf(n.Args[0]).Underlying().(*types.Slice)
 			if isArray && isSlice {
+				g.checkLocalScope(n)
 				fmt.Fprintf(w, "(%s)so_slice_array(", g.mapTypeName(n, tv.Type))
 				g.emitMacroArg(w, n.Args[0])
 				fmt.Fprintf(w, ", %d)", arrType.Len())
@@ -431,6 +438,11 @@ func (g *Generator) emitCallExpr(w io.Writer, n *ast.CallExpr) {
 // emitGenericCall emits a generic function call as fn(T, a, b),
 // where type arguments are prepended to the regular arguments.
 func (g *Generator) emitGenericCall(w io.Writer, n *ast.CallExpr, fun ast.Expr, inst types.Instance) {
+	// A generic call emits as a macro with a statement-expression body.
+	// An extern function does not emit at all.
+	if _, ok := g.funcExtern(n); !ok {
+		g.checkLocalScope(n)
+	}
 	if n.Ellipsis.IsValid() {
 		if ident := exprIdent(fun); ident != nil {
 			if ext, ok := g.getExtern(g.types.Uses[ident]); ok && !ext.nodecay {
@@ -460,6 +472,7 @@ func (g *Generator) emitGenericCall(w io.Writer, n *ast.CallExpr, fun ast.Expr, 
 
 // emitSliceCast emits a string-to-slice conversion ([]byte(s) or []rune(s)).
 func (g *Generator) emitSliceCast(w io.Writer, call *ast.CallExpr, sl *types.Slice) {
+	g.checkLocalScope(call)
 	switch elemKind(sl) {
 	case types.Byte:
 		fmt.Fprint(w, "so_string_bytes(")
@@ -476,6 +489,7 @@ func (g *Generator) emitSliceCast(w io.Writer, call *ast.CallExpr, sl *types.Sli
 
 // emitStringCast emits a slice-to-string conversion (string(bs) or string(rs)).
 func (g *Generator) emitStringCast(w io.Writer, call *ast.CallExpr, sl *types.Slice) {
+	g.checkLocalScope(call)
 	switch elemKind(sl) {
 	case types.Byte:
 		fmt.Fprint(w, "so_bytes_string(")
@@ -522,6 +536,7 @@ func (g *Generator) emitIdent(w io.Writer, n *ast.Ident) {
 		return
 	}
 	if obj := g.types.Uses[n]; obj != nil {
+		g.checkLocalVar(n, obj)
 		if obj.Parent() == g.pkg.Types.Scope() {
 			// Package-level declarations: exported names are prefixed
 			// with the package name (e.g. RectArea -> geom_RectArea),
@@ -537,6 +552,50 @@ func (g *Generator) emitIdent(w io.Writer, n *ast.Ident) {
 		return
 	}
 	fmt.Fprint(w, name)
+}
+
+// emitStaticAddr emits & expression in a package-level initializer.
+func (g *Generator) emitStaticAddr(w io.Writer, n *ast.UnaryExpr) {
+	if lit, ok := ast.Unparen(n.X).(*ast.CompositeLit); ok {
+		// &Person{...} → &(Person){...}
+		g.checkLitAddress(n, lit)
+		fmt.Fprint(w, "&")
+		g.emitExpr(w, lit)
+		return
+	}
+	fmt.Fprint(w, "&")
+	g.emitStaticName(w, n.X)
+}
+
+// emitStaticName emits a package-level variable, or a field selected from one.
+func (g *Generator) emitStaticName(w io.Writer, expr ast.Expr) {
+	switch e := ast.Unparen(expr).(type) {
+	case *ast.Ident:
+		obj := g.types.Uses[e]
+		if _, ok := obj.(*types.Var); !ok {
+			break
+		}
+		fmt.Fprint(w, g.symbolName(obj))
+		return
+
+	case *ast.SelectorExpr:
+		// A variable from another package.
+		if ident, ok := e.X.(*ast.Ident); ok {
+			if pkgName, ok := g.types.Uses[ident].(*types.PkgName); ok {
+				g.checkPackage(e, g.types.Uses[e.Sel])
+				fmt.Fprintf(w, "%s_%s", pkgName.Imported().Name(), e.Sel.Name)
+				return
+			}
+		}
+		// A struct field. C cannot dereference a pointer at compile time.
+		if _, ok := g.types.TypeOf(e.X).Underlying().(*types.Pointer); ok {
+			g.checkLocalScope(e)
+		}
+		g.emitStaticName(w, e.X)
+		fmt.Fprintf(w, ".%s", g.fieldNameOf(e.Sel))
+		return
+	}
+	g.checkLocalScope(expr)
 }
 
 // emitParenExpr emits a parenthesized expression.
@@ -563,6 +622,7 @@ func (g *Generator) emitSelectorExpr(w io.Writer, n *ast.SelectorExpr) {
 			// Imported symbols are prefixed with the
 			// package name (e.g. fmt.Println → fmt_Println).
 			g.checkPackage(n, g.types.Uses[n.Sel])
+			g.checkLocalVar(n, g.types.Uses[n.Sel])
 			if cast, ok := g.constCast(n, g.types.Uses[n.Sel]); ok {
 				fmt.Fprintf(w, "(%s)", cast)
 			}
@@ -679,6 +739,7 @@ func (g *Generator) emitIndexExpr(w io.Writer, n *ast.IndexExpr) {
 		g.fail(n, "unsupported index expression type: %T", t)
 	}
 
+	g.checkLocalScope(n)
 	fmt.Fprintf(w, "so_at(%s, ", elemType)
 	g.emitMacroArg(w, n.X)
 	fmt.Fprint(w, ", ")
@@ -689,6 +750,11 @@ func (g *Generator) emitIndexExpr(w io.Writer, n *ast.IndexExpr) {
 // emitUnaryExpr emits a unary expression.
 func (g *Generator) emitUnaryExpr(w io.Writer, n *ast.UnaryExpr) {
 	if n.Op == token.AND {
+		// A package-level initializer stores an address constant.
+		if g.state.atTopLevel() {
+			g.emitStaticAddr(w, n)
+			return
+		}
 		// &arrayParam: C array params decay to pointers, so &param
 		// gives T** instead of T(*)[N]. Emit a cast instead.
 		if ident, ok := n.X.(*ast.Ident); ok {

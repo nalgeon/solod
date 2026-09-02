@@ -1,0 +1,3 @@
+main.go:5:13: expression is not supported at package level; use init()
+var count = len(ages)
+            ^here

@@ -1,0 +1,3 @@
+main.go:3:16: expression is not supported at package level; use init()
+var smallest = min(11, 22)
+               ^here

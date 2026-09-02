@@ -54,6 +54,7 @@ func (g *Generator) emitBuiltin(w io.Writer, call *ast.CallExpr, ident *ast.Iden
 	// len on maps emits so_map_len macro.
 	if bi.Name() == "len" && len(call.Args) == 1 {
 		if _, ok := g.types.TypeOf(call.Args[0]).Underlying().(*types.Map); ok {
+			g.checkLocalScope(call)
 			fmt.Fprint(w, "so_map_len(")
 			g.emitMacroArg(w, call.Args[0])
 			fmt.Fprint(w, ")")
@@ -76,6 +77,7 @@ func (g *Generator) emitBuiltin(w io.Writer, call *ast.CallExpr, ident *ast.Iden
 
 // emitAppendCall emits an append() builtin call.
 func (g *Generator) emitAppendCall(w io.Writer, call *ast.CallExpr) {
+	g.checkLocalScope(call)
 	sliceType := g.types.TypeOf(call.Args[0]).Underlying().(*types.Slice)
 	elemType := g.mapTypeName(call, sliceType.Elem())
 	if call.Ellipsis.IsValid() {
@@ -110,6 +112,7 @@ func (g *Generator) emitAppendCall(w io.Writer, call *ast.CallExpr) {
 
 // emitClearCall emits a clear() builtin call as so_clear(T, s).
 func (g *Generator) emitClearCall(w io.Writer, call *ast.CallExpr) {
+	g.checkLocalScope(call)
 	typ := g.types.TypeOf(call.Args[0]).Underlying()
 	if _, ok := typ.(*types.Map); ok {
 		g.fail(call, "clear() is not supported for maps")
@@ -123,6 +126,7 @@ func (g *Generator) emitClearCall(w io.Writer, call *ast.CallExpr) {
 
 // emitCopyCall emits a copy() builtin call as so_copy(T, dst, src).
 func (g *Generator) emitCopyCall(w io.Writer, call *ast.CallExpr) {
+	g.checkLocalScope(call)
 	srcType := g.types.TypeOf(call.Args[1]).Underlying()
 	if basic, ok := srcType.(*types.Basic); ok && basic.Info()&types.IsString != 0 {
 		// copy([]byte, string) - copy bytes directly from string.
@@ -145,6 +149,7 @@ func (g *Generator) emitCopyCall(w io.Writer, call *ast.CallExpr) {
 
 // emitMakeCall emits a make() builtin call for slices or maps.
 func (g *Generator) emitMakeCall(w io.Writer, call *ast.CallExpr) {
+	g.checkLocalScope(call)
 	typ := g.types.Types[call.Args[0]].Type.Underlying()
 
 	switch t := typ.(type) {
@@ -182,6 +187,7 @@ func (g *Generator) emitMakeCall(w io.Writer, call *ast.CallExpr) {
 // For string types: so_string_min(a, b) / so_string_max(a, b)
 // For 3+ args, nests calls: min(a, b, c) -> so_min(so_min(a, b), c)
 func (g *Generator) emitMinMaxCall(w io.Writer, call *ast.CallExpr, name string) {
+	g.checkLocalScope(call)
 	typ := g.types.TypeOf(call.Args[0])
 	basic, ok := typ.Underlying().(*types.Basic)
 	if !ok {
@@ -343,32 +349,29 @@ func (g *Generator) emitSizeof(w io.Writer, call *ast.CallExpr) bool {
 	if obj, ok := g.types.Uses[sel.Sel].(*types.Builtin); !ok || obj.Pkg() != types.Unsafe {
 		return false
 	}
+	arg := ast.Unparen(call.Args[0])
+	_, isLit := arg.(*ast.CompositeLit)
 	fmt.Fprintf(w, "unsafe_%s(", sel.Sel.Name)
-	g.emitSizeofArg(w, call, call.Args[0])
+	// Sizeof and Alignof only need the type, not the actual operand. However, we
+	// still need to emit the variable operand in the local scope to avoid unused
+	// variable warnings.
+	if isLit || g.state.atTopLevel() {
+		fmt.Fprint(w, g.sizeofType(call, g.types.TypeOf(arg)))
+	} else {
+		g.emitExpr(w, arg)
+	}
 	fmt.Fprint(w, ")")
 	return true
 }
 
-// emitSizeofArg emits the argument of unsafe.Sizeof or unsafe.Alignof.
-func (g *Generator) emitSizeofArg(w io.Writer, node ast.Node, arg ast.Expr) {
-	lit, ok := ast.Unparen(arg).(*ast.CompositeLit)
-	if !ok {
-		g.emitExpr(w, arg)
-		return
+// sizeofType returns the C type name of an unsafe.Sizeof or unsafe.Alignof operand.
+func (g *Generator) sizeofType(node ast.Node, typ types.Type) string {
+	arr, ok := typ.Underlying().(*types.Array)
+	if !ok || arrayDims(typ) == "" {
+		return g.mapTypeName(node, typ)
 	}
-	if _, ok := g.types.TypeOf(lit).Underlying().(*types.Map); ok {
-		// A map literal expands to a statement expression.
-		// C does not allow a statement expression at file scope.
-		g.fail(arg, "cannot use a map literal here; assign it to a variable first")
-	}
-	// Parens protect against the preprocessor misinterpreting commas.
-	fmt.Fprint(w, "(")
-	if arr, ok := g.types.TypeOf(lit).Underlying().(*types.Array); ok {
-		// An array literal needs a type.
-		fmt.Fprintf(w, "(%s%s)", g.mapTypeName(node, arr.Elem()), arrayDims(arr))
-	}
-	g.emitExpr(w, lit)
-	fmt.Fprint(w, ")")
+	// An unnamed array type needs its dimensions after the element type.
+	return g.mapTypeName(node, arr.Elem()) + arrayDims(arr)
 }
 
 // buildFormatString constructs a C format string for the given print/println call,

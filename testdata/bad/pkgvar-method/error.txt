@@ -1,0 +1,3 @@
+main.go:11:12: cannot call a function at package level; use init()
+var area = unit.Area()
+           ^here

@@ -195,7 +195,7 @@ func (g *Generator) mapTypeName(node ast.Node, typ types.Type) string {
 	case *types.TypeParam:
 		// A type parameter only exists as a macro argument. Anywhere else it
 		// would be emitted as a literal C type name, which does not exist.
-		if !g.state.inMacro {
+		if g.state.scope != macroScope {
 			g.fail(node, "type parameter %s is only allowed in a so:inline macro", t.Obj().Name())
 		}
 		return t.Obj().Name()

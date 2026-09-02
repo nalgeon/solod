@@ -436,13 +436,7 @@ func (g *Generator) emitVarSpec(w io.Writer, spec *ast.ValueSpec, dirs directive
 		}
 		cName := g.declSymbolName(g.types.Defs[name])
 		if len(spec.Values) > i {
-			// Has explicit initializer.
-			if g.state.atTopLevel() {
-				g.checkStaticInit(spec.Values[i])
-			}
-			// A local array needs a memcpy unless the initializer is a literal.
-			// A package-level array always has a literal, because
-			// checkStaticInit rejects any other initializer.
+			// Variable has an explicit initializer.
 			if ct.IsArray() && !g.state.atTopLevel() {
 				g.emitArrayVarDecl(w, ct, cName, spec.Values[i])
 				continue
@@ -669,7 +663,7 @@ func (g *Generator) walkStmts(w io.Writer, stmts []ast.Stmt) {
 				}
 			}
 		}
-		if g.opts.TrackSource && !g.state.inMacro {
+		if g.opts.TrackSource && g.state.scope != macroScope {
 			pos := g.pkg.Fset.Position(stmt.Pos())
 			fmt.Fprintf(w, "#line %d \"%s\"\n", pos.Line, pos.Filename)
 		}
@@ -684,7 +678,7 @@ func (g *Generator) commentText(c *ast.Comment) (string, bool) {
 	if strings.HasPrefix(text, "//so:") {
 		return "", false
 	}
-	if !g.state.inMacro || !strings.HasPrefix(text, "//") {
+	if g.state.scope != macroScope || !strings.HasPrefix(text, "//") {
 		return text, true
 	}
 	// A macro body ends every line with a backslash-newline, and C removes

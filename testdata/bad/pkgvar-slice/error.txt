@@ -1,0 +1,3 @@
+main.go:4:12: expression is not supported at package level; use init()
+var tail = digits[1:]
+           ^here

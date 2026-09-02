@@ -29,7 +29,7 @@ static void testPointerConv(void);
 // -- Variables and constants --
 
 // Size of a struct literal, as a package-level constant.
-static const so_unused uintptr_t headSize = unsafe_Sizeof(((header){}));
+static const so_unused uintptr_t headSize = unsafe_Sizeof(header);
 
 // -- Implementation --
 
@@ -76,28 +76,28 @@ static void testSizeof(void) {
         so_panic("unexpected header size");
     }
     // A struct literal with several fields.
-    if (unsafe_Sizeof(((header){1, 2, 3})) != headSize) {
+    if (unsafe_Sizeof(header) != headSize) {
         so_panic("unexpected header literal size");
     }
-    if (unsafe_Alignof(((header){1, 2, 3})) != unsafe_Alignof(p.head)) {
+    if (unsafe_Alignof(header) != unsafe_Alignof(p.head)) {
         so_panic("unexpected header literal alignment");
     }
     // An array literal.
-    if (unsafe_Sizeof(((so_byte[8]){})) != 8) {
+    if (unsafe_Sizeof(so_byte[8]) != 8) {
         so_panic("unexpected byte array size");
     }
-    if (unsafe_Sizeof(((int64_t[2]){1, 2})) != 16) {
+    if (unsafe_Sizeof(int64_t[2]) != 16) {
         so_panic("unexpected int array size");
     }
-    if (unsafe_Alignof(((int64_t[2]){1, 2})) != unsafe_Alignof((int64_t)(0))) {
+    if (unsafe_Alignof(int64_t[2]) != unsafe_Alignof((int64_t)(0))) {
         so_panic("unexpected int array alignment");
     }
     // A two-dimensional array literal.
-    if (unsafe_Sizeof(((int64_t[2][3]){})) != 48) {
+    if (unsafe_Sizeof(int64_t[2][3]) != 48) {
         so_panic("unexpected 2d array size");
     }
     // A slice literal has the size of a slice header.
-    if (unsafe_Sizeof(((so_Slice){(so_int[2]){1, 2}, 2, 2})) != unsafe_Sizeof(p.nums)) {
+    if (unsafe_Sizeof(so_Slice) != unsafe_Sizeof(p.nums)) {
         so_panic("unexpected slice literal size");
     }
 }

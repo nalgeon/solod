@@ -3,6 +3,7 @@
 This document lists the main changes in the Solod version in development.
 
 - Language:
+  [Package-level variables](#package-level-variables) ·
   [Array pointers](#array-pointers) ·
   [Type parameters](#type-parameters) ·
   [Constraint interfaces](#constraint-interfaces) ·
@@ -51,6 +52,18 @@ This document lists the main changes in the Solod version in development.
 ⚠️ indicates breaking changes.
 
 ## Language
+
+### Package-level variables
+
+⚠️ A package-level variable now rejects every initializer that C cannot evaluate at compile time. Slice expressions, indexing, map literals, string conversions, the length of a map, and the `append`, `make`, `min` and `max` builtins are rejected:
+
+```go
+var digits = [3]int{1, 2, 3} // ok
+var tail = digits[1:]        // rejected
+var smallest = min(11, 22)   // rejected
+```
+
+Use [init()](spec.md#init-functions) to initialize a package-level variable.
 
 ### Array pointers
 

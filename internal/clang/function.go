@@ -278,9 +278,11 @@ func (g *Generator) emitFuncCall(w io.Writer, call *ast.CallExpr) {
 				return
 			}
 		} else {
+			g.checkLocalCall(call)
 			g.emitExpr(w, call.Fun)
 		}
 	} else {
+		g.checkLocalCall(call)
 		g.emitExpr(w, call.Fun)
 	}
 
@@ -446,21 +448,25 @@ func (g *Generator) emitCallArg(w io.Writer, node ast.Node, arg ast.Expr, paramT
 func (g *Generator) emitCArg(w io.Writer, arg ast.Expr) {
 	if lit, ok := arg.(*ast.BasicLit); ok && lit.Kind == token.STRING {
 		fmt.Fprint(w, g.cStringLit(lit))
-	} else if g.hasStringType(arg) {
-		fmt.Fprint(w, "so_cstr(")
-		g.emitMacroArg(w, arg)
-		fmt.Fprint(w, ")")
-	} else if _, ok := g.types.TypeOf(arg).Underlying().(*types.Slice); ok {
-		fmt.Fprint(w, "so_decay(")
-		g.emitMacroArg(w, arg)
-		fmt.Fprint(w, ")")
-	} else if isErrorType(g.types.TypeOf(arg)) {
-		fmt.Fprint(w, "so_error_cstr(")
-		g.emitMacroArg(w, arg)
-		fmt.Fprint(w, ")")
-	} else {
-		g.emitExpr(w, arg)
+		return
 	}
+	_, isSlice := g.types.TypeOf(arg).Underlying().(*types.Slice)
+	var macro string
+	switch {
+	case g.hasStringType(arg):
+		macro = "so_cstr"
+	case isSlice:
+		macro = "so_decay"
+	case isErrorType(g.types.TypeOf(arg)):
+		macro = "so_error_cstr"
+	default:
+		g.emitExpr(w, arg)
+		return
+	}
+	g.checkLocalScope(arg)
+	fmt.Fprintf(w, "%s(", macro)
+	g.emitMacroArg(w, arg)
+	fmt.Fprint(w, ")")
 }
 
 // funcSig extracts the function signature from a function or method declaration.

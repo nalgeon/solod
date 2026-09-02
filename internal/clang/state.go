@@ -8,6 +8,19 @@ import (
 	"strings"
 )
 
+// scope is where the generator is currently emitting code.
+type scope int
+
+const (
+	// Package-level constants and variables.
+	fileScope scope = iota
+	// A function body.
+	blockScope
+	// The body of a #define macro. Uses a statement expression,
+	// so a value created inside does not outlive the call.
+	macroScope
+)
+
 // State holds the code generation state for the current scope.
 // All of it is transient: it is set up when emission enters a function
 // body and cleared when emission leaves it.
@@ -20,8 +33,8 @@ type State struct {
 	defers []string
 	// Counter for unique temp variable names.
 	tempCount int
-	// Whether we are emitting inside a #define macro body.
-	inMacro bool
+	// Current generator scope.
+	scope scope
 	// Non-type macro parameter names. They are suffixed with _ and parenthesized
 	// to avoid name collisions (b->val = val) and syntax errors (&b->val) in macro bodies.
 	macroParams map[string]bool
@@ -36,14 +49,14 @@ type funcScope struct {
 // enterFunc starts a function body scope. Scopes never nest: Solod has no
 // function literals, and generic functions are always top-level.
 func (s *State) enterFunc(decl *ast.FuncDecl, sig *types.Signature) {
-	*s = State{fn: funcScope{decl: decl, sig: sig}}
+	*s = State{fn: funcScope{decl: decl, sig: sig}, scope: blockScope}
 }
 
 // enterMacro starts the macro body scope for a generic function. The body is
 // written to a buffer and then inserted into a #define, so it starts one level deep.
 // params holds the macro's non-type parameter names.
 func (s *State) enterMacro(decl *ast.FuncDecl, sig *types.Signature, params map[string]bool) {
-	*s = State{fn: funcScope{decl: decl, sig: sig}, depth: 1, inMacro: true, macroParams: params}
+	*s = State{fn: funcScope{decl: decl, sig: sig}, depth: 1, scope: macroScope, macroParams: params}
 }
 
 // leaveFunc ends the current function or macro body scope.
@@ -53,7 +66,39 @@ func (s *State) leaveFunc() {
 
 // atTopLevel reports whether emission is at package scope, outside any function body.
 func (s *State) atTopLevel() bool {
-	return s.fn.sig == nil
+	return s.scope == fileScope
+}
+
+// checkLocalScope fails when the generator writes an expression
+// which is not allowed in a file-scope initializer.
+func (g *Generator) checkLocalScope(node ast.Node) {
+	if g.state.scope != fileScope {
+		return
+	}
+	g.fail(node, "expression is not supported at package level; use init()")
+}
+
+// checkLocalVar fails when the generator reads a variable in a file-scope initializer.
+func (g *Generator) checkLocalVar(node ast.Node, obj types.Object) {
+	if g.state.scope != fileScope {
+		return
+	}
+	if _, ok := obj.(*types.Var); !ok {
+		return
+	}
+	g.fail(node, "cannot read a variable at package level; use init()")
+}
+
+// checkLocalCall fails when the generator writes a non-extern
+// function call in a file-scope initializer.
+func (g *Generator) checkLocalCall(call *ast.CallExpr) {
+	if g.state.scope != fileScope {
+		return
+	}
+	if _, ok := g.funcExtern(call); ok {
+		return
+	}
+	g.fail(call, "cannot call a function at package level; use init()")
 }
 
 // indent returns the indentation for the current scope.

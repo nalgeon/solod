@@ -9,7 +9,7 @@ import (
 
 // emitReturnStmt emits a return statement, preceded by any deferred generic calls.
 func (g *Generator) emitReturnStmt(w io.Writer, stmt *ast.ReturnStmt) {
-	if g.state.inMacro {
+	if g.state.scope == macroScope {
 		// In macro mode: "return X" becomes just "X;", void return is a no-op.
 		if len(stmt.Results) > 0 {
 			fmt.Fprint(w, g.indent())

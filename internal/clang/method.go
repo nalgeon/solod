@@ -57,6 +57,7 @@ func (g *Generator) emitMethodDecl(w io.Writer, decl *ast.FuncDecl) {
 
 // emitMethodCall emits a method call.
 func (g *Generator) emitMethodCall(w io.Writer, sel *ast.SelectorExpr, call *ast.CallExpr) {
+	g.checkLocalCall(call)
 	selection := g.types.Selections[sel]
 	// The receiver type can be an alias to a pointer, as in "type P = *T",
 	// so it is unaliased before the pointer check.

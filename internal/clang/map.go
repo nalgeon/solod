@@ -21,6 +21,7 @@ func (g *Generator) emitMapLit(w io.Writer, n *ast.CompositeLit) {
 	valType := g.mapTypeName(n, mapType.Elem())
 	size := len(n.Elts)
 
+	g.checkLocalScope(n)
 	if size == 0 {
 		fmt.Fprint(w, "&(so_Map){}")
 		return
@@ -56,6 +57,7 @@ func (g *Generator) emitMapIndexExpr(w io.Writer, n *ast.IndexExpr) {
 	keyType := g.mapTypeName(n, mapType.Key())
 	valType := g.mapTypeName(n, mapType.Elem())
 
+	g.checkLocalScope(n)
 	fmt.Fprintf(w, "so_map_get(%s, %s, ", keyType, valType)
 	g.emitExpr(w, n.X)
 	fmt.Fprint(w, ", ")

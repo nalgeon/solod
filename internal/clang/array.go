@@ -99,6 +99,7 @@ func (g *Generator) emitSparseArrayValues(w io.Writer, n *ast.CompositeLit, elem
 // For arrays: so_array_slice(T, arr, low, high, size).
 // For slices: so_slice(T, s, low, high).
 func (g *Generator) emitSliceExpr(w io.Writer, n *ast.SliceExpr) {
+	g.checkLocalScope(n)
 	typ := g.types.TypeOf(n.X).Underlying()
 
 	// Unwrap pointer-to-array: p[a:b] becomes (*p)[a:b].
