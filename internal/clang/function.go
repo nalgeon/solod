@@ -43,11 +43,7 @@ func (g *Generator) emitFuncProto(w io.Writer, decl *ast.FuncDecl) *types.Signat
 		retType = g.returnType(decl, sig)
 	}
 
-	// Name: methods use RecvType_Method, functions use symbolName.
-	name := g.symbolName(g.types.Defs[decl.Name])
-	if decl.Recv != nil {
-		name = g.symbolName(g.recvTypeObj(decl.Recv.List[0])) + "_" + decl.Name.Name
-	}
+	name := g.mapObjName(g.types.Defs[decl.Name])
 
 	// Parameters: methods prepend receiver
 	// (void* self for pointer, T name for value).
@@ -58,7 +54,7 @@ func (g *Generator) emitFuncProto(w io.Writer, decl *ast.FuncDecl) *types.Signat
 		recv := decl.Recv.List[0]
 		if _, ok := recv.Type.(*ast.Ident); ok {
 			// Value receiver: pass struct by value.
-			cStructType := g.symbolName(g.recvTypeObj(recv))
+			cStructType := g.mapObjName(g.recvTypeObj(recv))
 			parts = append(parts, cStructType+" "+names[0])
 		} else {
 			parts = append(parts, "void* self")
@@ -106,7 +102,7 @@ func (g *Generator) emitFuncTypeSpec(w io.Writer, spec *ast.TypeSpec) {
 		params = append(params, g.mapParamType(spec, parVar.Type()))
 	}
 
-	name := g.declSymbolName(g.types.Defs[spec.Name])
+	name := g.mapObjName(g.types.Defs[spec.Name])
 	fmt.Fprintf(w, "%stypedef %s (*%s)(%s);\n", g.indent(), retType, name, funcParams(params))
 }
 
@@ -150,11 +146,7 @@ func (g *Generator) emitMacroFuncDecl(w io.Writer, decl *ast.FuncDecl) {
 	sig := g.funcSig(decl)
 	g.checkNamedReturns(decl, sig)
 
-	// Build macro name.
-	name := g.symbolName(g.types.Defs[decl.Name])
-	if decl.Recv != nil {
-		name = g.symbolName(g.recvTypeObj(decl.Recv.List[0])) + "_" + decl.Name.Name
-	}
+	name := g.mapObjName(g.types.Defs[decl.Name])
 
 	// Build param list: type params, then receiver (for methods), then regular params.
 	// Non-type params are suffixed with _ to avoid name collisions (b->val = val).

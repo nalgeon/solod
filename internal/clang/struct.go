@@ -13,7 +13,7 @@ import (
 // dirs provides parsed so: directives for package-level declarations.
 func (g *Generator) emitStructTypeSpec(w io.Writer, spec *ast.TypeSpec, dirs directives) {
 	st := spec.Type.(*ast.StructType)
-	cName := g.declSymbolName(g.types.Defs[spec.Name])
+	cName := g.mapObjName(g.types.Defs[spec.Name])
 	attr := dirs.attrString()
 	if attr != "" {
 		fmt.Fprintf(w, "%stypedef struct %s %s {\n", g.indent(), attr, cName)

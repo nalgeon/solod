@@ -15,7 +15,7 @@ func (g *Generator) emitMethodDecl(w io.Writer, decl *ast.FuncDecl) {
 
 	// Init emission state.
 	recv := decl.Recv.List[0]
-	cStructType := g.symbolName(g.recvTypeObj(recv))
+	cStructType := g.mapObjName(g.recvTypeObj(recv))
 	recvName, named := recvVarName(recv)
 	_, isValueRecv := recv.Type.(*ast.Ident)
 

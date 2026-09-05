@@ -1,0 +1,3 @@
+main.go:4:2: identifier "double" is a reserved C name; rename it
+	double int
+	^here

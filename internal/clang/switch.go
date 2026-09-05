@@ -68,7 +68,7 @@ func (g *Generator) emitSwitchBody(w io.Writer, tag ast.Expr, tagRef *ast.Ident,
 			return
 		}
 		// Default-only. The body keeps its own scope block, so that its
-		// declarations do not collide with the surrounding ones.
+		// declarations do not conflict with the surrounding ones.
 		fmt.Fprintf(w, "%s{\n", g.indent())
 		g.state.depth++
 		g.walkStmts(w, def.Body)

@@ -123,7 +123,7 @@ func (g *Generator) emitMapRange(w io.Writer, stmt *ast.RangeStmt) {
 	keyType := g.mapTypeName(stmt, mapType.Key())
 	valType := g.mapTypeName(stmt, mapType.Elem())
 
-	// An enclosing block scopes _m, so two range loops in one block do not collide.
+	// An enclosing block scopes _m, so two range loops in one block do not conflict.
 	fmt.Fprintf(w, "%s{\n", g.indent())
 	g.state.depth++
 

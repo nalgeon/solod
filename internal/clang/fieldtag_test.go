@@ -52,17 +52,17 @@ func TestFieldTagValidation(t *testing.T) {
 			want: "invalid C field name",
 		},
 		{
-			name: "reserved C word",
+			name: "reserved C name",
 			src:  "package x\ntype T struct{ x int `c:\"int\"` }",
 			want: "invalid C field name",
 		},
 		{
-			name: "override collides with plain field",
+			name: "override conflicts with plain field",
 			src:  "package x\ntype T struct{ a int `c:\"b\"`; b int }",
 			want: "duplicate C field name",
 		},
 		{
-			name: "two overrides collide",
+			name: "two overrides conflict",
 			src:  "package x\ntype T struct{ a int `c:\"x\"`; b int `c:\"x\"` }",
 			want: "duplicate C field name",
 		},
@@ -82,12 +82,12 @@ func TestFieldTagValidation(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "override collides with blank field",
+			name: "override conflicts with blank field",
 			src:  "package x\ntype T struct{ a int `c:\"_1\"`; _ int }",
 			want: "duplicate C field name",
 		},
 		{
-			name: "plain field collides with blank field",
+			name: "plain field conflicts with blank field",
 			src:  "package x\ntype T struct{ _ int; _0 int }",
 			want: "duplicate C field name",
 		},

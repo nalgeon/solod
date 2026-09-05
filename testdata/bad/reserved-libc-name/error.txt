@@ -1,0 +1,3 @@
+main.go:7:6: mangled name "div_" for reserved C name "div" conflicts with an existing identifier; rename one of them
+func div() int64 {
+     ^here

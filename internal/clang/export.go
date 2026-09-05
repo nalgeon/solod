@@ -19,7 +19,7 @@ func (g *Generator) collectPromoted() {
 			g.promoted[g.types.Defs[sym.typeSpec.Name]] = true
 		case symbolFunc:
 			// Methods are named after their receiver type, so only a free
-			// function needs its own object in the set (see [Generator.symbolName]).
+			// function needs its own object in the promoted set.
 			g.promoted[g.types.Defs[sym.funcDecl.Name]] = true
 		case symbolVar, symbolConst:
 			for _, spec := range sym.genDecl.Specs {
@@ -117,7 +117,7 @@ func (g *Generator) checkPromoted() {
 		}
 		// A method's C name is built from its receiver type, so promoting the
 		// method without promoting the receiver would emit an unprefixed name
-		// in the header (see [Generator.symbolName]).
+		// in the header.
 		if sym.kind == symbolMethod {
 			recv := sym.funcDecl.Recv.List[0]
 			recvObj := g.recvTypeObj(recv)

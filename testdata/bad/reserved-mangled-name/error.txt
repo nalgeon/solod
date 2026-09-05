@@ -1,0 +1,3 @@
+main.go:5:2: mangled name "long_" for reserved C name "long" conflicts with an existing identifier; rename one of them
+	long := 2
+	^here

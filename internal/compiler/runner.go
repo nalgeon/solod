@@ -38,7 +38,7 @@ type suite struct {
 // source returns the entry package of the generated program. The runner holds
 // code, but no file is written: the runner goes to the Go loader as an overlay,
 // and go/packages resolves a package that only the overlay holds. The runner
-// directory must not collide with a directory of the module.
+// directory must not conflict with a directory of the module.
 func (k kind) source(root string, code []byte) (source, error) {
 	if _, err := os.Stat(filepath.Join(root, k.dir)); err == nil {
 		return source{}, fmt.Errorf("%s already exists in %s: %s needs the name for the generated runner",

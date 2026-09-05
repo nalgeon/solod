@@ -5,9 +5,8 @@ import (
 	"go/types"
 )
 
-// reservedC contains C identifiers that would conflict with C grammar if
-// used directly. This includes C keywords and some built-in macros.
-var reservedC = map[string]bool{
+// reservedAnyScope contains C identifiers that conflict in every scope.
+var reservedAnyScope = map[string]bool{
 	// C keywords that are valid Go identifiers.
 	"auto": true, "char": true, "do": true, "double": true, "enum": true,
 	"extern": true, "float": true, "inline": true, "int": true, "long": true,
@@ -18,9 +17,81 @@ var reservedC = map[string]bool{
 	"bool": true, "true": true, "false": true, "nullptr": true,
 	"alignas": true, "alignof": true, "constexpr": true, "typeof": true,
 	"thread_local": true, "static_assert": true,
-	// Macros from builtin.h headers. Best-effort: a macro from a system
-	// header that is not listed here can still conflict.
-	"assert": true, "offsetof": true,
+	// builtin.h macros.
+	"alloca": true, "assert": true, "offsetof": true, "NULL": true,
+	"memcmp": true, "memcpy": true, "memmove": true, "memset": true,
+	// stdio.h macros.
+	"EOF": true, "stdin": true, "stdout": true, "stderr": true,
+	// errno.h macros.
+	"errno": true,
+}
+
+// reservedFileScope contains C identifiers that only conflict in file scope.
+var reservedFileScope = map[string]bool{
+	// stdio.h, C standard.
+	"clearerr": true, "fclose": true, "feof": true, "ferror": true,
+	"fflush": true, "fgetc": true, "fgetpos": true, "fgets": true,
+	"fopen": true, "fprintf": true, "fputc": true, "fputs": true,
+	"fread": true, "freopen": true, "fscanf": true, "fseek": true,
+	"fsetpos": true, "ftell": true, "fwrite": true, "getc": true,
+	"getchar": true, "gets": true, "perror": true, "printf": true,
+	"putc": true, "putchar": true, "puts": true, "remove": true,
+	"rename": true, "rewind": true, "scanf": true, "setbuf": true,
+	"setvbuf": true, "snprintf": true, "sprintf": true, "sscanf": true,
+	"tmpfile": true, "tmpnam": true, "ungetc": true, "vfprintf": true,
+	"vfscanf": true, "vprintf": true, "vscanf": true, "vsnprintf": true,
+	"vsprintf": true, "vsscanf": true,
+	// stdio.h, POSIX and BSD.
+	"asprintf": true, "dprintf": true, "fdopen": true, "fileno": true,
+	"flockfile": true, "fmemopen": true, "fseeko": true, "ftello": true,
+	"ftrylockfile": true, "funlockfile": true, "getdelim": true,
+	"getline": true, "getw": true, "pclose": true, "popen": true,
+	"putw": true, "setbuffer": true, "setlinebuf": true, "tempnam": true,
+	"vasprintf": true, "vdprintf": true,
+	// stdlib.h, C standard.
+	"abort": true, "abs": true, "aligned_alloc": true, "at_quick_exit": true,
+	"atexit": true, "atof": true, "atoi": true, "atol": true, "atoll": true,
+	"bsearch": true, "calloc": true, "div": true, "exit": true, "free": true,
+	"getenv": true, "labs": true, "ldiv": true, "llabs": true, "lldiv": true,
+	"malloc": true, "mblen": true, "mbstowcs": true, "mbtowc": true,
+	"qsort": true, "quick_exit": true, "rand": true, "realloc": true,
+	"srand": true, "strtod": true, "strtof": true, "strtol": true,
+	"strtold": true, "strtoll": true, "strtoul": true, "strtoull": true,
+	"system": true, "wcstombs": true, "wctomb": true,
+	// stdlib.h, POSIX and BSD.
+	"a64l": true, "arc4random": true, "daemon": true, "drand48": true,
+	"ecvt": true, "erand48": true, "fcvt": true, "gcvt": true,
+	"getloadavg": true, "getprogname": true, "getsubopt": true,
+	"grantpt": true, "heapsort": true, "initstate": true, "jrand48": true,
+	"l64a": true, "lcong48": true, "lrand48": true, "mergesort": true,
+	"mkdtemp": true, "mkstemp": true, "mktemp": true, "mrand48": true,
+	"nrand48": true, "ptsname": true, "putenv": true, "radixsort": true,
+	"random": true, "realpath": true, "reallocf": true, "rpmatch": true,
+	"seed48": true, "setenv": true, "setprogname": true, "setstate": true,
+	"srand48": true, "srandom": true, "unlockpt": true, "unsetenv": true,
+	"valloc": true,
+	// stdlib.h drags in these declarations on Darwin.
+	"getpriority": true, "getrlimit": true, "getrusage": true,
+	"setpriority": true, "setrlimit": true, "signal": true, "wait": true,
+	"wait3": true, "wait4": true, "waitid": true, "waitpid": true,
+	// string.h, C standard. The memory functions are in reservedAnyScope,
+	// because builtin.h makes them macros in a freestanding build.
+	"memchr": true, "strcat": true, "strchr": true, "strcmp": true,
+	"strcoll": true, "strcpy": true, "strcspn": true, "strerror": true,
+	"strlen": true, "strncat": true, "strncmp": true, "strncpy": true,
+	"strpbrk": true, "strrchr": true, "strspn": true, "strstr": true,
+	"strtok": true, "strxfrm": true,
+	// string.h, POSIX and BSD.
+	"bcmp": true, "bcopy": true, "bzero": true, "ffs": true, "fls": true,
+	"index": true, "memccpy": true, "memmem": true, "mempcpy": true,
+	"rindex": true, "stpcpy": true, "stpncpy": true, "strcasecmp": true,
+	"strcasestr": true, "strchrnul": true, "strdup": true, "strlcat": true,
+	"strlcpy": true, "strncasecmp": true, "strndup": true, "strnlen": true,
+	"strnstr": true, "strsep": true, "strsignal": true, "strverscmp": true,
+	"swab": true,
+	// inttypes.h.
+	"imaxabs": true, "imaxdiv": true, "strtoimax": true, "strtoumax": true,
+	"wcstoimax": true, "wcstoumax": true,
 }
 
 // reservedSo contains identifiers that the generator emits itself.
@@ -29,103 +100,109 @@ var reservedSo = map[string]bool{
 	"self": true,
 }
 
-// handleReservedNames rewrites identifiers that conflict with reserved C names
-// and reject identifiers that conflict with reserved Solod names.
-//
-// Function-local variables, parameters, and constants are mangled by adding
-// "_" at the end (Go "long" -> C "long_"). This works because every time a
-// local variable's name is used, it's read directly from its AST identifier,
-// not from the types object. So, changing the identifier updates both the
-// declaration and all uses at once.
-//
-// Reserved names that cross the AST/types boundary - struct fields and
-// package-level declarations - can't be renamed safely, so they are
-// rejected at the declaration.
-func (g *Generator) handleReservedNames() {
-	pkgScope := g.pkg.Types.Scope()
+// resolveReservedNames renames or rejects the identifiers with a reserved
+// C name. It also rejects the identifiers with a [reservedSo] name.
+func (g *Generator) resolveReservedNames() {
 	for _, file := range g.pkg.Syntax {
 		ast.Inspect(file, func(n ast.Node) bool {
-			ident, ok := n.(*ast.Ident)
-			if !ok {
-				return true
-			}
-			if reservedSo[ident.Name] {
-				// Report the name once, at the declaration.
-				if _, isDef := g.types.Defs[ident]; isDef {
-					g.fail(ident, "identifier %q is reserved by the compiler; rename it", ident.Name)
-				}
-				return true
-			}
-			if !reservedC[ident.Name] {
-				return true
-			}
-			obj := g.types.Uses[ident]
-			if obj == nil {
-				obj = g.types.Defs[ident]
-			}
-			if obj == nil {
-				// Identifier that represents no object, like the package clause name.
-				// It's never used as a C identifier, so there's nothing to mangle.
-				return true
-			}
-			if isLocal(obj, pkgScope) {
-				mangled := ident.Name + "_"
-				if scopeDeclares(obj.Parent(), mangled) {
-					g.fail(ident, "mangled name %q for reserved word %q collides with an existing identifier; rename one of them", mangled, ident.Name)
-				}
-				ident.Name = mangled
-				return true
-			}
-			if isConcreteMethod(obj) {
-				// A method's C name carries its receiver-type prefix
-				// (Value.float -> slog_Value_float), never emitted bare.
-				return true
-			}
-			// Reserved name we can't mangle. Report it once, at the declaration.
-			if _, isDef := g.types.Defs[ident]; isDef {
-				g.fail(ident, "identifier %q is a reserved C word; rename it", ident.Name)
+			if ident, ok := n.(*ast.Ident); ok {
+				g.resolveReservedName(ident)
 			}
 			return true
 		})
 	}
 }
 
-// scopeDeclares reports whether scope itself already declares name.
-//
-// Only the mangled variable's own scope matters. A C redefinition only happens
-// within a single block, and go/types scopes match C blocks one-to-one.
-// A name in an outer or inner scope is a valid C shadow, not a conflict,
-// so those scopes aren't checked.
-func scopeDeclares(scope *types.Scope, name string) bool {
-	return scope.Lookup(name) != nil
+// resolveReservedName handles one identifier.
+func (g *Generator) resolveReservedName(ident *ast.Ident) {
+	if reservedSo[ident.Name] {
+		// Report the name once, at the declaration.
+		if _, isDef := g.types.Defs[ident]; isDef {
+			g.fail(ident, "identifier %q is reserved by the compiler; rename it", ident.Name)
+		}
+		return
+	}
+	obj, isDef := g.types.Defs[ident]
+	if !isDef {
+		obj = g.types.Uses[ident]
+	}
+	if obj == nil {
+		// An identifier that represents no object, like the package clause
+		// name or a blank identifier. It never becomes a C identifier.
+		return
+	}
+	if !g.makesCName(obj) {
+		return
+	}
+	name := g.baseObjName(obj)
+	if !isReserved(name, g.atPkgScope(obj)) {
+		return
+	}
+	if !g.canRename(obj) {
+		if isDef {
+			g.fail(ident, "identifier %q is a reserved C name; rename it", name)
+		}
+		return
+	}
+	mangled := name + "_"
+	if isDef && obj.Parent().Lookup(mangled) != nil {
+		// Only the scope of the renamed object matters. A C redefinition only
+		// happens within a single block, and go/types scopes match C blocks
+		// one-to-one. A name in an outer or inner scope is a valid C shadow.
+		g.fail(ident, "mangled name %q for reserved C name %q conflicts with an existing identifier; rename one of them", mangled, name)
+	}
+	g.renames[obj] = mangled
+	if g.isLocalValue(obj) {
+		// Some emit sites take a local name from its identifier instead of
+		// its object, so rename the identifier too.
+		ident.Name = mangled
+	}
 }
 
-// isLocal reports whether obj is a function-local variable, parameter, or
-// constant, as opposed to a struct field or a package-level declaration.
-// Locals are safe to mangle because their names never cross an API boundary.
-func isLocal(obj types.Object, pkgScope *types.Scope) bool {
-	switch obj := obj.(type) {
-	case *types.Var:
-		if obj.IsField() {
-			return false
-		}
-	case *types.Const:
-		// A function-local constant; mangled like a local variable.
+// makesCName reports whether the generator makes the C name of obj
+// from the Go source of this package.
+func (g *Generator) makesCName(obj types.Object) bool {
+	if obj.Pkg() != g.pkg.Types {
+		// A predeclared Go identifier, or an object of another package.
+		return false
+	}
+	if _, isImport := obj.(*types.PkgName); isImport {
+		// An import alias never becomes a C identifier. The generator emits
+		// the name of the imported package.
+		return false
+	}
+	if _, isExtern := g.getExtern(obj); isExtern {
+		// The C name of an extern object comes from the C source.
+		return false
+	}
+	return true
+}
+
+// canRename reports whether the generator can change the C name of obj.
+func (g *Generator) canRename(obj types.Object) bool {
+	if g.isLocalValue(obj) {
+		// Never leave the .c file, safe to rename.
+		return true
+	}
+	// Unexported exported package-level names never leave the .c file.
+	// Exported package-level names are renamed when emitted.
+	return g.atPkgScope(obj)
+}
+
+// isLocalValue reports whether obj is a function-local
+// variable, parameter, or constant.
+func (g *Generator) isLocalValue(obj types.Object) bool {
+	switch obj.(type) {
+	case *types.Var, *types.Const:
 	default:
 		return false
 	}
+	// A struct field has no parent scope.
 	parent := obj.Parent()
-	return parent != nil && parent != pkgScope && parent != types.Universe
+	return parent != nil && parent != g.pkg.Types.Scope()
 }
 
-// isConcreteMethod reports whether obj is a method with a non-interface
-// receiver. Interface methods have a receiver too, but they emit as bare
-// struct fields, so they are excluded.
-func isConcreteMethod(obj types.Object) bool {
-	fn, ok := obj.(*types.Func)
-	if !ok {
-		return false
-	}
-	recv := fn.Signature().Recv()
-	return recv != nil && !types.IsInterface(recv.Type())
+// isReserved reports whether C already uses name.
+func isReserved(name string, fileScope bool) bool {
+	return reservedAnyScope[name] || (fileScope && reservedFileScope[name])
 }

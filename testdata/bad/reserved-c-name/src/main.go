@@ -1,7 +1,6 @@
 package main
 
 type Point struct {
-	// A struct field cannot be mangled, unlike a local variable.
 	double int
 }
 

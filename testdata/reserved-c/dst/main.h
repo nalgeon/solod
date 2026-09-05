@@ -3,6 +3,5 @@
 
 // -- Variables and constants --
 
-// An exported identifier gets a package prefix,
-// so it doesn't need mangling.
+// An exported identifier gets a package prefix.
 extern so_int main_NULL;

@@ -537,12 +537,7 @@ func (g *Generator) emitIdent(w io.Writer, n *ast.Ident) {
 	}
 	if obj := g.types.Uses[n]; obj != nil {
 		g.checkLocalVar(n, obj)
-		if obj.Parent() == g.pkg.Types.Scope() {
-			// Package-level declarations: exported names are prefixed
-			// with the package name (e.g. RectArea -> geom_RectArea),
-			// and extern overrides are applied (e.g. maxInt64 -> INT64_MAX).
-			name = g.symbolName(obj)
-		}
+		name = g.mapObjName(obj)
 		if cast, ok := g.constCast(n, obj); ok {
 			fmt.Fprintf(w, "(%s)", cast)
 		}
@@ -575,7 +570,7 @@ func (g *Generator) emitStaticName(w io.Writer, expr ast.Expr) {
 		if _, ok := obj.(*types.Var); !ok {
 			break
 		}
-		fmt.Fprint(w, g.symbolName(obj))
+		fmt.Fprint(w, g.mapObjName(obj))
 		return
 
 	case *ast.SelectorExpr:

@@ -42,7 +42,6 @@ type symbol struct {
 func (g *Generator) collect() {
 	g.comments = ast.CommentMap{}
 	g.embeds = newEmbeds()
-	g.handleReservedNames()
 
 	srcDir := ""
 	if len(g.pkg.GoFiles) > 0 {
@@ -86,6 +85,7 @@ func (g *Generator) collect() {
 	g.collectImplObjs()
 	g.collectResultTypes()
 
+	g.resolveReservedNames()
 	g.checkExportedFuncs()
 	g.checkExportedDecls()
 	g.checkPromoted()

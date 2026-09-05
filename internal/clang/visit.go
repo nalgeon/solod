@@ -280,7 +280,7 @@ func (g *Generator) emitConstSpec(w io.Writer, spec *ast.ValueSpec) {
 				continue
 			}
 			specifier = "static "
-			constName = g.symbolName(g.types.Defs[name])
+			constName = g.mapObjName(g.types.Defs[name])
 		}
 
 		// Emit the constant declaration. Go allows unused constants, so mark
@@ -434,7 +434,7 @@ func (g *Generator) emitVarSpec(w io.Writer, spec *ast.ValueSpec, dirs directive
 				specifier += attr + " "
 			}
 		}
-		cName := g.declSymbolName(g.types.Defs[name])
+		cName := g.mapObjName(g.types.Defs[name])
 		if len(spec.Values) > i {
 			// Variable has an explicit initializer.
 			if ct.IsArray() && !g.state.atTopLevel() {
@@ -480,7 +480,7 @@ func (g *Generator) emitTypeSpec(w io.Writer, spec *ast.TypeSpec, dirs directive
 			}
 		}
 		ct := g.mapTypeDecl(spec, resolved)
-		cName := g.declSymbolName(g.types.Defs[spec.Name])
+		cName := g.mapObjName(g.types.Defs[spec.Name])
 		attr := dirs.attrString()
 		if attr != "" {
 			fmt.Fprintf(w, "%stypedef %s %s;\n", g.indent(), attr, ct.Decl(cName))
@@ -492,7 +492,7 @@ func (g *Generator) emitTypeSpec(w io.Writer, spec *ast.TypeSpec, dirs directive
 		iface := g.types.Defs[spec.Name].Type().Underlying().(*types.Interface)
 		if iface.Empty() {
 			cType := g.mapTypeName(spec, iface)
-			cName := g.declSymbolName(g.types.Defs[spec.Name])
+			cName := g.mapObjName(g.types.Defs[spec.Name])
 			fmt.Fprintf(w, "%stypedef %s %s;\n", g.indent(), cType, cName)
 		} else {
 			g.emitInterfaceTypeSpec(w, spec)

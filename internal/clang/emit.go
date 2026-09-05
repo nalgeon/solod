@@ -103,6 +103,7 @@ type Generator struct {
 	externs     map[types.Object]externInfo  // symbols provided by C headers
 	promoted    map[types.Object]bool        // unexported symbols forced into the header
 	implObjs    map[types.Object]bool        // symbols only the .c file declares
+	renames     map[types.Object]string      // C names changed to avoid name conflicts
 	fieldNames  map[*types.Var]string        // C name overrides from `c:"..."` field tags
 	includes    Includes                     // included headers from so:include
 	links       []string                     // link libraries from so:link
@@ -123,6 +124,7 @@ func newGenerator(opts EmitOptions) *Generator {
 		types:      opts.Pkg.TypesInfo,
 		modulePkgs: make(map[string]bool),
 		externs:    make(map[types.Object]externInfo),
+		renames:    make(map[types.Object]string),
 		fieldNames: make(map[*types.Var]string),
 		funcDirs:   make(map[*ast.FuncDecl]directives),
 	}

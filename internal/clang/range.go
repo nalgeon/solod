@@ -234,7 +234,7 @@ func (g *Generator) rangeKeyVar(stmt *ast.RangeStmt, key *ast.Ident) rangeKey {
 	}
 	if stmt.Tok == token.ASSIGN {
 		// The name follows the key, like the width variable of a string range,
-		// so it cannot collide with the local names of the builtin macros.
+		// so it cannot conflict with the local names of the builtin macros.
 		return rangeKey{decl: "so_int ", name: "_" + key.Name + "i", copy: key.Name}
 	}
 	return rangeKey{decl: g.mapTypeName(stmt, g.types.Defs[key].Type()) + " ", name: key.Name}

@@ -1,0 +1,3 @@
+main.go:4:2: identifier "stderr" is a reserved C name; rename it
+	stderr int
+	^here

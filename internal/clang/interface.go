@@ -22,7 +22,7 @@ func (g *Generator) emitInterfaceTypeSpec(w io.Writer, spec *ast.TypeSpec) {
 	}
 	typ := types.Unalias(g.types.Defs[spec.Name].Type()).(*types.Named)
 	iface := typ.Underlying().(*types.Interface)
-	cName := g.declSymbolName(g.types.Defs[spec.Name])
+	cName := g.mapObjName(g.types.Defs[spec.Name])
 	fmt.Fprintf(w, "typedef struct %s {\n", cName)
 	fmt.Fprint(w, "    void* self;\n")
 	for m := range iface.Methods() {

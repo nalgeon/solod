@@ -74,7 +74,7 @@ func (g *Generator) emitForwardTypeDecls(w io.Writer, typeSyms []symbol) {
 	hasDecls := false
 	for _, sym := range typeSyms {
 		if _, ok := sym.typeSpec.Type.(*ast.StructType); ok {
-			cName := g.declSymbolName(g.types.Defs[sym.typeSpec.Name])
+			cName := g.mapObjName(g.types.Defs[sym.typeSpec.Name])
 			fmt.Fprintf(w, "\ntypedef struct %s %s;", cName, cName)
 			hasDecls = true
 		}

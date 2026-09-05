@@ -157,10 +157,7 @@ func (g *Generator) mapTypeName(node ast.Node, typ types.Type) string {
 			g.checkPackage(node, obj)
 			return obj.Pkg().Name() + "_" + obj.Name()
 		}
-		if obj.Parent() == g.pkg.Types.Scope() {
-			return g.symbolName(obj)
-		}
-		return obj.Name()
+		return g.mapObjName(obj)
 
 	case *types.Pointer:
 		// A pointer to an unnamed array type has no C type name (T (*arr)[N]).
@@ -182,7 +179,7 @@ func (g *Generator) mapTypeName(node ast.Node, typ types.Type) string {
 				continue
 			}
 			if types.Identical(tn.Type().Underlying(), t) {
-				return g.symbolName(tn)
+				return g.mapObjName(tn)
 			}
 		}
 		g.fail(node, "no matching function type for signature")
@@ -347,25 +344,29 @@ func (g *Generator) checkPackage(node ast.Node, obj types.Object) {
 	g.fail(node, "Go package %q is not supported; use the Solod standard library", pkg.Path())
 }
 
-// declSymbolName returns the C name for a declaration that could be
-// either package-level or function-local.
-func (g *Generator) declSymbolName(obj types.Object) string {
-	if g.state.atTopLevel() {
-		return g.symbolName(obj)
+// mapObjName returns the C name of a Go object:
+//   - An exported package-level name gets the package prefix (RectArea -> geom_RectArea).
+//   - An unexported package-level name with so:promote gets the package prefix.
+//   - A method name gets the receiver type prefix (Rect.Area -> geom_Rect_Area).
+//   - An extern name replaces the Go name.
+//   - A reserved C name gets a "_" suffix (div -> div_).
+func (g *Generator) mapObjName(obj types.Object) string {
+	if name, ok := g.renames[obj]; ok {
+		return name
 	}
-	return obj.Name()
+	return g.baseObjName(obj)
 }
 
-// symbolName returns the C symbol name for a Go identifier.
-// Exported names are prefixed with the package name (e.g. RectArea -> geom_RectArea).
-// Unexported names marked with so:promote get the same prefix.
-// Extern symbols with a name override use the specified C name instead.
-func (g *Generator) symbolName(obj types.Object) string {
+// baseObjName returns the C name of a Go object before mangling.
+func (g *Generator) baseObjName(obj types.Object) string {
 	if info, ok := g.getExtern(obj); ok && info.name != "" {
 		return info.name
 	}
+	if recv := methodRecvType(obj); recv != nil {
+		return g.mapObjName(recv) + "_" + obj.Name()
+	}
 	name := obj.Name()
-	if ast.IsExported(name) || g.promoted[obj] {
+	if g.atPkgScope(obj) && (ast.IsExported(name) || g.promoted[obj]) {
 		return g.pkg.Name + "_" + name
 	}
 	return name
@@ -383,6 +384,33 @@ func (g *Generator) constType(node ast.Node, obj types.Object) types.Type {
 		g.fail(node, "constant %s does not fit in int64 or uint64", obj.Name())
 	}
 	return types.Typ[types.Uint64]
+}
+
+// methodRecvType returns the receiver type name of a concrete method.
+// It returns nil for a function and for an interface method.
+func methodRecvType(obj types.Object) *types.TypeName {
+	fn, ok := obj.(*types.Func)
+	if !ok {
+		return nil
+	}
+	recv := fn.Signature().Recv()
+	if recv == nil || types.IsInterface(recv.Type()) {
+		return nil
+	}
+	typ := recv.Type()
+	if ptr, ok := typ.(*types.Pointer); ok {
+		typ = ptr.Elem()
+	}
+	named, ok := types.Unalias(typ).(*types.Named)
+	if !ok {
+		return nil
+	}
+	return named.Obj()
+}
+
+// atPkgScope reports whether obj is declared at package scope.
+func (g *Generator) atPkgScope(obj types.Object) bool {
+	return obj.Parent() == g.pkg.Types.Scope()
 }
 
 // isBoolType reports whether t is a boolean type.
