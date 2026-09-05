@@ -49,9 +49,11 @@ func (g *Generator) sortTypes(syms []symbol) []symbol {
 //
 // A reference only creates a dependency when the forward declarations from
 // [Generator.emitForwardTypeDecls] do not already satisfy it. Those cover
-// struct types, and an incomplete struct is enough behind a pointer or as a
-// parameter or result of a function pointer. Everywhere else - a value field,
-// an array element, the target of a typedef - the definition must come first.
+// every type with a struct underlying type: a struct spec and a spec that
+// names another struct type. An incomplete struct is enough behind a pointer
+// or as a parameter or result of a function pointer. Everywhere else - a
+// value field, an array element, the target of a typedef - the definition
+// must come first.
 //
 // Objects from other packages may appear in the result; the caller ignores
 // any that are not package-level types of its own.

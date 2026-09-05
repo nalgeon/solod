@@ -57,6 +57,33 @@ type Origin struct {
 	v int
 }
 
+// Pointer to a named struct type defined later.
+type Anchor struct {
+	link *Chain
+}
+
+type Chain Link
+
+type Link Base
+
+type Base struct {
+	v int
+}
+
+// Named struct type in the signature of a func type and an interface.
+type Visit func(*Chain)
+
+type Visitor interface {
+	See(*Chain)
+}
+
+// Struct that points to a named type of itself.
+type Loop struct {
+	twin *Twin
+}
+
+type Twin Loop
+
 // Func type held by value: Handler must precede Outer, but the struct types
 // in its signature are fine as forward declarations.
 type Outer struct {

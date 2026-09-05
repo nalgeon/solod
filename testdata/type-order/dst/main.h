@@ -11,9 +11,16 @@ typedef struct main_Rect main_Rect;
 typedef struct main_Cell main_Cell;
 typedef struct main_Grid main_Grid;
 typedef struct main_Origin main_Origin;
+typedef struct main_Anchor main_Anchor;
+typedef struct main_Base main_Base;
+typedef struct main_Loop main_Loop;
 typedef struct main_Outer main_Outer;
 typedef struct main_Payload main_Payload;
 typedef struct main_Reading main_Reading;
+typedef main_Origin main_Target;
+typedef main_Base main_Link;
+typedef main_Link main_Chain;
+typedef main_Loop main_Twin;
 
 // Self-referencing struct type.
 typedef struct main_Node {
@@ -57,6 +64,35 @@ typedef struct main_Origin {
 
 // Named type of a type defined later.
 typedef main_Origin main_Target;
+
+// Pointer to a named struct type defined later.
+typedef struct main_Anchor {
+    main_Chain* link;
+} main_Anchor;
+
+typedef struct main_Base {
+    so_int v;
+} main_Base;
+typedef main_Base main_Link;
+typedef main_Link main_Chain;
+
+// Named struct type in the signature of a func type and an interface.
+typedef void (*main_Visit)(main_Chain*);
+
+typedef struct main_Visitor {
+    void* self;
+    void (*See)(void* self, main_Chain*);
+} main_Visitor;
+
+static inline void main_Visitor_See(main_Visitor self, main_Chain* _0) {
+    self.See(self.self, _0);
+}
+
+// Struct that points to a named type of itself.
+typedef struct main_Loop {
+    main_Twin* twin;
+} main_Loop;
+typedef main_Loop main_Twin;
 
 typedef main_Payload (*main_Handler)(main_Payload);
 

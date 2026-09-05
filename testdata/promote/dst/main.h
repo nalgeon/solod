@@ -5,6 +5,7 @@
 
 typedef struct main_counter main_counter;
 typedef struct main_Stats main_Stats;
+typedef main_counter main_alias;
 
 // counter is unexported, but so:promote emits it in the header
 // so the Stats can reference it.

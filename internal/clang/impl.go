@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"go/types"
 	"io"
 )
 
@@ -71,16 +72,26 @@ func (g *Generator) emitUnexportedTypes(w io.Writer) {
 // emitForwardTypeDecls writes forward declarations for struct types
 // so that self-referencing and out-of-order references resolve.
 func (g *Generator) emitForwardTypeDecls(w io.Writer, typeSyms []symbol) {
-	hasDecls := false
+	var structs, refs []symbol
 	for _, sym := range typeSyms {
-		if _, ok := sym.typeSpec.Type.(*ast.StructType); ok {
-			cName := g.mapObjName(g.types.Defs[sym.typeSpec.Name])
-			fmt.Fprintf(w, "\ntypedef struct %s %s;", cName, cName)
-			hasDecls = true
+		switch {
+		case isStructSpec(sym.typeSpec):
+			structs = append(structs, sym)
+		case g.refersToNamedStruct(sym.typeSpec):
+			refs = append(refs, sym)
 		}
 	}
-	if hasDecls {
-		fmt.Fprintln(w)
+	if len(structs) == 0 && len(refs) == 0 {
+		return
+	}
+	for _, sym := range structs {
+		cName := g.mapObjName(g.types.Defs[sym.typeSpec.Name])
+		fmt.Fprintf(w, "\ntypedef struct %s %s;", cName, cName)
+	}
+	fmt.Fprintln(w)
+	// typeSyms is sorted, so a typedef follows the type it names.
+	for _, sym := range refs {
+		g.emitTypeSpec(w, sym.typeSpec, sym.dirs)
 	}
 }
 
@@ -106,6 +117,28 @@ func (g *Generator) emitForwardFuncDecls(w io.Writer) {
 		g.emitFuncProto(w, decl)
 		fmt.Fprintln(w, ";")
 	}
+}
+
+// refersToNamedStruct reports whether the spec names another struct type,
+// such as `type T2 T1` or `type T2 = T1`.
+func (g *Generator) refersToNamedStruct(spec *ast.TypeSpec) bool {
+	switch spec.Type.(type) {
+	case *ast.Ident, *ast.SelectorExpr:
+	default:
+		return false
+	}
+	obj := g.types.Defs[spec.Name]
+	if obj == nil {
+		return false
+	}
+	_, isStruct := obj.Type().Underlying().(*types.Struct)
+	return isStruct
+}
+
+// isStructSpec reports whether the spec declares a struct type.
+func isStructSpec(spec *ast.TypeSpec) bool {
+	_, ok := spec.Type.(*ast.StructType)
+	return ok
 }
 
 // isBlockTypeSpec returns true for type specs that emit multi-line blocks

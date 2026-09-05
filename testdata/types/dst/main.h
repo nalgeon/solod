@@ -6,6 +6,8 @@
 typedef struct main_Empty main_Empty;
 typedef struct main_Person main_Person;
 typedef struct main_Benchmark main_Benchmark;
+typedef main_Person main_Human;
+typedef main_Person main_Employee;
 
 // Primitive types.
 // same type in C
