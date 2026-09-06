@@ -357,6 +357,8 @@ func (g *Generator) emitVarSpec(w io.Writer, spec *ast.ValueSpec, dirs directive
 		for i < len(spec.Names) {
 			name := spec.Names[i]
 			if name.Name == "_" {
+				// Blank identifier - the value is still evaluated.
+				g.emitDiscardVar(w, spec, i)
 				i++
 				continue
 			}
@@ -408,6 +410,8 @@ func (g *Generator) emitVarSpec(w io.Writer, spec *ast.ValueSpec, dirs directive
 	// Single variable or package-level declaration.
 	for i, name := range spec.Names {
 		if name.Name == "_" {
+			// Blank identifier - the value is still evaluated.
+			g.emitDiscardVar(w, spec, i)
 			continue
 		}
 		typ := g.types.Defs[name].Type()

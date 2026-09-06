@@ -1,6 +1,7 @@
 #include "main.h"
 
 // -- Forward declarations --
+static so_int next(void);
 static so_int unnamed1(so_int _0 so_unused);
 static so_int unnamed2(so_int _0 so_unused, float _1 so_unused);
 static so_int blank1(so_int _0 so_unused);
@@ -20,7 +21,15 @@ static const so_unused int64_t iotaE = 4;
 // Blank package-level variables of different types.
 static so_unused main_Value value = (main_Value){42};
 
+// A counter to prove that a discarded value still runs.
+static so_unused so_int counter = 0;
+
 // -- Implementation --
+
+static so_int next(void) {
+    counter++;
+    return counter;
+}
 
 // Unnamed receiver.
 so_int main_Value_One(main_Value self) {
@@ -208,7 +217,12 @@ int main(void) {
     {
         // Discarding values with blank identifier.
         so_int v1 = 11;
+        (void)12;
+        (void)21;
         so_int v2 = 22;
+        (void)31;
+        (void)32;
+        (void)41;
         so_int v3 = 51;
         (void)52;
         (void)61;
@@ -230,6 +244,24 @@ int main(void) {
         so_int n1 = 1;
         (void)(so_int[2]){2, 3};
         (void)n1;
+        (void)(so_int[3]){1, 2, 3};
+        (void)(so_int[3]){1, 2, 3};
+        so_int n2 = 4;
+        (void)n2;
+    }
+    {
+        // A discarded value still runs.
+        (void)next();
+        (void)next();
+        (void)next();
+        (void)next();
+        (void)next();
+        (void)next();
+        (void)(so_int[2]){next(), next()};
+        (void)(so_int[2]){next(), next()};
+        if (counter != 10) {
+            so_panic("unexpected counter value");
+        }
     }
     return 0;
 }

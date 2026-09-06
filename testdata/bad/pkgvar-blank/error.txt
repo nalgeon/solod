@@ -1,0 +1,3 @@
+main.go:5:9: cannot call a function at package level; use init()
+var _ = size()
+        ^here

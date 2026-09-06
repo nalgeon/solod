@@ -860,6 +860,20 @@ func (g *Generator) emitAnyMacroArg(w io.Writer, node ast.Node, arg ast.Expr) {
 	g.fail(arg, "cannot use a value as any here; assign it to a variable first")
 }
 
+// emitDiscardVar emits the initializer of the i-th blank variable of spec.
+func (g *Generator) emitDiscardVar(w io.Writer, spec *ast.ValueSpec, i int) {
+	if i >= len(spec.Values) {
+		return
+	}
+	if g.state.atTopLevel() {
+		// Package-level function calls are rejected,
+		// so it's safe to omit the value entirely.
+		g.emitExpr(io.Discard, spec.Values[i])
+		return
+	}
+	g.emitDiscard(w, spec.Values[i])
+}
+
 // emitDiscard emits an expression statement that evaluates expr
 // and throws the value away: (void)expr;
 func (g *Generator) emitDiscard(w io.Writer, expr ast.Expr) {

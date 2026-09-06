@@ -61,6 +61,14 @@ type Value struct{ x int }
 // A named array type.
 type Nums [3]int
 
+// A counter to prove that a discarded value still runs.
+var counter int
+
+func next() int {
+	counter++
+	return counter
+}
+
 // Unnamed receiver.
 func (Value) One() int { return 1 }
 
@@ -260,5 +268,21 @@ func main() {
 		_ = Nums{1, 2, 3}
 		n1, _ := 1, [...]int{2, 3}
 		_ = n1
+
+		var _ = [3]int{1, 2, 3}
+		var _, n2 = [...]int{1, 2, 3}, 4
+		_ = n2
+	}
+	{
+		// A discarded value still runs.
+		_ = next()
+		var _ = next()
+		_, _ = next(), next()
+		var _, _ = next(), next()
+		_ = [...]int{next(), next()}
+		var _ = [...]int{next(), next()}
+		if counter != 10 {
+			panic("unexpected counter value")
+		}
 	}
 }
