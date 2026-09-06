@@ -597,6 +597,7 @@ func (g *Generator) emitLabeledStmt(w io.Writer, stmt *ast.LabeledStmt) {
 
 // emitRangeStmt emits a range-based for statement.
 func (g *Generator) emitRangeStmt(w io.Writer, stmt *ast.RangeStmt) {
+	stmt = unparenRange(stmt)
 	typ := g.types.TypeOf(stmt.X).Underlying()
 	// Unwrap pointer-to-array so `for range p` dispatches to emitArrayRange.
 	if ptr, ok := typ.(*types.Pointer); ok {

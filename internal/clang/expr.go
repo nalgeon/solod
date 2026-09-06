@@ -783,6 +783,11 @@ func (g *Generator) emitUnaryExpr(w io.Writer, n *ast.UnaryExpr) {
 // emitExprAsType emits an expression as a specific type, handling special cases
 // like interface conversions and nil assignments.
 func (g *Generator) emitExprAsType(w io.Writer, node ast.Node, expr ast.Expr, targetType types.Type) {
+	// A nil target type means the caller could not resolve it.
+	// The generator fails here to report the position instead of a crash.
+	if targetType == nil {
+		g.fail(node, "cannot determine the target type")
+	}
 	// Empty interface: emit as void*.
 	if iface, ok := targetType.Underlying().(*types.Interface); ok && iface.Empty() {
 		g.emitAnyValue(w, node, expr)

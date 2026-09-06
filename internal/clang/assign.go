@@ -11,6 +11,7 @@ import (
 
 // emitAssignStmt emits an assignment statement.
 func (g *Generator) emitAssignStmt(w io.Writer, stmt *ast.AssignStmt) {
+	stmt = unparenAssign(stmt)
 	switch stmt.Tok {
 	case token.DEFINE:
 		g.emitDefine(w, stmt)
@@ -507,6 +508,27 @@ func collectIdents(exprs ...ast.Expr) map[string]bool {
 		ast.Inspect(expr, visit)
 	}
 	return names
+}
+
+// unparenAssign removes the parentheses around each assignment target.
+func unparenAssign(stmt *ast.AssignStmt) *ast.AssignStmt {
+	var lhs []ast.Expr
+	for i, expr := range stmt.Lhs {
+		bare := ast.Unparen(expr)
+		if bare == expr {
+			continue
+		}
+		if lhs == nil {
+			lhs = slices.Clone(stmt.Lhs)
+		}
+		lhs[i] = bare
+	}
+	if lhs == nil {
+		return stmt
+	}
+	clone := *stmt
+	clone.Lhs = lhs
+	return &clone
 }
 
 // isTypeParam reports whether typ is a type parameter of a generic function.

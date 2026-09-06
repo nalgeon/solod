@@ -249,3 +249,20 @@ func (g *Generator) emitRangeKeyCopy(w io.Writer, k rangeKey) {
 	fmt.Fprintf(w, "%s%s = %s;\n", g.indent(), k.copy, k.name)
 	g.state.depth--
 }
+
+// unparenRange removes the parentheses around the key and the value of a range loop.
+func unparenRange(stmt *ast.RangeStmt) *ast.RangeStmt {
+	key, value := stmt.Key, stmt.Value
+	if key != nil {
+		key = ast.Unparen(key)
+	}
+	if value != nil {
+		value = ast.Unparen(value)
+	}
+	if key == stmt.Key && value == stmt.Value {
+		return stmt
+	}
+	clone := *stmt
+	clone.Key, clone.Value = key, value
+	return &clone
+}
