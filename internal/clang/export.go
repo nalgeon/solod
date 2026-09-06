@@ -41,14 +41,14 @@ func (g *Generator) collectImplObjs() {
 		case symbolType:
 			// A constraint interface is not emitted at all.
 			obj := g.types.Defs[sym.typeSpec.Name]
-			if sym.exported || sym.dirs.promote || isConstraintInterface(obj.Type()) {
+			if sym.inHeader() || isConstraintInterface(obj.Type()) {
 				continue
 			}
 			g.implObjs[obj] = true
 		case symbolFunc, symbolMethod:
 			// The header holds the body of an so:inline function,
 			// so an unexported one is available there too.
-			if sym.exported || sym.dirs.inline || sym.dirs.promote {
+			if sym.inHeader() {
 				continue
 			}
 			g.implObjs[g.types.Defs[sym.funcDecl.Name]] = true
@@ -56,7 +56,7 @@ func (g *Generator) collectImplObjs() {
 			for _, spec := range sym.genDecl.Specs {
 				vs := spec.(*ast.ValueSpec)
 				for _, name := range vs.Names {
-					if ast.IsExported(name.Name) || sym.dirs.promote {
+					if nameInHeader(name, sym.dirs) {
 						continue
 					}
 					g.implObjs[g.types.Defs[name]] = true
@@ -138,7 +138,7 @@ func (g *Generator) checkExportedFuncs() {
 		}
 		// The header holds the prototype of an exported or so:promote function,
 		// and the body of an so:inline function.
-		if !sym.exported && !sym.dirs.inline && !sym.dirs.promote {
+		if !sym.inHeader() {
 			continue
 		}
 		kind := "function"
@@ -176,7 +176,7 @@ func (g *Generator) checkImplRef(n ast.Node, kind, name string, exported bool, d
 // that references an unexported type.
 func (g *Generator) checkExportedDecls() {
 	for _, sym := range g.symbols {
-		if !sym.exported && !sym.dirs.promote {
+		if !sym.inHeader() {
 			continue
 		}
 		switch sym.kind {
@@ -216,7 +216,7 @@ func (g *Generator) checkExportedValues(sym symbol) {
 		for i, name := range vs.Names {
 			exported := ast.IsExported(name.Name)
 			def := g.types.Defs[name]
-			if def == nil || (!exported && !sym.dirs.promote) {
+			if def == nil || !nameInHeader(name, sym.dirs) {
 				continue
 			}
 			if obj := g.unexportedRef(def.Type()); obj != nil {

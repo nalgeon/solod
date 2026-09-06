@@ -103,7 +103,7 @@ func (g *Generator) emitForwardFuncDecls(w io.Writer) {
 		if sym.kind != symbolFunc && sym.kind != symbolMethod {
 			continue
 		}
-		if sym.exported || sym.dirs.inline || sym.dirs.promote {
+		if sym.inHeader() {
 			continue
 		}
 		funcDecls = append(funcDecls, sym.funcDecl)

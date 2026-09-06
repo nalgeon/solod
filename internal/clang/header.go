@@ -65,7 +65,7 @@ func (g *Generator) emitHeaderDecls(w io.Writer) {
 		if sym.kind != symbolVar && sym.kind != symbolConst {
 			continue
 		}
-		if !sym.exported && !sym.dirs.promote {
+		if !sym.inHeader() {
 			continue
 		}
 		varSyms = append(varSyms, sym)
@@ -84,7 +84,7 @@ func (g *Generator) emitHeaderDecls(w io.Writer) {
 		if sym.kind != symbolFunc && sym.kind != symbolMethod {
 			continue
 		}
-		if !sym.exported && !sym.dirs.inline && !sym.dirs.promote {
+		if !sym.inHeader() {
 			continue
 		}
 		funcSyms = append(funcSyms, sym)
@@ -123,7 +123,7 @@ func (g *Generator) emitHeaderGenDecl(w io.Writer, decl *ast.GenDecl, dirs direc
 			continue
 		}
 		for i, name := range vs.Names {
-			if !ast.IsExported(name.Name) && !dirs.promote {
+			if !nameInHeader(name, dirs) {
 				continue
 			}
 			if !emitted {

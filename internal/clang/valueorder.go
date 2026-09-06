@@ -40,7 +40,7 @@ func (g *Generator) valueSeqs() (header, impl []pkgValue) {
 					v.value = vs.Values[i]
 				}
 				switch {
-				case !ast.IsExported(name.Name) && !sym.dirs.promote:
+				case !nameInHeader(name, sym.dirs):
 					// The .c file holds the declaration and the value.
 					impl = append(impl, v)
 				case isConst:

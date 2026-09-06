@@ -272,11 +272,8 @@ func (g *Generator) checkEmbeddedTypes() {
 // types it depends on.
 func (g *Generator) typeSymbols(header bool) []symbol {
 	var syms []symbol
-	inHeader := func(sym symbol) bool {
-		return sym.exported || (sym.unexported && sym.dirs.promote)
-	}
 	for _, sym := range g.symbols {
-		if sym.kind != symbolType || inHeader(sym) != header {
+		if sym.kind != symbolType || sym.inHeader() != header {
 			continue
 		}
 		if isConstraintInterface(g.types.Defs[sym.typeSpec.Name].Type()) {
@@ -285,6 +282,23 @@ func (g *Generator) typeSymbols(header bool) []symbol {
 		syms = append(syms, sym)
 	}
 	return g.sortTypes(syms)
+}
+
+// inHeader reports whether the header holds the symbol. The header holds an
+// exported symbol, an so:promote symbol, and the body of an so:inline function.
+//
+// A var or const group can mix exported and unexported names, so a group in the
+// header can still leave some of its names to the .c file. Use [nameInHeader]
+// to place a single name.
+func (sym symbol) inHeader() bool {
+	return sym.exported || sym.dirs.inline || sym.dirs.promote
+}
+
+// nameInHeader reports whether the header holds one name of a var or const
+// group. A group can mix exported and unexported names, so the placement of a
+// name does not follow the placement of the group.
+func nameInHeader(name *ast.Ident, dirs directives) bool {
+	return ast.IsExported(name.Name) || dirs.promote
 }
 
 // detectExported reports whether a GenDecl contains at least one
