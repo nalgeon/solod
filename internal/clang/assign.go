@@ -64,28 +64,8 @@ func (g *Generator) emitAssignStmt(w io.Writer, stmt *ast.AssignStmt) {
 
 // emitDefine emits a short variable declaration (:=).
 func (g *Generator) emitDefine(w io.Writer, stmt *ast.AssignStmt) {
-	// Detect: _, ok := s.(Rect)
-	if len(stmt.Lhs) == 2 && len(stmt.Rhs) == 1 {
-		if ta, ok := stmt.Rhs[0].(*ast.TypeAssertExpr); ok {
-			g.emitTypeAssertion(w, stmt, ta)
-			return
-		}
-	}
-	// Map comma-ok: v, ok := m[key]
-	if len(stmt.Lhs) == 2 && len(stmt.Rhs) == 1 {
-		if idx, ok := stmt.Rhs[0].(*ast.IndexExpr); ok {
-			if _, isMap := g.types.TypeOf(idx.X).Underlying().(*types.Map); isMap {
-				g.emitMapCommaOk(w, stmt, idx, true)
-				return
-			}
-		}
-	}
-	// Multi-return destructuring: x, y := f()
-	if len(stmt.Lhs) > 1 && len(stmt.Rhs) == 1 {
-		if call, ok := stmt.Rhs[0].(*ast.CallExpr); ok {
-			g.emitMultiReturnDefine(w, stmt, call)
-			return
-		}
+	if g.emitAssignSpecial(w, stmt, true) {
+		return
 	}
 	// Detect self-shadowing - a variable x is defined using a variable with
 	// the same name from an outer scope, eg. `x := x + 1`. C does not support
@@ -103,6 +83,7 @@ func (g *Generator) emitDefine(w io.Writer, stmt *ast.AssignStmt) {
 			g.fail(stmt, "self-shadowing variable %q is not supported", ident.Name)
 		}
 	}
+
 	// Regular define: group consecutive variables by type.
 	rhs := stmt.Rhs
 	if g.needsRhsTemps(stmt) {
@@ -133,46 +114,29 @@ func (g *Generator) emitDefine(w io.Writer, stmt *ast.AssignStmt) {
 
 		typ := def.Type()
 		ct := g.mapVarType(stmt, typ, true)
-
 		if ct.IsArray() {
-			// Arrays can't be grouped with other variables.
+			// C cannot assign an array, so it needs a declaration of its own.
 			g.emitArrayVarDecl(w, ct, ident.Name, rhs[i])
 			i++
 			continue
 		}
 
-		// Emit a variable declaration for this variable
-		// (grouped with subsequent variables of the same type).
+		// Emit the leading declarator: "T name = init".
 		fmt.Fprintf(w, "%s%s = ", g.indent(), ct.Decl(ident.Name))
 		g.emitExpr(w, rhs[i])
 		i++
-
-		// Pointer types, anonymous structs and type parameters can't be grouped:
-		//  - `T* a, b` declares a as T* but b as T
-		//  - __auto_type allows only one declarator per statement
-		//  - a macro takes a pointer type for a type parameter, which gives `T* a, b`
-		if ct.IsPointer() || isAnonStruct(typ) || isTypeParam(typ) {
+		if !groupable(ct, typ) {
 			fmt.Fprint(w, ";\n")
 			continue
 		}
 
+		// Group the following variables of the same type.
 		for i < len(stmt.Lhs) {
-			nextIdent := stmt.Lhs[i].(*ast.Ident)
-			if nextIdent.Name == "_" {
+			next := stmt.Lhs[i].(*ast.Ident)
+			if _, ok := g.groupType(stmt, next, ct, true); !ok {
 				break
 			}
-			nextDef := g.types.Defs[nextIdent]
-			if nextDef == nil {
-				break
-			}
-			nextCType := g.mapTypeName(stmt, nextDef.Type())
-			if nextCType != ct.Base {
-				break
-			}
-			if isArrayType(nextDef.Type()) {
-				break
-			}
-			fmt.Fprintf(w, ", %s = ", nextIdent.Name)
+			fmt.Fprintf(w, ", %s = ", next.Name)
 			g.emitExpr(w, rhs[i])
 			i++
 		}
@@ -184,29 +148,8 @@ func (g *Generator) emitDefine(w io.Writer, stmt *ast.AssignStmt) {
 func (g *Generator) emitAssign(w io.Writer, stmt *ast.AssignStmt) {
 	g.checkAssignTargets(stmt)
 	g.checkAssignAnonStruct(stmt)
-
-	// Detect: _, ok = s.(Rect)
-	if len(stmt.Lhs) == 2 && len(stmt.Rhs) == 1 {
-		if ta, ok := stmt.Rhs[0].(*ast.TypeAssertExpr); ok {
-			g.emitTypeAssertion(w, stmt, ta)
-			return
-		}
-	}
-	// Map comma-ok: v, ok = m[key]
-	if len(stmt.Lhs) == 2 && len(stmt.Rhs) == 1 {
-		if idx, ok := stmt.Rhs[0].(*ast.IndexExpr); ok {
-			if _, isMap := g.types.TypeOf(idx.X).Underlying().(*types.Map); isMap {
-				g.emitMapCommaOk(w, stmt, idx, false)
-				return
-			}
-		}
-	}
-	// Multi-return destructuring: x, y = f()
-	if len(stmt.Lhs) > 1 && len(stmt.Rhs) == 1 {
-		if call, ok := stmt.Rhs[0].(*ast.CallExpr); ok {
-			g.emitMultiReturnAssign(w, stmt, call)
-			return
-		}
+	if g.emitAssignSpecial(w, stmt, false) {
+		return
 	}
 	// Regular assignment.
 	rhs := stmt.Rhs
@@ -251,6 +194,37 @@ func (g *Generator) emitAssign(w io.Writer, stmt *ast.AssignStmt) {
 		g.emitExprAsType(w, stmt, rhs[i], lhsType)
 		fmt.Fprint(w, ";\n")
 	}
+}
+
+// emitAssignSpecial emits an assignment of a special form: a comma-ok type
+// assertion, a comma-ok map read, or a multi-return destructuring. It reports
+// whether the statement has one of these forms. define reports whether the
+// statement declares the variables of its left side.
+func (g *Generator) emitAssignSpecial(w io.Writer, stmt *ast.AssignStmt, define bool) bool {
+	if len(stmt.Lhs) == 2 && len(stmt.Rhs) == 1 {
+		// Comma-ok type assertion: v, ok := s.(Rect)
+		if ta, ok := stmt.Rhs[0].(*ast.TypeAssertExpr); ok {
+			g.emitTypeAssertion(w, stmt, ta)
+			return true
+		}
+		// Comma-ok map read: v, ok := m[key]
+		if idx, ok := stmt.Rhs[0].(*ast.IndexExpr); ok && isMapType(g.types.TypeOf(idx.X)) {
+			g.emitMapCommaOk(w, stmt, idx, define)
+			return true
+		}
+	}
+	// Multi-return destructuring: x, y := f()
+	if len(stmt.Lhs) > 1 && len(stmt.Rhs) == 1 {
+		if call, ok := stmt.Rhs[0].(*ast.CallExpr); ok {
+			if define {
+				g.emitMultiReturnDefine(w, stmt, call)
+			} else {
+				g.emitMultiReturnAssign(w, stmt, call)
+			}
+			return true
+		}
+	}
+	return false
 }
 
 // checkAssignCall rejects a call in the left side of a compound assignment.

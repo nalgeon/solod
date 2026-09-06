@@ -321,30 +321,20 @@ func (g *Generator) emitVarSpec(w io.Writer, spec *ast.ValueSpec, dirs directive
 			fmt.Fprintf(w, "%s%s = ", g.indent(), ct.Decl(name.Name))
 			emitInit(i, typ)
 			i++
-
-			// Arrays, pointers and anonymous structs can't be grouped:
-			//  - an array carries its dimension after the name (so_byte a[8])
-			//  - `T* a, b` declares a as T* but b as T
-			//  - __auto_type allows only one declarator per statement
-			_, isPtr := ptrElem(typ)
-			if ct.IsArray() || isPtr || ct.FuncPtr || isAnonStruct(typ) {
+			if !groupable(ct, typ) {
 				fmt.Fprint(w, ";\n")
 				continue
 			}
 
-			// Group following variables of the same scalar type.
+			// Group the following variables of the same type.
 			for i < len(spec.Names) {
-				nextName := spec.Names[i]
-				if nextName.Name == "_" {
+				next := spec.Names[i]
+				nextType, ok := g.groupType(spec, next, ct, len(spec.Values) > i)
+				if !ok {
 					break
 				}
-				nextTyp := g.types.Defs[nextName].Type()
-				nextCt := g.mapTypeDecl(spec, nextTyp)
-				if nextCt.IsArray() || nextCt.Base != ct.Base {
-					break
-				}
-				fmt.Fprintf(w, ", %s = ", nextName.Name)
-				emitInit(i, nextTyp)
+				fmt.Fprintf(w, ", %s = ", next.Name)
+				emitInit(i, nextType)
 				i++
 			}
 			fmt.Fprint(w, ";\n")
