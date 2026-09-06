@@ -566,6 +566,7 @@ func (g *Generator) emitIfInner(w io.Writer, stmt *ast.IfStmt, prefix string) {
 
 // emitIncDecStmt emits an increment or decrement statement.
 func (g *Generator) emitIncDecStmt(w io.Writer, stmt *ast.IncDecStmt) {
+	g.checkMapIndex(stmt.X)
 	fmt.Fprint(w, g.indent())
 	g.emitPostfixOperand(w, stmt.X)
 	fmt.Fprintf(w, "%s;\n", stmt.Tok)

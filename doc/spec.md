@@ -418,7 +418,7 @@ A `nil` map emits as `NULL` in C.
 Limitations:
 
 - Maps have a fixed capacity set at creation time. Setting a key when the map is full panics.
-- Compound assignment on map index (`m["a"] += 1`) is not supported.
+- Increment, decrement, and compound assignment on map items are not supported.
 - Arrays as map value types are not supported.
 - `delete` is not supported.
 - `clear` is not supported with maps.

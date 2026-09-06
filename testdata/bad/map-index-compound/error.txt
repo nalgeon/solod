@@ -1,0 +1,3 @@
+main.go:5:2: operation on map item is not supported
+	m["a"] += 2
+	^here

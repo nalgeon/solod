@@ -181,3 +181,12 @@ func (g *Generator) checkMap(node ast.Node, keyType, valType types.Type) {
 		g.fail(node, "array as map value type is not supported")
 	}
 }
+
+// checkMapIndex fails if target updates a map index in place.
+func (g *Generator) checkMapIndex(target ast.Expr) {
+	idx, ok := ast.Unparen(target).(*ast.IndexExpr)
+	if !ok || !isMapType(g.types.TypeOf(idx.X)) {
+		return
+	}
+	g.fail(target, "operation on map item is not supported")
+}

@@ -21,11 +21,7 @@ func (g *Generator) emitAssignStmt(w io.Writer, stmt *ast.AssignStmt) {
 	case token.ADD_ASSIGN, token.SUB_ASSIGN, token.MUL_ASSIGN, token.QUO_ASSIGN,
 		token.REM_ASSIGN, token.OR_ASSIGN, token.AND_ASSIGN, token.XOR_ASSIGN,
 		token.SHL_ASSIGN, token.SHR_ASSIGN:
-		if idx, ok := stmt.Lhs[0].(*ast.IndexExpr); ok {
-			if _, isMap := g.types.TypeOf(idx.X).Underlying().(*types.Map); isMap {
-				g.fail(stmt, "compound assignment on map index is not supported")
-			}
-		}
+		g.checkMapIndex(stmt.Lhs[0])
 		g.checkAssignCall(stmt)
 		// String += uses so_string_add.
 		if stmt.Tok == token.ADD_ASSIGN && g.hasStringType(stmt.Lhs[0]) {
