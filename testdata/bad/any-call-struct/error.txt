@@ -1,0 +1,3 @@
+main.go:12:14: cannot use a value of type point as any; assign it to a variable first
+	var a any = mkPoint()
+	            ^here

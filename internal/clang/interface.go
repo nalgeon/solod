@@ -241,32 +241,122 @@ func (g *Generator) emitAnyValue(w io.Writer, node ast.Node, expr ast.Expr) {
 	// A non-empty interface is a fat struct, so it is boxed like a value type
 	// below: its address is stored in the void*.
 
-	// Value types must be passed by reference for void* storage.
-	// Identifiers, composite literals, and string literals emit as
-	// addressable C expressions - just prepend &.
-	// Other expressions need wrapping in a compound literal: &(Type){val}.
-	addressable := false
-	switch e := expr.(type) {
-	case *ast.Ident:
-		addressable = true
-	case *ast.CompositeLit:
-		// A map literal emits a macro call or an address.
-		// C cannot take the address of either.
-		addressable = !isMapType(g.types.TypeOf(e))
-	case *ast.BasicLit:
-		addressable = e.Kind == token.STRING
-	}
-
-	if addressable {
+	if g.isLvalue(expr) {
+		// An lvalue already has an address, so just take it: &val.
+		if star, ok := ast.Unparen(expr).(*ast.StarExpr); ok {
+			// &*p is p.
+			g.emitExpr(w, star.X)
+			return
+		}
 		fmt.Fprint(w, "&")
 		g.emitExpr(w, expr)
 		return
 	}
 
+	if !g.isScalar(valType) {
+		g.fail(expr, "cannot use a value of type %s as any; assign it to a variable first",
+			g.typeString(valType))
+	}
+
+	// Every other scalar expression needs a composite literal: &(Type){val}.
 	cType := g.mapTypeName(node, valType)
 	fmt.Fprintf(w, "&(%s){", cType)
 	g.emitExpr(w, expr)
 	fmt.Fprint(w, "}")
+}
+
+// isLvalue reports whether an expression emits a C lvalue.
+func (g *Generator) isLvalue(expr ast.Expr) bool {
+	switch e := ast.Unparen(expr).(type) {
+	case *ast.Ident:
+		return g.isIdentLvalue(e)
+	case *ast.BasicLit:
+		// A string literal emits so_str, a composite literal.
+		// Every other literal emits a C constant.
+		return e.Kind == token.STRING
+	case *ast.CompositeLit:
+		// A map literal emits a macro call or an address.
+		// C cannot take the address of either.
+		return !isMapType(g.types.TypeOf(e))
+	case *ast.StarExpr:
+		// A dereference is an lvalue whatever the operand is.
+		return true
+	case *ast.SelectorExpr:
+		return g.isSelectorLvalue(e)
+	case *ast.IndexExpr:
+		return g.isIndexLvalue(e)
+	}
+	return false
+}
+
+// isIdentLvalue reports whether an identifier emits a C lvalue.
+func (g *Generator) isIdentLvalue(id *ast.Ident) bool {
+	switch obj := g.types.ObjectOf(id).(type) {
+	case *types.Var:
+		return true
+	case *types.Const:
+		// A declared constant emits a C variable. A predeclared one
+		// (true, false, iota) emits a literal or a macro name.
+		return obj.Parent() != types.Universe
+	}
+	return false
+}
+
+// isSelectorLvalue reports whether a selector emits a C lvalue.
+func (g *Generator) isSelectorLvalue(sel *ast.SelectorExpr) bool {
+	info, ok := g.types.Selections[sel]
+	if !ok {
+		// A qualified identifier. A variable of another package emits a C
+		// variable name; a constant can emit a macro name.
+		_, isVar := g.types.ObjectOf(sel.Sel).(*types.Var)
+		return isVar
+	}
+	if info.Kind() != types.FieldVal {
+		// A method value is not a field read.
+		return false
+	}
+	if info.Indirect() {
+		// The selector emits x->f, an lvalue whatever x is.
+		return true
+	}
+	return g.isLvalue(sel.X)
+}
+
+// isIndexLvalue reports whether an index expression emits a C lvalue.
+func (g *Generator) isIndexLvalue(idx *ast.IndexExpr) bool {
+	switch t := g.types.TypeOf(idx.X).Underlying().(type) {
+	case *types.Array:
+		// The index emits a[i], an lvalue when a is one.
+		return g.isLvalue(idx.X)
+	case *types.Pointer:
+		// The index emits (*p)[i], an lvalue whatever p is.
+		_, isArray := t.Elem().Underlying().(*types.Array)
+		return isArray
+	case *types.Slice:
+		// The index emits so_at, which dereferences a pointer.
+		return true
+	case *types.Basic:
+		// A string index also emits so_at.
+		return t.Kind() == types.String || t.Kind() == types.UntypedString
+	}
+	// A map read emits so_map_get, which returns a value.
+	// A generic instantiation is not a value at all.
+	return false
+}
+
+// isScalar reports whether the emitted C type is a scalar.
+func (g *Generator) isScalar(typ types.Type) bool {
+	switch t := typ.Underlying().(type) {
+	case *types.Basic:
+		// Every basic type emits a scalar, except a string,
+		// which emits the so_String struct.
+		return t.Kind() != types.String && t.Kind() != types.UntypedString
+	case *types.Map:
+		// A map emits so_Map*, a pointer.
+		return true
+	}
+	// A struct, an array, a slice and a named interface all emit an aggregate.
+	return false
 }
 
 // checkMethodReceivers rejects interface methods that are declared with

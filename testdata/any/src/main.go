@@ -214,6 +214,55 @@ func main() {
 		}
 	}
 	{
+		// Any holding an addressable expression.
+		p := point{1, 2}
+		pp := &p
+		var a any = *pp
+		if a.(point).x != 1 {
+			panic("want a.(point).x == 1")
+		}
+		a = p.y
+		if a.(int) != 2 {
+			panic("want a.(int) == 2")
+		}
+		a = pp.x
+		if a.(int) != 1 {
+			panic("want a.(int) == 1")
+		}
+		arr := [2]point{{1, 2}, {3, 4}}
+		a = arr[1]
+		if a.(point).y != 4 {
+			panic("want a.(point).y == 4")
+		}
+		sl := []point{{5, 6}}
+		a = sl[0]
+		if a.(point).x != 5 {
+			panic("want a.(point).x == 5")
+		}
+		s := "hello"
+		a = s[1]
+		if a.(byte) != 'e' {
+			panic("want a.(byte) == 'e'")
+		}
+	}
+	{
+		// Any holding a scalar value.
+		n := 1
+		var a any = n + 1
+		if a.(int) != 2 {
+			panic("want a.(int) == 2")
+		}
+		a = true
+		if !a.(bool) {
+			panic("want a.(bool)")
+		}
+		m := map[string]int{"n": 42}
+		a = m["n"]
+		if a.(int) != 42 {
+			panic("want a.(int) == 42")
+		}
+	}
+	{
 		// Any appended to a slice.
 		n := 42
 		p := point{1, 2}

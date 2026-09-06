@@ -233,6 +233,55 @@ int main(void) {
         }
     }
     {
+        // Any holding an addressable expression.
+        point p = (point){1, 2};
+        point* pp = &p;
+        void* a = pp;
+        if ((*(point*)a).x != 1) {
+            so_panic("want a.(point).x == 1");
+        }
+        a = &p.y;
+        if ((*(so_int*)a) != 2) {
+            so_panic("want a.(int) == 2");
+        }
+        a = &pp->x;
+        if ((*(so_int*)a) != 1) {
+            so_panic("want a.(int) == 1");
+        }
+        point arr[2] = {(point){1, 2}, (point){3, 4}};
+        a = &arr[1];
+        if ((*(point*)a).y != 4) {
+            so_panic("want a.(point).y == 4");
+        }
+        so_Slice sl = (so_Slice){(point[1]){(point){5, 6}}, 1, 1};
+        a = &so_at(point, sl, 0);
+        if ((*(point*)a).x != 5) {
+            so_panic("want a.(point).x == 5");
+        }
+        so_String s = so_str("hello");
+        a = &so_at(so_byte, s, 1);
+        if ((*(so_byte*)a) != 'e') {
+            so_panic("want a.(byte) == 'e'");
+        }
+    }
+    {
+        // Any holding a scalar value.
+        so_int n = 1;
+        void* a = &(so_int){n + 1};
+        if ((*(so_int*)a) != 2) {
+            so_panic("want a.(int) == 2");
+        }
+        a = &(bool){true};
+        if (!(*(bool*)a)) {
+            so_panic("want a.(bool)");
+        }
+        so_Map* m = so_map_lit(so_String, so_int, 1, ((so_String[]){so_str("n")}), ((so_int[]){42}));
+        a = &(so_int){so_map_get(so_String, so_int, m, so_str("n"))};
+        if ((*(so_int*)a) != 42) {
+            so_panic("want a.(int) == 42");
+        }
+    }
+    {
         // Any appended to a slice.
         so_int n = 42;
         point p = (point){1, 2};

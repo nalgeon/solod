@@ -1,0 +1,3 @@
+main.go:5:14: cannot use a value of type string as any; assign it to a variable first
+	var a any = s[1:3]
+	            ^here
