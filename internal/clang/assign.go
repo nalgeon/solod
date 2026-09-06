@@ -114,7 +114,7 @@ func (g *Generator) emitDefine(w io.Writer, stmt *ast.AssignStmt) {
 
 		typ := def.Type()
 		ct := g.mapVarType(stmt, typ, true)
-		if ct.IsArray() {
+		if _, isArr := arrayType(typ); isArr {
 			// C cannot assign an array, so it needs a declaration of its own.
 			g.emitArrayVarDecl(w, ct, ident.Name, rhs[i])
 			i++
@@ -167,7 +167,7 @@ func (g *Generator) emitAssign(w io.Writer, stmt *ast.AssignStmt) {
 
 		// Map index assignment uses so_map_set.
 		if idx, ok := lhs.(*ast.IndexExpr); ok {
-			if _, isMap := g.types.TypeOf(idx.X).Underlying().(*types.Map); isMap {
+			if isMapType(g.types.TypeOf(idx.X)) {
 				g.emitMapIndexAssign(w, stmt, idx, rhs[i])
 				continue
 			}

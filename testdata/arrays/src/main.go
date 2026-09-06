@@ -180,6 +180,20 @@ func main() {
 		if a[1] != 42 {
 			panic("want a[1] == 42")
 		}
+
+		// A named array copies like an unnamed one.
+		b := a
+		var c array = a
+		if b[1] != 42 || c[1] != 42 {
+			panic("want b[1] == c[1] == 42")
+		}
+
+		// A named array in a for-init clause also copies.
+		for d := a; d[1] > 0; d[1]-- {
+			if d[1] > 42 {
+				panic("want d[1] <= 42")
+			}
+		}
 	}
 	{
 		// Array pointers. A pointer to an unnamed array type

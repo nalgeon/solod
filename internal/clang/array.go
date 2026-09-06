@@ -277,11 +277,6 @@ func arrayType(t types.Type) (*types.Array, bool) {
 	return arr, ok
 }
 
-// isArrayType reports whether a type has array dimensions.
-func isArrayType(typ types.Type) bool {
-	return arrayDims(typ) != ""
-}
-
 // hasKeyedElements returns true if any element
 // in the composite literal uses key:value syntax.
 func hasKeyedElements(n *ast.CompositeLit) bool {

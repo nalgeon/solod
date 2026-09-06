@@ -155,7 +155,7 @@ func (g *Generator) emitInterfaceLit(w io.Writer, ifaceType types.Type, expr ast
 // Uses function pointer comparison to identify the concrete type.
 func (g *Generator) emitTypeAssertion(w io.Writer, stmt *ast.AssignStmt, ta *ast.TypeAssertExpr) {
 	sourceType := g.types.TypeOf(ta.X)
-	if iface, ok := sourceType.Underlying().(*types.Interface); ok && iface.Empty() {
+	if isEmptyInterface(sourceType) {
 		g.fail(ta, "comma-ok type assertion on any is not supported")
 	}
 	ifaceType := types.Unalias(sourceType).(*types.Named)
@@ -180,7 +180,7 @@ func (g *Generator) emitTypeAssertion(w io.Writer, stmt *ast.AssignStmt, ta *ast
 // emitTypeAssertExpr emits a type assertion.
 func (g *Generator) emitTypeAssertExpr(w io.Writer, n *ast.TypeAssertExpr) {
 	sourceType := g.types.TypeOf(n.X)
-	if iface, ok := sourceType.Underlying().(*types.Interface); ok && iface.Empty() {
+	if isEmptyInterface(sourceType) {
 		targetType := g.types.TypeOf(n.Type)
 		cType := g.mapTypeName(n, targetType)
 		if isPointerType(targetType) {
@@ -200,7 +200,7 @@ func (g *Generator) emitTypeAssertExpr(w io.Writer, n *ast.TypeAssertExpr) {
 	targetType := g.types.TypeOf(n.Type)
 	// A non-empty interface holds no runtime type information, so the
 	// generator cannot emit a check against a second interface.
-	if _, ok := targetType.Underlying().(*types.Interface); ok {
+	if isInterfaceType(targetType) {
 		g.fail(n, "type assertion from an interface to an interface is not supported")
 	}
 	elemType, isPtr := ptrElem(targetType)
@@ -230,8 +230,7 @@ func (g *Generator) emitAnyValue(w io.Writer, node ast.Node, expr ast.Expr) {
 		return
 	}
 
-	iface, isIface := valType.Underlying().(*types.Interface)
-	if isPointerType(valType) || (isIface && iface.Empty()) {
+	if isPointerType(valType) || isEmptyInterface(valType) {
 		// Pointer values pass through as-is (implicitly convertible to void*).
 		// Empty interface (any) values pass through as-is (already void*).
 		g.emitExpr(w, expr)

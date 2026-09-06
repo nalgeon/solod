@@ -92,7 +92,8 @@ func (g *Generator) fitsForAssign(stmt *ast.AssignStmt, isInit bool) bool {
 		if !ok || g.types.Defs[ident] == nil {
 			return false
 		}
-		return !isArrayType(g.types.Defs[ident].Type())
+		_, isArr := arrayType(g.types.Defs[ident].Type())
+		return !isArr
 	}
 
 	// No blank identifiers.

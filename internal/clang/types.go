@@ -474,6 +474,12 @@ func isScalarType(t types.Type) bool {
 	return false
 }
 
+// isSliceType reports whether t is a slice type.
+func isSliceType(t types.Type) bool {
+	_, ok := t.Underlying().(*types.Slice)
+	return ok
+}
+
 // isMapType reports whether t is a map type.
 func isMapType(t types.Type) bool {
 	_, ok := t.Underlying().(*types.Map)

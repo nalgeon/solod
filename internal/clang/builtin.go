@@ -53,7 +53,7 @@ func (g *Generator) emitBuiltin(w io.Writer, call *ast.CallExpr, ident *ast.Iden
 
 	// len on maps emits so_map_len macro.
 	if bi.Name() == "len" && len(call.Args) == 1 {
-		if _, ok := g.types.TypeOf(call.Args[0]).Underlying().(*types.Map); ok {
+		if isMapType(g.types.TypeOf(call.Args[0])) {
 			g.checkLocalScope(call)
 			fmt.Fprint(w, "so_map_len(")
 			g.emitMacroArg(w, call.Args[0])
@@ -417,7 +417,7 @@ func (g *Generator) formatSpec(arg ast.Expr, typ types.Type) (spec, macro string
 	if _, isPtr := ptrElem(typ); isPtr {
 		return "%p", ""
 	}
-	if iface, ok := typ.Underlying().(*types.Interface); ok && iface.Empty() {
+	if isEmptyInterface(typ) {
 		return "%p", ""
 	}
 	if isErrorType(typ) {

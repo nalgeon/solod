@@ -187,6 +187,24 @@ int main(void) {
         if (a[1] != 42) {
             so_panic("want a[1] == 42");
         }
+        // A named array copies like an unnamed one.
+        array b;
+        memcpy(b, a, sizeof(b));
+        array c;
+        memcpy(c, a, sizeof(c));
+        if (b[1] != 42 || c[1] != 42) {
+            so_panic("want b[1] == c[1] == 42");
+        }
+        // A named array in a for-init clause also copies.
+        {
+            array d;
+            memcpy(d, a, sizeof(d));
+            for (; d[1] > 0; d[1]--) {
+                if (d[1] > 42) {
+                    so_panic("want d[1] <= 42");
+                }
+            }
+        }
     }
     {
         // Array pointers. A pointer to an unnamed array type

@@ -311,7 +311,7 @@ func (g *Generator) emitVarSpec(w io.Writer, spec *ast.ValueSpec, dirs directive
 			ct := g.mapVarType(spec, typ, len(spec.Values) > i)
 
 			// An array with an initializer needs a declaration of its own.
-			if ct.IsArray() && len(spec.Values) > i {
+			if _, isArr := arrayType(typ); isArr && len(spec.Values) > i {
 				g.emitArrayVarDecl(w, ct, name.Name, spec.Values[i])
 				i++
 				continue
@@ -376,7 +376,7 @@ func (g *Generator) emitVarSpec(w io.Writer, spec *ast.ValueSpec, dirs directive
 		cName := g.mapObjName(g.types.Defs[name])
 		if len(spec.Values) > i {
 			// Variable has an explicit initializer.
-			if ct.IsArray() && !g.state.atTopLevel() {
+			if _, isArr := arrayType(typ); isArr && !g.state.atTopLevel() {
 				g.emitArrayVarDecl(w, ct, cName, spec.Values[i])
 				continue
 			}

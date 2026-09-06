@@ -308,7 +308,7 @@ func (g *Generator) emitExternVarArg(w io.Writer, node ast.Node, call *ast.CallE
 		return
 	}
 	argType := g.types.TypeOf(arg)
-	if iface, ok := argType.Underlying().(*types.Interface); ok && iface.Empty() {
+	if isEmptyInterface(argType) {
 		g.fail(arg, "cannot pass an any value to a variadic extern function")
 	}
 	// The generator widens the scalar types to avoid C promotion issues.
@@ -336,7 +336,7 @@ func (g *Generator) emitCArg(w io.Writer, arg ast.Expr) {
 		fmt.Fprint(w, g.cStringLit(lit))
 		return
 	}
-	_, isSlice := g.types.TypeOf(arg).Underlying().(*types.Slice)
+	isSlice := isSliceType(g.types.TypeOf(arg))
 	var macro string
 	switch {
 	case g.hasStringType(arg):

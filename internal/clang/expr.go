@@ -251,14 +251,14 @@ func (g *Generator) emitEqual(w io.Writer, n *ast.BinaryExpr) {
 	}
 
 	// Slice nil comparison: emit s.cap == 0 / != 0.
-	if _, ok := leftType.Underlying().(*types.Slice); ok && rightIsNil {
+	if isSliceType(leftType) && rightIsNil {
 		g.emitExpr(w, left)
 		fmt.Fprintf(w, ".cap %s 0", op)
 		return
 	}
 
 	// Map nil comparison: emit m == NULL / != NULL.
-	if _, ok := leftType.Underlying().(*types.Map); ok && rightIsNil {
+	if isMapType(leftType) && rightIsNil {
 		g.emitExpr(w, left)
 		fmt.Fprintf(w, " %s NULL", op)
 		return
@@ -398,7 +398,7 @@ func (g *Generator) emitCallExpr(w io.Writer, n *ast.CallExpr) {
 		// Slice-to-array-pointer conversion (e.g. (*[3]int)(s)).
 		if ptrType, ok := tv.Type.Underlying().(*types.Pointer); ok {
 			arrType, isArray := ptrType.Elem().Underlying().(*types.Array)
-			_, isSlice := g.types.TypeOf(n.Args[0]).Underlying().(*types.Slice)
+			isSlice := isSliceType(g.types.TypeOf(n.Args[0]))
 			if isArray && isSlice {
 				g.checkLocalScope(n)
 				fmt.Fprintf(w, "(%s)so_slice_array(", g.mapTypeName(n, tv.Type))
@@ -683,7 +683,7 @@ func (g *Generator) emitPostfixOperand(w io.Writer, expr ast.Expr) {
 // For arrays: a[i] directly. For slices/strings: so_at(T, s, i).
 func (g *Generator) emitIndexExpr(w io.Writer, n *ast.IndexExpr) {
 	// Maps use so_map_get.
-	if _, ok := g.types.TypeOf(n.X).Underlying().(*types.Map); ok {
+	if isMapType(g.types.TypeOf(n.X)) {
 		g.emitMapIndexExpr(w, n)
 		return
 	}
@@ -787,7 +787,7 @@ func (g *Generator) emitExprAsType(w io.Writer, node ast.Node, expr ast.Expr, ta
 		g.fail(node, "cannot determine the target type")
 	}
 	// Empty interface: emit as void*.
-	if iface, ok := targetType.Underlying().(*types.Interface); ok && iface.Empty() {
+	if isEmptyInterface(targetType) {
 		g.emitAnyValue(w, node, expr)
 		return
 	}
@@ -805,12 +805,12 @@ func (g *Generator) emitExprAsType(w io.Writer, node ast.Node, expr ast.Expr, ta
 		}
 	}
 	// Slice nil assignment: emit zero-initialized struct instead of NULL.
-	if _, ok := targetType.Underlying().(*types.Slice); ok && isNilType(g.types.TypeOf(expr)) {
+	if isSliceType(targetType) && isNilType(g.types.TypeOf(expr)) {
 		fmt.Fprint(w, "(so_Slice){}")
 		return
 	}
 	// Map nil assignment: emit NULL.
-	if _, ok := targetType.Underlying().(*types.Map); ok && isNilType(g.types.TypeOf(expr)) {
+	if isMapType(targetType) && isNilType(g.types.TypeOf(expr)) {
 		fmt.Fprint(w, "NULL")
 		return
 	}
