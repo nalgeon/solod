@@ -451,21 +451,19 @@ func (g *Generator) emitGenericCall(w io.Writer, n *ast.CallExpr, fun ast.Expr, 
 		}
 	}
 	g.emitExpr(w, fun)
-	fmt.Fprintf(w, "(%s", g.mapTypeName(n, inst.TypeArgs.At(0)))
-	for i := 1; i < inst.TypeArgs.Len(); i++ {
-		fmt.Fprintf(w, ", %s", g.mapTypeName(n, inst.TypeArgs.At(i)))
+	fmt.Fprint(w, "(")
+	args := g.callArgs(w, n, true)
+	for t := range inst.TypeArgs.Types() {
+		args.emitType(g.mapTypeName(n, t))
 	}
 	sig, _ := inst.Type.(*types.Signature)
 	for i, arg := range n.Args {
-		// Wrap args in parens to protect against
-		// the preprocessor misinterpreting commas.
-		fmt.Fprint(w, ", (")
 		if sig != nil && i < sig.Params().Len() {
-			g.emitExprAsType(w, n, arg, sig.Params().At(i).Type())
+			paramType := sig.Params().At(i).Type()
+			args.emit(func() { g.emitExprAsType(w, n, arg, paramType) })
 		} else {
-			g.emitExpr(w, arg)
+			args.emit(func() { g.emitExpr(w, arg) })
 		}
-		fmt.Fprint(w, ")")
 	}
 	fmt.Fprint(w, ")")
 }

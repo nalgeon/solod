@@ -73,16 +73,9 @@ func (g *Generator) emitMethodCall(w io.Writer, sel *ast.SelectorExpr, call *ast
 	fmt.Fprintf(w, "%s(", cName)
 
 	typeArgs := named.TypeArgs()
-	isGeneric := typeArgs.Len() > 0
-	// Prepend type arguments for generic method calls.
-	if isGeneric {
-		for i := 0; i < typeArgs.Len(); i++ {
-			if i > 0 {
-				fmt.Fprint(w, ", ")
-			}
-			fmt.Fprint(w, g.mapTypeName(sel, typeArgs.At(i)))
-		}
-		fmt.Fprint(w, ", ")
+	args := g.callArgs(w, sel, typeArgs.Len() > 0)
+	for t := range typeArgs.Types() {
+		args.emitType(g.mapTypeName(sel, t))
 	}
 
 	// Pass receiver based on method's declared receiver type and call-site type.
@@ -99,124 +92,20 @@ func (g *Generator) emitMethodCall(w io.Writer, sel *ast.SelectorExpr, call *ast
 		}
 	}
 
-	// For generic (= macro) calls, wrap non-type args in parens to protect
-	// against the preprocessor misinterpreting commas.
-	lparen, rparen := "", ""
-	if isGeneric {
-		lparen, rparen = "(", ")"
-	}
-
-	fmt.Fprint(w, lparen)
-	if isMethodPtrRecv {
-		// Pointer receiver: pass address of value, or pointer directly.
-		if isCallSitePtr {
-			g.emitExpr(w, sel.X)
-		} else {
+	args.emit(func() {
+		switch {
+		case isMethodPtrRecv && !isCallSitePtr:
+			// Pointer receiver on a value: pass the address of the value.
 			fmt.Fprint(w, "&")
-			g.emitExpr(w, sel.X)
-		}
-	} else {
-		// Value receiver: pass value directly, or dereference pointer.
-		if isCallSitePtr {
+		case !isMethodPtrRecv && isCallSitePtr:
+			// Value receiver on a pointer: pass the pointed-to value.
 			fmt.Fprint(w, "*")
-			g.emitExpr(w, sel.X)
-		} else {
-			g.emitExpr(w, sel.X)
 		}
-	}
-	fmt.Fprint(w, rparen)
+		g.emitExpr(w, sel.X)
+	})
 
 	// Pass method arguments.
-	g.emitMethodCallArgs(w, sel, call, sig, lparen, rparen)
+	ext, isExtern := g.methodExtern(sel)
+	g.emitCallArgs(args, call, sig, ext, isExtern)
 	fmt.Fprint(w, ")")
-}
-
-// emitMethodCallArgs emits method arguments, handling variadic arg packing.
-func (g *Generator) emitMethodCallArgs(w io.Writer, sel *ast.SelectorExpr, call *ast.CallExpr, sig *types.Signature, lparen, rparen string) {
-	args := call.Args
-
-	if ext, ok := g.methodExtern(sel); ok {
-		if !ext.nodecay {
-			// Extern C method: decay args to C-compatible types.
-			g.emitMethodExternArgs(w, sel, call, sig)
-			return
-		}
-		if sig.Variadic() {
-			// Extern nodecay method: emit the variadic args flat.
-			g.emitMethodExternVarArgs(w, sel, call, sig)
-			return
-		}
-	}
-
-	if sig.Variadic() && !call.Ellipsis.IsValid() {
-		// Variadic call with individual args: pack trailing args into a slice literal.
-		g.emitMethodVarArgs(w, sel, call, sig, lparen, rparen)
-		return
-	}
-
-	// Non-variadic call or variadic call with ellipsis: emit all args directly.
-	for i, arg := range args {
-		fmt.Fprintf(w, ", %s", lparen)
-		g.emitCallArg(w, sel, arg, sig.Params().At(i).Type())
-		fmt.Fprint(w, rparen)
-	}
-}
-
-// emitMethodExternArgs emits method arguments for an extern C method, handling type decay.
-func (g *Generator) emitMethodExternArgs(w io.Writer, sel *ast.SelectorExpr, call *ast.CallExpr, sig *types.Signature) {
-	if call.Ellipsis.IsValid() {
-		g.fail(call, "spreading variadic arguments to an extern function is not supported")
-	}
-	for i, arg := range call.Args {
-		fmt.Fprint(w, ", ")
-		if i < sig.Params().Len() && isNamedNonEmptyInterface(sig.Params().At(i).Type()) {
-			g.emitExprAsType(w, sel, arg, sig.Params().At(i).Type())
-		} else {
-			g.emitCArg(w, arg)
-		}
-	}
-}
-
-// emitMethodExternVarArgs emits the arguments of a call to a variadic extern
-// nodecay method. See [Generator.emitExternVarArg] for the argument rules.
-func (g *Generator) emitMethodExternVarArgs(w io.Writer, sel *ast.SelectorExpr, call *ast.CallExpr, sig *types.Signature) {
-	if call.Ellipsis.IsValid() {
-		g.fail(call, "spreading variadic arguments to an extern function is not supported")
-	}
-	for i := range call.Args {
-		fmt.Fprint(w, ", ")
-		g.emitExternVarArg(w, sel, call, sig, i)
-	}
-}
-
-func (g *Generator) emitMethodVarArgs(w io.Writer, sel *ast.SelectorExpr, call *ast.CallExpr, sig *types.Signature, lparen, rparen string) {
-	// Emit fixed args first.
-	fixedCount := sig.Params().Len() - 1
-	args := call.Args
-	for i := 0; i < fixedCount && i < len(args); i++ {
-		fmt.Fprintf(w, ", %s", lparen)
-		g.emitCallArg(w, sel, args[i], sig.Params().At(i).Type())
-		fmt.Fprint(w, rparen)
-	}
-
-	// Emit variadic args as a so_Slice literal.
-	variadicArgs := args[fixedCount:]
-	variadicParam := sig.Params().At(sig.Params().Len() - 1)
-	elemType := g.mapTypeName(sel, variadicParam.Type().(*types.Slice).Elem())
-	count := len(variadicArgs)
-	targetType := variadicParam.Type().(*types.Slice).Elem()
-	if count == 0 {
-		// No variadic args: emit a nil slice.
-		fmt.Fprintf(w, ", %s(so_Slice){}%s", lparen, rparen)
-		return
-	}
-
-	fmt.Fprintf(w, ", %s(so_Slice){(%s[%d]){", lparen, elemType, count)
-	for i, arg := range variadicArgs {
-		if i > 0 {
-			fmt.Fprint(w, ", ")
-		}
-		g.emitExprAsType(w, sel, arg, targetType)
-	}
-	fmt.Fprintf(w, "}, %d, %d}%s", count, count, rparen)
 }
