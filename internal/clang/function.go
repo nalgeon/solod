@@ -22,7 +22,7 @@ func (g *Generator) emitFuncProto(w io.Writer, decl *ast.FuncDecl) *types.Signat
 	} else if decl.Name.Name != "main" {
 		exported := ast.IsExported(decl.Name.Name)
 		if exported && decl.Recv != nil {
-			exported = ast.IsExported(recvTypeName(decl.Recv.List[0]))
+			exported = ast.IsExported(g.recvTypeName(decl.Recv.List[0]))
 		}
 		if !exported && !dirs.promote {
 			spec = "static "
@@ -119,7 +119,7 @@ func (g *Generator) emitFuncDecl(w io.Writer, decl *ast.FuncDecl) {
 	if g.funcDirs[decl].inline {
 		return
 	}
-	if isGenericFunc(decl) {
+	if g.isGenericFunc(decl) {
 		// Type parameters only exist as macro arguments. A regular function
 		// can't handle them, yet call sites still pass them.
 		kind := "function"
@@ -134,7 +134,7 @@ func (g *Generator) emitFuncDecl(w io.Writer, decl *ast.FuncDecl) {
 // emitInlineFuncDecl emits a so:inline function declaration into the header.
 // Generic functions are emitted as #define macros; non-generic as static inline.
 func (g *Generator) emitInlineFuncDecl(w io.Writer, decl *ast.FuncDecl) {
-	if isGenericFunc(decl) {
+	if g.isGenericFunc(decl) {
 		g.emitMacroFuncDecl(w, decl)
 		return
 	}
@@ -163,7 +163,8 @@ func (g *Generator) emitMacroFuncDecl(w io.Writer, decl *ast.FuncDecl) {
 	if decl.Recv != nil {
 		recv := decl.Recv.List[0]
 		// Add receiver type params (no suffix - these are type names).
-		params = append(params, recvTypeParams(recv)...)
+		_, typeParams := g.parseRecv(recv)
+		params = append(params, typeParams...)
 		// Add receiver as parameter (suffixed).
 		recvName, named := recvVarName(recv)
 		if named {
@@ -411,48 +412,62 @@ func (g *Generator) checkParamNames(decl *ast.FuncDecl, names []string) {
 	}
 }
 
+// isGenericFunc reports whether a function declaration is generic
+// (has type params on the function itself or on its receiver type).
+func (g *Generator) isGenericFunc(decl *ast.FuncDecl) bool {
+	if decl.Type.TypeParams != nil && len(decl.Type.TypeParams.List) > 0 {
+		return true
+	}
+	if decl.Recv == nil {
+		return false
+	}
+	_, typeParams := g.parseRecv(decl.Recv.List[0])
+	return len(typeParams) > 0
+}
+
 // recvTypeName returns the Go type name from a method receiver field.
-// Handles both pointer receivers (*Rect) and value receivers (Rect).
-func recvTypeName(recv *ast.Field) string {
-	typ := recv.Type
-	// Unwrap pointer receiver.
-	if star, ok := typ.(*ast.StarExpr); ok {
-		typ = star.X
-	}
-	// Unwrap generic type parameters.
-	switch t := typ.(type) {
-	case *ast.Ident:
-		return t.Name
-	case *ast.IndexExpr:
-		return t.X.(*ast.Ident).Name
-	case *ast.IndexListExpr:
-		return t.X.(*ast.Ident).Name
-	}
-	panic(fmt.Sprintf("unsupported receiver type: %T", recv.Type))
+// Handles both pointer receivers (*Type) and value receivers (Type).
+func (g *Generator) recvTypeName(recv *ast.Field) string {
+	name, _ := g.parseRecv(recv)
+	return name.Name
 }
 
 // recvTypeObj returns the types.Object for the receiver type of a method.
 func (g *Generator) recvTypeObj(recv *ast.Field) types.Object {
-	typ := recv.Type
-	if star, ok := typ.(*ast.StarExpr); ok {
-		typ = star.X
-	}
-	var obj types.Object
-	switch t := typ.(type) {
-	case *ast.Ident:
-		obj = g.types.Uses[t]
-	case *ast.IndexExpr:
-		obj = g.types.Uses[t.X.(*ast.Ident)]
-	case *ast.IndexListExpr:
-		obj = g.types.Uses[t.X.(*ast.Ident)]
-	default:
-		g.fail(recv, "unsupported receiver type: %T", recv.Type)
-	}
+	name, _ := g.parseRecv(recv)
+	obj := g.types.Uses[name]
 	// Resolve type aliases to the underlying named type.
 	if named, ok := types.Unalias(obj.Type()).(*types.Named); ok {
 		return named.Obj()
 	}
 	return obj
+}
+
+// parseRecv splits a method receiver into its type name and the names of its
+// type parameters. A receiver is `Type`, `*Type`, `Type[T]` or `*Type[K, V]`.
+func (g *Generator) parseRecv(recv *ast.Field) (name *ast.Ident, typeParams []string) {
+	typ := recv.Type
+	// Unwrap a pointer receiver.
+	if star, ok := typ.(*ast.StarExpr); ok {
+		typ = star.X
+	}
+	// Unwrap the type parameters of a generic receiver.
+	var indices []ast.Expr
+	switch t := typ.(type) {
+	case *ast.IndexExpr:
+		typ, indices = t.X, []ast.Expr{t.Index}
+	case *ast.IndexListExpr:
+		typ, indices = t.X, t.Indices
+	}
+	name, ok := typ.(*ast.Ident)
+	if !ok {
+		g.fail(recv, "unsupported receiver type: %T", recv.Type)
+	}
+	// Go allows only a type parameter name as an index of a receiver type.
+	for _, index := range indices {
+		typeParams = append(typeParams, index.(*ast.Ident).Name)
+	}
+	return name, typeParams
 }
 
 // recvVarName returns the C name of the method receiver. It also reports
@@ -463,29 +478,6 @@ func recvVarName(recv *ast.Field) (name string, named bool) {
 		return "self", false
 	}
 	return recv.Names[0].Name, true
-}
-
-// recvTypeParams extracts type parameter names from a generic receiver field.
-func recvTypeParams(recv *ast.Field) []string {
-	typ := recv.Type
-	if star, ok := typ.(*ast.StarExpr); ok {
-		typ = star.X
-	}
-	switch t := typ.(type) {
-	case *ast.IndexExpr:
-		if ident, ok := t.Index.(*ast.Ident); ok {
-			return []string{ident.Name}
-		}
-	case *ast.IndexListExpr:
-		var names []string
-		for _, idx := range t.Indices {
-			if ident, ok := idx.(*ast.Ident); ok {
-				names = append(names, ident.Name)
-			}
-		}
-		return names
-	}
-	return nil
 }
 
 // varArgType returns the C type a scalar widens to in the variadic position of
@@ -506,26 +498,6 @@ func varArgType(typ types.Type) (string, bool) {
 		return "double", true
 	}
 	return "", false
-}
-
-// isGenericFunc reports whether a function declaration is generic
-// (has type params on the function itself or on its receiver type).
-func isGenericFunc(decl *ast.FuncDecl) bool {
-	if decl.Type.TypeParams != nil && len(decl.Type.TypeParams.List) > 0 {
-		return true
-	}
-	if decl.Recv != nil {
-		recv := decl.Recv.List[0]
-		typ := recv.Type
-		if star, ok := typ.(*ast.StarExpr); ok {
-			typ = star.X
-		}
-		switch typ.(type) {
-		case *ast.IndexExpr, *ast.IndexListExpr:
-			return true
-		}
-	}
-	return false
 }
 
 // isMainFunc reports whether a function declaration is the main function.

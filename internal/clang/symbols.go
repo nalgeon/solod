@@ -239,7 +239,7 @@ func (g *Generator) collectFuncDecl(d *ast.FuncDecl) {
 	if d.Recv != nil {
 		kind = symbolMethod
 		if exported {
-			exported = ast.IsExported(recvTypeName(d.Recv.List[0]))
+			exported = ast.IsExported(g.recvTypeName(d.Recv.List[0]))
 		}
 	}
 	g.symbols = append(g.symbols, symbol{

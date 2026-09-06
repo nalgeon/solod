@@ -123,7 +123,7 @@ func (g *Generator) checkPromoted() {
 			recvObj := g.recvTypeObj(recv)
 			if !ast.IsExported(recvObj.Name()) && !g.promoted[recvObj] {
 				g.fail(node, "so:promote method %s needs so:promote on its receiver type %s",
-					sym.funcDecl.Name.Name, recvTypeName(recv))
+					sym.funcDecl.Name.Name, g.recvTypeName(recv))
 			}
 		}
 	}

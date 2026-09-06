@@ -87,7 +87,7 @@ func (g *Generator) checkFuncFrame(fn *ast.FuncDecl) {
 	}
 	// A generic function expands to a macro in the frame of the caller
 	// (see emitMacroFuncDecl), so its result outlives the call.
-	if isGenericFunc(fn) {
+	if g.isGenericFunc(fn) {
 		return
 	}
 	for _, node := range c.escapes(fn) {
