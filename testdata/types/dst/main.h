@@ -19,8 +19,8 @@ typedef so_int main_AlsoID;
 // also int
 typedef so_int main_AliasInt;
 
-// also int
-typedef so_int main_AliasID;
+// same type in C
+typedef main_ID main_AliasID;
 typedef so_rune main_Rune;
 
 // Complex types.

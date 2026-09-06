@@ -4,7 +4,7 @@ package main
 type ID int         // same type in C
 type AlsoID ID      // also int
 type AliasInt = int // also int
-type AliasID = ID   // also int
+type AliasID = ID   // same type in C
 type Rune rune
 
 // Complex types.

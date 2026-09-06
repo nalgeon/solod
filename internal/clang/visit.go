@@ -379,7 +379,7 @@ func (g *Generator) emitVarSpec(w io.Writer, spec *ast.ValueSpec, dirs directive
 			//  - an array carries its dimension after the name (so_byte a[8])
 			//  - `T* a, b` declares a as T* but b as T
 			//  - __auto_type allows only one declarator per statement
-			_, isPtr := typ.(*types.Pointer)
+			_, isPtr := ptrElem(typ)
 			if ct.IsArray() || isPtr || ct.FuncPtr || isAnonStruct(typ) {
 				fmt.Fprint(w, ";\n")
 				continue
@@ -462,6 +462,9 @@ func (g *Generator) emitTypeSpec(w io.Writer, spec *ast.TypeSpec, dirs directive
 	case *ast.Ident, *ast.SelectorExpr, *ast.ArrayType, *ast.StarExpr, *ast.MapType:
 		typ := g.types.Defs[spec.Name].Type()
 		resolved := typ.Underlying()
+		if alias, ok := typ.(*types.Alias); ok {
+			resolved = types.Unalias(alias)
+		}
 		// The underlying type of a named struct is an anonymous struct, which
 		// mapTypeDecl rejects. When the spec references a named type, use that
 		// name instead.

@@ -630,13 +630,8 @@ func (g *Generator) emitSelectorExpr(w io.Writer, n *ast.SelectorExpr) {
 	// Method expression: T.method or (*T).method -> function name.
 	if selection, ok := g.types.Selections[n]; ok && selection.Kind() == types.MethodExpr {
 		// Get the named type (strip pointer if present).
-		recv := selection.Recv()
-		var named *types.Named
-		if ptr, ok := recv.(*types.Pointer); ok {
-			named = types.Unalias(ptr.Elem()).(*types.Named)
-		} else {
-			named = types.Unalias(recv).(*types.Named)
-		}
+		recv, _ := ptrElem(selection.Recv())
+		named := recv.(*types.Named)
 		cName := g.mapTypeName(n, named) + "_" + n.Sel.Name
 
 		// Pointer receiver methods use void* in C, but the function type expects T*.

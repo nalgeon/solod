@@ -413,6 +413,18 @@ func (g *Generator) atPkgScope(obj types.Object) bool {
 	return obj.Parent() == g.pkg.Types.Scope()
 }
 
+// ptrElem unwraps a pointer type to its element type. The second result reports
+// whether t is a pointer. ptrElem unaliases t and the element, so an alias to a
+// pointer (type P = *T) behaves like the pointer.
+func ptrElem(t types.Type) (typ types.Type, isPtr bool) {
+	t = types.Unalias(t)
+	ptr, ok := t.(*types.Pointer)
+	if !ok {
+		return t, false
+	}
+	return types.Unalias(ptr.Elem()), true
+}
+
 // isBoolType reports whether t is a boolean type.
 func isBoolType(t types.Type) bool {
 	basic, ok := t.Underlying().(*types.Basic)

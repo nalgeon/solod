@@ -59,18 +59,11 @@ func (g *Generator) emitMethodDecl(w io.Writer, decl *ast.FuncDecl) {
 func (g *Generator) emitMethodCall(w io.Writer, sel *ast.SelectorExpr, call *ast.CallExpr) {
 	g.checkLocalCall(call)
 	selection := g.types.Selections[sel]
-	// The receiver type can be an alias to a pointer, as in "type P = *T",
-	// so it is unaliased before the pointer check.
-	recv := types.Unalias(selection.Recv())
 	sig := selection.Type().(*types.Signature)
 
 	// Get the struct type name.
-	var named *types.Named
-	if ptr, ok := recv.(*types.Pointer); ok {
-		named = types.Unalias(ptr.Elem()).(*types.Named)
-	} else {
-		named = types.Unalias(recv).(*types.Named)
-	}
+	recv, _ := ptrElem(selection.Recv())
+	named := recv.(*types.Named)
 
 	// Method call: r.Area() → main_Rect_Area(&r).
 	// An interface method call looks the same because the generator emits

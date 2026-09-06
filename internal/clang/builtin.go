@@ -414,7 +414,7 @@ func (g *Generator) buildFormatString(call *ast.CallExpr) string {
 // for a Go type. When macro is non-empty (e.g. "PRId64"), the specifier
 // ends with "%" and the macro must follow outside the string literal.
 func (g *Generator) formatSpec(arg ast.Expr, typ types.Type) (spec, macro string) {
-	if _, ok := typ.(*types.Pointer); ok {
+	if _, isPtr := ptrElem(typ); isPtr {
 		return "%p", ""
 	}
 	if iface, ok := typ.Underlying().(*types.Interface); ok && iface.Empty() {

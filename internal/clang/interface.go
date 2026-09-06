@@ -131,13 +131,8 @@ func (g *Generator) emitInterfaceLit(w io.Writer, ifaceType types.Type, expr ast
 	iface := named.Underlying().(*types.Interface)
 
 	// Get value type, dereferencing if it's a pointer.
-	concreteType := g.types.TypeOf(expr)
-	isPtr := false
-	if ptr, ok := concreteType.(*types.Pointer); ok {
-		concreteType = ptr.Elem()
-		isPtr = true
-	}
-	concreteNamed := types.Unalias(concreteType).(*types.Named)
+	concreteType, isPtr := ptrElem(g.types.TypeOf(expr))
+	concreteNamed := concreteType.(*types.Named)
 	g.checkMethodReceivers(expr, iface, concreteNamed)
 
 	cIface := g.mapTypeName(expr, named)
@@ -168,11 +163,8 @@ func (g *Generator) emitTypeAssertion(w io.Writer, stmt *ast.AssignStmt, ta *ast
 	firstMethod := iface.Method(0).Name()
 
 	// Get value type, dereferencing if it's a pointer.
-	assertedType := g.types.TypeOf(ta.Type)
-	if ptr, ok := assertedType.(*types.Pointer); ok {
-		assertedType = ptr.Elem()
-	}
-	concreteNamed := types.Unalias(assertedType).(*types.Named)
+	assertedType, _ := ptrElem(g.types.TypeOf(ta.Type))
+	concreteNamed := assertedType.(*types.Named)
 	cConcrete := g.mapTypeName(ta, concreteNamed)
 
 	okIdent := stmt.Lhs[1].(*ast.Ident)
@@ -211,14 +203,10 @@ func (g *Generator) emitTypeAssertExpr(w io.Writer, n *ast.TypeAssertExpr) {
 	if _, ok := targetType.Underlying().(*types.Interface); ok {
 		g.fail(n, "type assertion from an interface to an interface is not supported")
 	}
-	isPtr := false
-	if ptr, ok := targetType.(*types.Pointer); ok {
-		targetType = ptr.Elem()
-		isPtr = true
-	}
+	elemType, isPtr := ptrElem(targetType)
 
 	// Cast to a pointer or value type, depending on the request.
-	concreteNamed := types.Unalias(targetType).(*types.Named)
+	concreteNamed := elemType.(*types.Named)
 	cConcrete := g.mapTypeName(n, concreteNamed)
 	if isPtr {
 		// Pointer assertion: ival.(*Type) -> (Type*)ival.self
@@ -362,10 +350,8 @@ func isConcreteNamedType(t types.Type) bool {
 	if isInterfaceType(t) {
 		return false
 	}
-	if ptr, ok := t.(*types.Pointer); ok {
-		t = ptr.Elem()
-	}
-	_, ok := types.Unalias(t).(*types.Named)
+	elem, _ := ptrElem(t)
+	_, ok := elem.(*types.Named)
 	return ok
 }
 
