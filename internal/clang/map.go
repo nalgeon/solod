@@ -3,7 +3,6 @@ package clang
 import (
 	"fmt"
 	"go/ast"
-	"go/token"
 	"go/types"
 	"io"
 )
@@ -136,37 +135,19 @@ func (g *Generator) emitMapRange(w io.Writer, stmt *ast.RangeStmt) {
 	// The guard on NULL _m keeps the loop body unused for a nil map.
 	fmt.Fprintf(w, "%sfor (so_int _i = 0; _m != NULL && _i < _m->cap; _i++) {\n", g.indent())
 
-	g.state.depth++
-
-	// Skip empty slots in hash table.
-	fmt.Fprintf(w, "%sif (!_m->used[_i]) continue;\n", g.indent())
-
-	// Emit key variable.
-	if stmt.Key != nil {
-		if keyIdent, ok := stmt.Key.(*ast.Ident); ok && keyIdent.Name != "_" {
-			keyDecl := keyType + " "
-			if stmt.Tok == token.ASSIGN {
-				keyDecl = ""
-			}
-			fmt.Fprintf(w, "%s%s%s = ((%s*)_m->keys)[_i];\n", g.indent(), keyDecl, keyIdent.Name, keyType)
+	// The map key is not a loop counter, so the loop does not need rangeKey.
+	g.emitRangeBody(w, stmt, rangeKey{}, func() {
+		// Skip empty slots in hash table.
+		fmt.Fprintf(w, "%sif (!_m->used[_i]) continue;\n", g.indent())
+		if name, declare := rangeVar(stmt, stmt.Key); name != "" {
+			fmt.Fprintf(w, "%s%s%s = ((%s*)_m->keys)[_i];\n",
+				g.indent(), rangeDecl(keyType, declare), name, keyType)
 		}
-	}
-
-	// Emit value variable.
-	if stmt.Value != nil {
-		if valIdent, ok := stmt.Value.(*ast.Ident); ok && valIdent.Name != "_" {
-			valDecl := valType + " "
-			if stmt.Tok == token.ASSIGN {
-				valDecl = ""
-			}
-			fmt.Fprintf(w, "%s%s%s = ((%s*)_m->vals)[_i];\n", g.indent(), valDecl, valIdent.Name, valType)
+		if name, declare := rangeVar(stmt, stmt.Value); name != "" {
+			fmt.Fprintf(w, "%s%s%s = ((%s*)_m->vals)[_i];\n",
+				g.indent(), rangeDecl(valType, declare), name, valType)
 		}
-	}
-
-	g.state.depth--
-
-	g.emitBlock(w, stmt.Body)
-	fmt.Fprintf(w, "%s}\n", g.indent())
+	})
 
 	g.state.depth--
 	fmt.Fprintf(w, "%s}\n", g.indent())
