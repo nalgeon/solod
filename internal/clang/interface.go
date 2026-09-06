@@ -253,7 +253,7 @@ func (g *Generator) emitAnyValue(w io.Writer, node ast.Node, expr ast.Expr) {
 		return
 	}
 
-	if !g.isScalar(valType) {
+	if !isScalarType(valType) {
 		g.fail(expr, "cannot use a value of type %s as any; assign it to a variable first",
 			g.typeString(valType))
 	}
@@ -341,21 +341,6 @@ func (g *Generator) isIndexLvalue(idx *ast.IndexExpr) bool {
 	}
 	// A map read emits so_map_get, which returns a value.
 	// A generic instantiation is not a value at all.
-	return false
-}
-
-// isScalar reports whether the emitted C type is a scalar.
-func (g *Generator) isScalar(typ types.Type) bool {
-	switch t := typ.Underlying().(type) {
-	case *types.Basic:
-		// Every basic type emits a scalar, except a string,
-		// which emits the so_String struct.
-		return t.Kind() != types.String && t.Kind() != types.UntypedString
-	case *types.Map:
-		// A map emits so_Map*, a pointer.
-		return true
-	}
-	// A struct, an array, a slice and a named interface all emit an aggregate.
 	return false
 }
 

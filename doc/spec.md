@@ -506,6 +506,8 @@ for j := 0; j < 3; j++ {
 }
 ```
 
+The post-iteration statement must be an increment, a decrement, a call, or an assignment to a scalar variable (a number, a boolean, or a pointer).
+
 While-style loop:
 
 ```go

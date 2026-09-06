@@ -151,61 +151,6 @@ func (g *Generator) emitExprStmt(w io.Writer, stmt *ast.ExprStmt) {
 	fmt.Fprint(w, ";\n")
 }
 
-// emitForStmt emits a for statement.
-func (g *Generator) emitForStmt(w io.Writer, stmt *ast.ForStmt) {
-	fmt.Fprintf(w, "%sfor (", g.indent())
-
-	if stmt.Init != nil {
-		g.emitForClause(w, stmt.Init)
-	}
-	fmt.Fprint(w, ";")
-
-	if stmt.Cond != nil {
-		fmt.Fprint(w, " ")
-		g.emitExpr(w, stmt.Cond)
-	}
-	fmt.Fprint(w, ";")
-
-	if stmt.Post != nil {
-		fmt.Fprint(w, " ")
-		g.emitForClause(w, stmt.Post)
-	}
-
-	fmt.Fprint(w, ") {\n")
-	g.emitBlock(w, stmt.Body)
-	fmt.Fprintf(w, "%s}\n", g.indent())
-}
-
-// emitForClause emits a simple statement inline (no indent, no semicolon)
-// for use in for-loop Init and Post positions.
-func (g *Generator) emitForClause(w io.Writer, stmt ast.Stmt) {
-	switch s := stmt.(type) {
-	case *ast.AssignStmt:
-		if len(s.Lhs) > 1 {
-			// C declares one type per for clause, and it has no way to
-			// evaluate several right-hand sides before the assignments.
-			g.fail(stmt, "multiple variables in a for clause are not supported")
-		}
-		if s.Tok == token.DEFINE {
-			ident := s.Lhs[0].(*ast.Ident)
-			cType := g.mapTypeName(s, g.types.Defs[ident].Type())
-			fmt.Fprintf(w, "%s %s = ", cType, ident.Name)
-			g.emitExpr(w, s.Rhs[0])
-		} else {
-			g.emitExpr(w, s.Lhs[0])
-			fmt.Fprintf(w, " %s ", s.Tok)
-			g.emitExpr(w, s.Rhs[0])
-		}
-	case *ast.IncDecStmt:
-		g.emitExpr(w, s.X)
-		fmt.Fprint(w, s.Tok)
-	case *ast.ExprStmt:
-		g.emitExpr(w, s.X)
-	default:
-		g.fail(stmt, "unsupported for-loop clause: %T", stmt)
-	}
-}
-
 // emitGenDecl emits a general declaration (var, import, etc.).
 func (g *Generator) emitGenDecl(w io.Writer, decl *ast.GenDecl) {
 	if found, _ := parseExtern(decl.Doc); found {

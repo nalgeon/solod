@@ -457,6 +457,23 @@ func isPointerType(t types.Type) bool {
 	return false
 }
 
+// isScalarType reports whether the emitted C type of t is a scalar.
+func isScalarType(t types.Type) bool {
+	if t == nil {
+		return false
+	}
+	if isPointerType(t) {
+		return true
+	}
+	switch t.Underlying().(type) {
+	case *types.Basic:
+		return !isStringType(t) // string is a struct
+	case *types.Map:
+		return true // map is a pointer
+	}
+	return false
+}
+
 // isMapType reports whether t is a map type.
 func isMapType(t types.Type) bool {
 	_, ok := t.Underlying().(*types.Map)
