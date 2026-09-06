@@ -248,7 +248,15 @@ func (g *Generator) checkArrayValue(expr ast.Expr, targetType types.Type) {
 // checkSliceElemType fails if the slice element type is not supported in C.
 // Unwraps nested slices, since [][][3]int is as unsupported as [][3]int.
 func (g *Generator) checkSliceElemType(node ast.Node, elem types.Type) {
+	seen := make(map[*types.TypeName]bool)
 	for {
+		// A named element type can close a cycle, as in `type S []S`.
+		if named, ok := types.Unalias(elem).(*types.Named); ok {
+			if seen[named.Obj()] {
+				return
+			}
+			seen[named.Obj()] = true
+		}
 		sl, ok := elem.Underlying().(*types.Slice)
 		if !ok {
 			break

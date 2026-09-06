@@ -1251,7 +1251,7 @@ type Point struct {
 }
 ```
 
-A recursive type only works if the cycle goes through a struct, because that's what C forward declarations support. For example, `type Node struct { next *Node }` is allowed, but `type StateFn func() StateFn` and `type Tree [2]*Tree` are not.
+A recursive type works if the cycle goes through a struct, because that's what C forward declarations support. For example, `type Node struct { next *Node }` is allowed, but `type StateFn func() StateFn` and `type Tree [2]*Tree` are not.
 
 ### Init functions
 

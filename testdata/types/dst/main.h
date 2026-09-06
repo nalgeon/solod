@@ -33,6 +33,12 @@ typedef void* main_Any;
 typedef struct main_Empty {
 } main_Empty;
 
+// Recursive slice types.
+typedef so_Slice main_Tree;
+typedef so_Slice main_Deep;
+typedef so_Slice main_Left;
+typedef so_Slice main_Right;
+
 // Struct type.
 typedef struct main_Person {
     so_String name;

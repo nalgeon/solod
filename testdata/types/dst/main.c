@@ -74,6 +74,25 @@ int main(void) {
         (void)slice;
     }
     {
+        // Recursive slice types.
+        main_Tree leaf = {};
+        main_Tree tree = so_make_slice(main_Tree, 0, 1);
+        tree = so_append(main_Tree, tree, 1, leaf);
+        if (so_len(tree) != 1 || so_len(so_at(main_Tree, tree, 0)) != 0) {
+            so_panic("tree is not a single empty node");
+        }
+        main_Deep deep = {};
+        if (so_len(deep) != 0) {
+            so_panic("len(deep) != 0");
+        }
+        main_Right right = {};
+        main_Left left = so_make_slice(main_Right, 0, 1);
+        left = so_append(main_Right, left, 1, right);
+        if (so_len(left) != 1) {
+            so_panic("len(left) != 1");
+        }
+    }
+    {
         // Struct types.
         main_Person bob = (main_Person){so_str("Bob"), 20};
         (void)bob;

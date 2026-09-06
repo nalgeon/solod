@@ -15,6 +15,12 @@ type IntPtr *int
 type Any interface{}
 type Empty struct{}
 
+// Recursive slice types.
+type Tree []Tree
+type Deep [][]Deep
+type Left []Right
+type Right []Left
+
 // Struct type.
 type Person struct {
 	name string
@@ -99,6 +105,27 @@ func main() {
 
 		var slice IntSlice = []int{4, 5, 6}
 		_ = slice
+	}
+	{
+		// Recursive slice types.
+		var leaf Tree
+		tree := make(Tree, 0, 1)
+		tree = append(tree, leaf)
+		if len(tree) != 1 || len(tree[0]) != 0 {
+			panic("tree is not a single empty node")
+		}
+
+		var deep Deep
+		if len(deep) != 0 {
+			panic("len(deep) != 0")
+		}
+
+		var right Right
+		left := make(Left, 0, 1)
+		left = append(left, right)
+		if len(left) != 1 {
+			panic("len(left) != 1")
+		}
 	}
 	{
 		// Struct types.
