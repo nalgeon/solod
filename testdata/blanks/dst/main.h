@@ -29,6 +29,9 @@ typedef struct main_Value {
     so_int x;
 } main_Value;
 
+// A named array type.
+typedef so_int main_Nums[3];
+
 // Interface with unnamed and blank parameters.
 typedef struct main_Valuer {
     void* self;

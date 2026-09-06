@@ -221,5 +221,15 @@ int main(void) {
         (void)v3;
         (void)v4;
     }
+    {
+        // Discarding an array literal.
+        (void)(so_int[3]){1, 2, 3};
+        (void)(so_int[3]){1, 2, 3};
+        (void)(so_Slice[2]){(so_Slice){}, (so_Slice){}};
+        (void)(so_int[3]){1, 2, 3};
+        so_int n1 = 1;
+        (void)(so_int[2]){2, 3};
+        (void)n1;
+    }
     return 0;
 }

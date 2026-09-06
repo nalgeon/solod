@@ -864,6 +864,11 @@ func (g *Generator) emitAnyMacroArg(w io.Writer, node ast.Node, arg ast.Expr) {
 // and throws the value away: (void)expr;
 func (g *Generator) emitDiscard(w io.Writer, expr ast.Expr) {
 	fmt.Fprintf(w, "%s(void)", g.indent())
+	if arr, ok := arrayType(g.types.TypeOf(expr)); ok {
+		g.emitArrayValue(w, expr, expr, arr)
+		fmt.Fprint(w, ";\n")
+		return
+	}
 	if g.needsVoidParens(expr) {
 		fmt.Fprint(w, "(")
 		g.emitExpr(w, expr)

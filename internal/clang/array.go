@@ -29,30 +29,29 @@ func (g *Generator) emitArrayLit(w io.Writer, n *ast.CompositeLit) {
 	fmt.Fprint(w, "}")
 }
 
-// emitArrayArg emits an array expression as a function argument.
-// Composite literals need compound literal syntax (e.g. (so_int[3]){11, 22, 33}).
-func (g *Generator) emitArrayArg(w io.Writer, node ast.Node, arg ast.Expr, arr *types.Array) {
-	if lit, isLit := ast.Unparen(arg).(*ast.CompositeLit); isLit {
-		elemType := g.mapTypeName(node, arr.Elem())
-		fmt.Fprintf(w, "(%s%s)", elemType, arrayDims(arr))
-		g.emitExpr(w, lit)
+// emitArrayValue emits an array expression in a value position.
+func (g *Generator) emitArrayValue(w io.Writer, node ast.Node, expr ast.Expr, arr *types.Array) {
+	lit, isLit := ast.Unparen(expr).(*ast.CompositeLit)
+	if !isLit {
+		g.emitExpr(w, expr)
 		return
 	}
-	g.emitExpr(w, arg)
+	// A composite literal needs a compound literal prefix (e.g. (so_int[3]){11, 22, 33}).
+	fmt.Fprintf(w, "(%s%s)", g.mapTypeName(node, arr.Elem()), arrayDims(arr))
+	g.emitExpr(w, lit)
 }
 
 // emitArrayCmpOperand emits an array comparison operand.
-// Composite literals need a C compound literal prefix (e.g. (so_int[3]){...})
-// wrapped in extra parentheses so commas inside braces don't split macro args.
 func (g *Generator) emitArrayCmpOperand(w io.Writer, expr ast.Expr, arr *types.Array) {
-	if lit, isLit := ast.Unparen(expr).(*ast.CompositeLit); isLit {
-		elemType := g.mapTypeName(expr, arr.Elem())
-		fmt.Fprintf(w, "((%s%s)", elemType, arrayDims(arr))
-		g.emitExpr(w, lit)
-		fmt.Fprint(w, ")")
+	if _, isLit := ast.Unparen(expr).(*ast.CompositeLit); !isLit {
+		g.emitExpr(w, expr)
 		return
 	}
-	g.emitExpr(w, expr)
+	// A compound literal needs extra parentheses to protect
+	// against the preprocessor misinterpreting commas.
+	fmt.Fprint(w, "(")
+	g.emitArrayValue(w, expr, expr, arr)
+	fmt.Fprint(w, ")")
 }
 
 // emitSliceLit emits a slice literal as a so_Slice compound literal.
@@ -259,6 +258,15 @@ func (g *Generator) checkSliceElemType(node ast.Node, elem types.Type) {
 	if _, ok := elem.Underlying().(*types.Array); ok {
 		g.fail(node, "slice of arrays is not supported")
 	}
+}
+
+// arrayType returns the array type of t, named or not.
+func arrayType(t types.Type) (*types.Array, bool) {
+	if t == nil {
+		return nil, false
+	}
+	arr, ok := t.Underlying().(*types.Array)
+	return arr, ok
 }
 
 // isArrayType reports whether a type has array dimensions.

@@ -426,10 +426,8 @@ func (g *Generator) emitExternVarArg(w io.Writer, node ast.Node, call *ast.CallE
 
 // emitCallArg emits a call argument coerced to the parameter type.
 func (g *Generator) emitCallArg(w io.Writer, node ast.Node, arg ast.Expr, paramType types.Type) {
-	// An array parameter that receives a composite literal needs C compound
-	// literal syntax: (so_int[3]){11, 22, 33} instead of just {11, 22, 33}.
-	if arr, ok := paramType.Underlying().(*types.Array); ok {
-		g.emitArrayArg(w, node, arg, arr)
+	if arr, ok := arrayType(paramType); ok {
+		g.emitArrayValue(w, node, arg, arr)
 		return
 	}
 	g.emitExprAsType(w, node, arg, paramType)

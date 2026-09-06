@@ -807,9 +807,6 @@ func isStringType(t types.Type) bool {
 // is a frame value. A struct that wraps an array is copied by value and stays
 // safe.
 func isUnderlyingArray(t types.Type) bool {
-	if t == nil {
-		return false
-	}
-	_, ok := t.Underlying().(*types.Array)
+	_, ok := arrayType(t)
 	return ok
 }

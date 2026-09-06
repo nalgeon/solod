@@ -58,6 +58,9 @@ type Wrapper struct {
 // Struct with blank and unnamed parameters.
 type Value struct{ x int }
 
+// A named array type.
+type Nums [3]int
+
 // Unnamed receiver.
 func (Value) One() int { return 1 }
 
@@ -248,5 +251,14 @@ func main() {
 		_ = v2
 		_ = v3
 		_ = v4
+	}
+	{
+		// Discarding an array literal.
+		_ = [3]int{1, 2, 3}
+		_ = [...]int{1, 2, 3}
+		_ = [...][]int{{}, {}}
+		_ = Nums{1, 2, 3}
+		n1, _ := 1, [...]int{2, 3}
+		_ = n1
 	}
 }

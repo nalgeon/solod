@@ -231,19 +231,14 @@ func (g *Generator) emitAssign(w io.Writer, stmt *ast.AssignStmt) {
 
 		// Array assignment uses memcpy.
 		lhsType := g.types.TypeOf(lhs)
-		if arr, ok := lhsType.Underlying().(*types.Array); ok {
+		if arr, ok := arrayType(lhsType); ok {
 			// The array type is known at compile time, so sizeof takes the
 			// type instead of the left side to avoid evaluating it twice.
 			arrCType := g.mapTypeName(stmt, arr.Elem()) + arrayDims(arr)
 			fmt.Fprintf(w, "%smemcpy(", g.indent())
 			g.emitExpr(w, lhs)
 			fmt.Fprint(w, ", ")
-			value := ast.Unparen(rhs[i])
-			if _, isLit := value.(*ast.CompositeLit); isLit {
-				// Compound literal: (int[3]){1, 2, 3}
-				fmt.Fprintf(w, "(%s)", arrCType)
-			}
-			g.emitExpr(w, value)
+			g.emitArrayValue(w, stmt, rhs[i], arr)
 			fmt.Fprintf(w, ", sizeof(%s));\n", arrCType)
 			continue
 		}
